@@ -1011,3 +1011,39 @@
 
   * { box-shadow: none !important; }
 }
+
+/* ── PDF preview (Report Card Phase 0): the backend PDF, never the app page ── */
+.rc-pdf-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(15, 23, 42, 0.62);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+.rc-pdf-dialog {
+  display: flex; flex-direction: column; width: min(960px, 100%); height: min(92vh, 1200px);
+  background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+.rc-pdf-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;
+}
+.rc-pdf-title { font-weight: 700; color: #0f172a; font-size: 0.95rem; }
+.rc-pdf-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rc-pdf-btn {
+  padding: 7px 14px; border: 1.5px solid #cbd5e1; border-radius: 8px; background: #fff;
+  color: #1e293b; font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+}
+.rc-pdf-btn:hover { background: #f1f5f9; }
+.rc-pdf-btn-primary { background: #153a32; border-color: #153a32; color: #fff; }
+.rc-pdf-btn-primary:hover { background: #1f5246; }
+.rc-pdf-close {
+  width: 34px; height: 34px; border: none; border-radius: 8px; background: transparent;
+  color: #475569; font-size: 1rem; cursor: pointer;
+}
+.rc-pdf-close:hover { background: #e2e8f0; }
+.rc-pdf-btn:focus-visible, .rc-pdf-close:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.rc-pdf-frame { flex: 1; width: 100%; border: 0; background: #525659; }
+@media (max-width: 600px) {
+  .rc-pdf-overlay { padding: 0; }
+  .rc-pdf-dialog { height: 100%; border-radius: 0; }
+}
