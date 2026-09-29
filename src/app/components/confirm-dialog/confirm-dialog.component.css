@@ -19,3 +19,4 @@
 .cd-input-label { display:block; font-size:0.8rem; color:#64748b; margin-bottom:6px; }
 .cd-input { width:100%; padding:10px 12px; border:2px solid #e2e8f0; border-radius:8px; font-size:0.9rem; font-family:inherit; color:#1e293b; transition:border-color 0.15s; box-sizing:border-box; }
 .cd-input:focus { outline:none; border-color:#dc2626; }
+.cd-textarea { resize: vertical; min-height: 64px; font-family: inherit; line-height: 1.4; }

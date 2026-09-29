@@ -1,73 +1,18 @@
-/* ── Page wrapper ────────────────────────────────────────────────── */
-.vl-container {
+/* Leave Applications — one mobile-first stylesheet, in template order:
+   hero → toolbar (status, class, filters) → records → pagination. */
+
+.vl-page {
   display: flex;
-  gap: 0;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 16px;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  animation: vl-fade-up 0.45s ease-out both;
+  animation: vl-fade-up 0.35s ease-out both;
 }
 
-/* ── Left navigation ─────────────────────────────────────────────── */
-.vl-left-nav {
-  width: 170px;
-  flex-shrink: 0;
-  background: linear-gradient(180deg, #134e4a 0%, #0f766e 100%);
-  border-radius: 16px 0 0 16px;
-  padding: 20px 12px;
-  box-shadow: 4px 0 20px rgba(19, 78, 74, 0.2);
-}
-
-.vl-left-nav h2 {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: rgba(153, 246, 228, 0.8);
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  margin: 0 0 14px 4px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(153, 246, 228, 0.2);
-}
-
-.vl-class-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.vl-class-item { cursor: pointer; }
-
-.vl-class-pill {
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: background 0.2s, color 0.2s;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.vl-class-item:hover .vl-class-pill {
-  background: rgba(153, 246, 228, 0.18);
-  color: #a5b4fc;
-}
-
-.vl-class-item.selected .vl-class-pill {
-  background: rgba(153, 246, 228, 0.25);
-  color: #a5b4fc;
-  box-shadow: inset 0 0 0 1.5px rgba(153, 246, 228, 0.45);
-}
-
-/* ── Main area ───────────────────────────────────────────────────── */
-.vl-main {
-  flex-grow: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+@keyframes vl-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Hero ─────────────────────────────────────────────────────────── */
@@ -76,651 +21,381 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 22px 24px;
+  padding: 20px 22px;
+  border-radius: 18px;
   background: linear-gradient(135deg, #134e4a 0%, #0f766e 55%, #2dd4bf 100%);
-  border-radius: 0 16px 0 0;
-  overflow: hidden;
   color: #fff;
+  overflow: hidden;
 }
 
-.vl-container:not(:has(.vl-left-nav)) .vl-hero {
-  border-radius: 20px;
-}
-
-/* Decorative blobs */
-.vl-blob {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0.1;
-}
+.vl-blob { position: absolute; border-radius: 50%; opacity: 0.12; pointer-events: none; }
 .vl-blob-1 { width: 140px; height: 140px; background: #fff; top: -40px; right: -30px; }
-.vl-blob-2 { width: 90px;  height: 90px;  background: #99f6e4; bottom: -24px; left: 42%; }
+.vl-blob-2 { width: 90px; height: 90px; background: #99f6e4; bottom: -24px; left: 42%; }
 
 .vl-hero-left {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 14px;
-  position: relative;
-  z-index: 1;
-  flex: 1;
 }
 
 .vl-hero-icon {
-  font-size: 1.6rem;
-  background: rgba(255, 255, 255, 0.16);
-  border-radius: 14px;
-  width: 52px; height: 52px;
-  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 1.5rem;
 }
 
-.vl-hero-text h1 {
+.vl-hero-title {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  color: #fff;
   letter-spacing: -0.3px;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.vl-hero-sub {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.vl-hero-stat {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.vl-hero-num { font-size: 1.35rem; font-weight: 800; line-height: 1; }
+.vl-hero-lbl { margin-top: 3px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; opacity: 0.85; }
+
+/* ── Toolbar ──────────────────────────────────────────────────────── */
+.vl-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+}
+
+/* Status: one segmented row that never wraps. */
+.vl-status-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #f1f5f9;
+}
+
+.vl-status-filter {
+  min-width: 0;
+  padding: 9px 4px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #475569;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vl-status-filter:hover { color: #0f766e; }
+
+.vl-status-filter-active,
+.vl-status-filter-active:hover {
+  background: linear-gradient(135deg, #134e4a, #0f766e);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.28);
+}
+
+.vl-status-filter:focus-visible,
+.vl-chip:focus-visible { outline: 2px solid #0f766e; outline-offset: 2px; }
+
+/* Class chips (admin): one horizontally scrollable row. */
+.vl-chips {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  padding: 2px 0;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.vl-chips::-webkit-scrollbar { display: none; }
+
+.vl-class-filter-label {
+  flex-shrink: 0;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
 }
 
-.vl-hero-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 20px;
-  letter-spacing: 0.3px;
-  vertical-align: middle;
-}
-
-.vl-hero-text p {
-  margin: 2px 0 0;
-  font-size: 0.78rem;
-  color: rgba(153, 246, 228, 0.9);
-  position: relative;
-  z-index: 1;
-}
-
-/* ── Filter card ─────────────────────────────────────────────────── */
-.vl-filter-card {
+.vl-chip {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1.5px solid #e2e8f0;
   background: #fff;
-  padding: 16px 24px;
-  border-bottom: 1px solid #f1f5f9;
+  color: #475569;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.vl-chip:hover { border-color: #0f766e; color: #0f766e; background: #f0fdfa; }
+.vl-chip.vl-chip-active {
+  border-color: transparent;
+  background: linear-gradient(135deg, #0f766e, #2dd4bf);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.25);
 }
 
+/* Filters: side by side, stacking only on very narrow screens. */
 .vl-filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .vl-filter-group {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 180px;
-  max-width: 260px;
+  gap: 5px;
 }
 
 .vl-filter-label {
-  font-size: 0.72rem;
-  font-weight: 700;
   color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.vl-mat-field { width: 100%; }
-
-::ng-deep .vl-mat-field .mat-mdc-form-field-subscript-wrapper { display: none; }
-::ng-deep .vl-mat-field .mat-mdc-text-field-wrapper {
-  border-radius: 10px !important; background: #f8fafc !important;
+.vl-filter-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 42px;
+  padding: 0 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #1e293b;
+  font: inherit;
+  font-size: 0.86rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
-::ng-deep .vl-mat-field .mat-mdc-form-field-infix {
-  padding-top: 7px !important; padding-bottom: 7px !important;
-  min-height: unset !important;
-}
-::ng-deep .vl-mat-field input.mat-mdc-input-element {
-  font-size: 0.84rem !important; color: #374151 !important;
-}
-::ng-deep .vl-mat-field .mat-mdc-floating-label { font-size: 0.84rem !important; }
-::ng-deep .vl-mat-field .mat-mdc-icon-button.mat-mdc-button-base {
-  width: 32px !important; height: 32px !important; padding: 4px !important;
-}
-::ng-deep .vl-mat-field.mat-focused .mdc-notched-outline__leading,
-::ng-deep .vl-mat-field.mat-focused .mdc-notched-outline__notch,
-::ng-deep .vl-mat-field.mat-focused .mdc-notched-outline__trailing {
-  border-color: #0f766e !important;
+.vl-filter-input::placeholder { color: #94a3b8; }
+.vl-filter-input:focus {
+  outline: none;
+  border-color: #0f766e;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
 }
 
 .vl-filter-actions {
   display: flex;
-  gap: 8px;
   align-items: center;
-  flex-shrink: 0;
-  padding-bottom: 2px;
+  gap: 8px;
+  min-height: 32px;
 }
-
-.vl-btn-clear {
-  padding: 9px 16px;
-  border: 1.5px solid #99f6e4;
-  border-radius: 10px;
-  background: #f0fdfa;
-  color: #0f766e;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s, border-color 0.15s;
-  white-space: nowrap;
-}
-.vl-btn-clear:hover { background: #ccfbf1; border-color: #2dd4bf; }
-
-.vl-btn-delete-all {
-  padding: 9px 16px;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  color: #fff;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  transition: opacity 0.15s, transform 0.15s;
-  white-space: nowrap;
-}
-.vl-btn-delete-all:hover { opacity: 0.88; transform: translateY(-1px); }
 
 .vl-filter-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  font-size: 0.82rem;
+  flex: 1;
+  min-width: 0;
   color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
-.vl-meta-count { font-weight: 700; color: #374151; }
-.vl-meta-sep   { color: #cbd5e1; }
-.vl-meta-label { font-weight: 500; }
-
-.vl-page-size-select {
-  padding: 4px 8px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 7px;
-  background: #f8fafc;
-  color: #374151;
-  font-size: 0.82rem;
-  font-family: inherit;
+.vl-btn-clear,
+.vl-btn-delete-all {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s;
-}
-.vl-page-size-select:focus { border-color: #0f766e; }
-
-/* ── Empty state ─────────────────────────────────────────────────── */
-.vl-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 72px 20px;
-  background: #fff;
-  border-radius: 0 0 16px 16px;
-  text-align: center;
+  transition: all 0.15s ease;
 }
 
-.vl-container:not(:has(.vl-left-nav)) .vl-empty { border-radius: 0 0 16px 16px; }
+.vl-btn-clear { border: 1.5px solid #99f6e4; background: #f0fdfa; color: #0f766e; }
+.vl-btn-clear:hover { background: #ccfbf1; border-color: #2dd4bf; }
 
-.vl-empty-icon  { font-size: 2.5rem; margin-bottom: 4px; }
-.vl-empty-title { font-size: 1rem; font-weight: 700; color: #374151; margin: 0; }
-.vl-empty-sub   { font-size: 0.85rem; color: #94a3b8; margin: 0; }
+.vl-btn-delete-all { border: 1.5px solid #fecaca; background: #fef2f2; color: #b91c1c; }
+.vl-btn-delete-all:hover:not(:disabled) { background: #fee2e2; }
+.vl-btn-delete-all:disabled { opacity: 0.45; cursor: not-allowed; }
 
-/* ── Leave list ──────────────────────────────────────────────────── */
+/* ── Records ──────────────────────────────────────────────────────── */
 .vl-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  background: #f8fafc;
-  padding: 16px 24px;
-  border-radius: 0 0 16px 16px;
-  flex-grow: 1;
+  gap: 10px;
 }
 
-.vl-container:not(:has(.vl-left-nav)) .vl-list { border-radius: 0 0 16px 16px; }
-
-/* ── Leave card ──────────────────────────────────────────────────── */
 .vl-card {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
   background: #fff;
-  border-radius: 12px;
-  border: 1px solid #f1f5f9;
+  border: 1px solid #eef2f6;
   border-left: 4px solid #2dd4bf;
-  margin-bottom: 8px;
-  transition: box-shadow 0.15s;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+  transition: box-shadow 0.15s ease;
 }
+.vl-card:hover { box-shadow: 0 4px 14px rgba(15, 118, 110, 0.1); }
 
-.vl-card:last-child { margin-bottom: 0; }
-.vl-card:hover { box-shadow: 0 3px 10px rgba(15, 118, 110, 0.1); }
-
-/* ── Date badge ──────────────────────────────────────────────────── */
 .vl-date-badge {
+  flex-shrink: 0;
+  width: 50px;
+  height: 54px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: linear-gradient(135deg, #0f766e, #2dd4bf);
-  flex-shrink: 0;
+  color: #fff;
 }
+.vl-date-day { font-size: 1.25rem; font-weight: 800; line-height: 1; }
+.vl-date-month { margin-top: 2px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; opacity: 0.9; }
 
-.vl-date-day   { font-size: 1.1rem; font-weight: 800; color: #fff; line-height: 1; }
-.vl-date-month { font-size: 0.6rem;  font-weight: 700; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.3; }
-
-/* ── Card body ───────────────────────────────────────────────────── */
 .vl-card-body {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-}
-
-.vl-card-name-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
+  gap: 4px;
 }
 
 .vl-card-name {
+  color: #0f172a;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #1a1a2e;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
-.vl-card-id { font-size: 0.78rem; color: #94a3b8; font-weight: 500; white-space: nowrap; }
+.vl-card-id {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
 
 .vl-card-reason {
-  font-size: 0.78rem;
-  color: #94a3b8;
+  color: #64748b;
+  font-size: 0.82rem;
   font-style: italic;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
-/* ── Card right ──────────────────────────────────────────────────── */
 .vl-card-right {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
-  flex-shrink: 0;
 }
 
 .vl-status-chip {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
   padding: 3px 10px;
-  border-radius: 20px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
 }
 .vl-status-pending  { background: #fef3c7; color: #92400e; }
 .vl-status-approved { background: #d1fae5; color: #065f46; }
 .vl-status-rejected { background: #fee2e2; color: #991b1b; }
 
-.vl-actions {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
+.vl-actions { display: flex; gap: 6px; }
 
 .vl-btn-approve,
 .vl-btn-reject,
 .vl-btn-edit,
 .vl-btn-del {
-  padding: 5px 12px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   border: none;
-  border-radius: 7px;
-  font-size: 0.75rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
-  font-family: inherit;
-  transition: opacity 0.15s, transform 0.1s;
-  white-space: nowrap;
+  transition: transform 0.15s ease, filter 0.15s ease;
 }
+.vl-btn-approve:hover:not(:disabled), .vl-btn-reject:hover:not(:disabled),
+.vl-btn-edit:hover, .vl-btn-del:hover { transform: translateY(-1px); filter: brightness(0.96); }
+.vl-btn-approve:disabled, .vl-btn-reject:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.vl-btn-approve:hover, .vl-btn-reject:hover,
-.vl-btn-edit:hover { opacity: 0.85; transform: translateY(-1px); }
+.vl-btn-approve { background: #dcfce7; color: #15803d; }
+.vl-btn-reject  { background: #fee2e2; color: #dc2626; }
+.vl-btn-edit    { background: #e0f2fe; color: #0369a1; }
+.vl-btn-del     { background: #f1f5f9; color: #64748b; font-size: 0.8rem; }
 
-.vl-btn-approve { background: linear-gradient(135deg, #059669, #34d399); color: #fff; }
-.vl-btn-reject  { background: linear-gradient(135deg, #dc2626, #f87171); color: #fff; }
-.vl-btn-edit    { background: linear-gradient(135deg, #0369a1, #38bdf8); color: #fff; }
-.vl-btn-del     { background: #f1f5f9; color: #64748b; font-size: 0.85rem; padding: 5px 9px; }
-.vl-btn-del:hover { background: #e2e8f0; }
-
-/* ── Pagination ──────────────────────────────────────────────────── */
-.vl-pagination {
+/* ── Empty ────────────────────────────────────────────────────────── */
+.vl-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 6px;
-  padding: 16px 24px;
+  padding: 44px 20px;
+  border-radius: 18px;
   background: #fff;
-  border-top: 1px solid #f1f5f9;
-  flex-wrap: wrap;
+  border: 1px solid #eef2f6;
+  text-align: center;
 }
+.vl-empty-icon  { font-size: 2.4rem; }
+.vl-empty-title { margin: 0; color: #334155; font-size: 1rem; font-weight: 700; }
+.vl-empty-sub   { margin: 0; color: #94a3b8; font-size: 0.84rem; }
 
-.vl-page-btn {
-  padding: 7px 16px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  color: #374151;
-  font-size: 0.82rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-.vl-page-btn:hover:not(:disabled) { background: #f0fdfa; border-color: #2dd4bf; color: #0f766e; }
-.vl-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.vl-page-num {
-  width: 36px; height: 36px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  color: #374151;
-  font-size: 0.82rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-  display: flex; align-items: center; justify-content: center;
-}
-.vl-page-num:hover { background: #f0fdfa; border-color: #2dd4bf; color: #0f766e; }
-
-.vl-page-active {
-  background: linear-gradient(135deg, #0f766e, #2dd4bf) !important;
-  border-color: transparent !important;
-  color: #fff !important;
-  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.35);
-}
-
-.vl-ellipsis { color: #94a3b8; font-size: 0.9rem; padding: 0 4px; user-select: none; }
-
-/* ── Animation ───────────────────────────────────────────────────── */
-@keyframes vl-fade-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ── Tablet ──────────────────────────────────────────────────────── */
-@media (max-width: 1023px) {
-  .vl-left-nav { width: 150px; padding: 16px 10px; }
-  .vl-hero { padding: 20px 18px 24px; border-radius: 0 12px 0 0; }
-  .vl-hero-text h1 { font-size: 1.05rem; }
-  .vl-filter-card { padding: 14px 20px; }
-  .vl-list { padding: 14px 20px; }
-  .vl-card { padding: 10px 14px; gap: 10px; }
-  .vl-date-badge { width: 40px; height: 40px; border-radius: 8px; }
-  .vl-date-day { font-size: 1rem; }
-}
-
-/* ── Mobile ──────────────────────────────────────────────────────── */
-@media (max-width: 767px) {
-  .vl-container { flex-direction: column; width: 100%; }
-
-  .vl-left-nav {
-    order: 1;
-    width: 100%;
-    border-radius: 14px;
-    padding: 10px 10px;
-    background: #fff;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    border: 1px solid #f1f5f9;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .vl-left-nav h2 {
-    display: block;
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #0f766e;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 0 4px 0 0;
-    padding: 0;
-    border: none;
-    white-space: nowrap;
-  }
-
-  .vl-main { display: contents; }
-
-  .vl-hero { order: 0; }
-  .vl-filter-card { order: 2; }
-  .vl-list { order: 2; }
-  .vl-empty { order: 2; }
-  .vl-pagination { order: 2; }
-
-  .vl-class-list {
-    flex-direction: row;
-    overflow-x: auto;
-    scrollbar-width: none;
-    gap: 8px;
-    padding: 0;
-    align-items: center;
-  }
-  .vl-class-list::-webkit-scrollbar { display: none; }
-
-  .vl-class-item { flex-shrink: 0; }
-
-  .vl-class-pill {
-    font-size: 0.8rem;
-    padding: 7px 16px;
-    border-radius: 20px;
-    background: #fff;
-    color: #64748b;
-    border: 1.5px solid #e2e8f0;
-    box-shadow: none;
-  }
-
-  .vl-class-item:hover .vl-class-pill {
-    border-color: #2dd4bf;
-    color: #0f766e;
-    background: #f0fdfa;
-  }
-
-  .vl-class-item.selected .vl-class-pill {
-    background: linear-gradient(135deg, #0f766e, #2dd4bf);
-    color: #fff;
-    border-color: transparent;
-    box-shadow: 0 2px 8px rgba(15, 118, 110, 0.3);
-  }
-
-  .vl-hero { border-radius: 16px; padding: 18px 14px; }
-  .vl-hero-icon { width: 44px; height: 44px; font-size: 1.4rem; border-radius: 12px; }
-  /* hero already has border-radius: 16px on mobile for all cases */
-
-  .vl-filter-card { padding: 10px 10px; }
-
-  .vl-filter-group { flex: none; width: 100%; max-width: 100%; }
-  .vl-filter-actions { width: 100%; }
-  .vl-btn-clear, .vl-btn-delete-all { flex: 1; text-align: center; }
-
-  .vl-list { padding: 8px 8px 14px; }
-
-  .vl-card { padding: 10px 12px; gap: 10px; flex-wrap: wrap; }
-
-  .vl-date-badge { width: 40px; height: 40px; border-radius: 8px; }
-  .vl-date-day { font-size: 1rem; }
-
-  .vl-card { flex-wrap: nowrap; }
-
-  .vl-card-right {
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
-  }
-
-  .vl-card-name { font-size: 0.88rem; }
-
-  /* Icon-only action buttons on mobile (match android) */
-  .vl-btn-approve,
-  .vl-btn-reject,
-  .vl-btn-edit,
-  .vl-btn-del {
-    width: 30px; height: 30px;
-    padding: 0;
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.85rem;
-    overflow: hidden;
-    text-indent: -9999px;
-  }
-
-  .vl-btn-approve { background: #dcfce7; color: #15803d; }
-  .vl-btn-reject  { background: #fee2e2; color: #dc2626; }
-  .vl-btn-edit    { background: #e0f2fe; color: #0369a1; }
-  .vl-btn-del     { background: #f0fdfa; color: #2dd4bf; font-size: 0.75rem; }
-
-  .vl-btn-approve::after { content: '✓'; text-indent: 0; display: flex; align-items: center; justify-content: center; }
-  .vl-btn-reject::after  { content: '✕'; text-indent: 0; display: flex; align-items: center; justify-content: center; }
-  .vl-btn-edit::after    { content: '✎'; text-indent: 0; display: flex; align-items: center; justify-content: center; }
-  .vl-btn-del::after     { content: '🗑'; text-indent: 0; display: flex; align-items: center; justify-content: center; }
-
-  .vl-pagination { padding: 10px 10px; gap: 4px; }
-  .vl-page-btn  { padding: 6px 12px; font-size: 0.78rem; }
-  .vl-page-num  { width: 32px; height: 32px; font-size: 0.78rem; }
-
-  .vl-empty { padding: 48px 12px; border-radius: 0 0 16px 16px; }
-}
-
-/* ── NEW HTML STRUCTURE — appended to match rewritten template ──── */
-
-/* Root wrapper renamed from vl-container to vl-page */
-.vl-page {
-  display: flex;
-  flex-direction: column;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  animation: vl-fade-up 0.45s ease-out both;
-}
-
-/* Hero title + sub (previously h1/p inside .vl-hero-text) */
-.vl-hero-title {
-  margin: 0;
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.3px;
-}
-.vl-hero-sub {
-  margin: 2px 0 0;
-  font-size: 0.78rem;
-  color: rgba(255,255,255,0.8);
-}
-
-/* Hero stat (total count on the right) */
-.vl-hero-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.25);
-  border-radius: 12px;
-  padding: 8px 16px;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 1;
-}
-.vl-hero-num {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #fff;
-  line-height: 1;
-}
-.vl-hero-lbl {
-  font-size: 0.62rem;
-  font-weight: 600;
-  color: rgba(255,255,255,0.75);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Class + section chips */
-.vl-chips-wrap {
-  background: #fff;
-  padding: 10px 20px;
-  border-bottom: 1px solid #eef0f5;
-  display: flex;
-  align-items: center;
-}
-.vl-chips {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.vl-chip {
-  padding: 5px 14px;
-  border-radius: 16px;
-  border: 1.5px solid #d1d5db;
-  background: #f9fafb;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #374151;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.15s ease;
-}
-.vl-chip:hover { border-color: #0f766e; color: #0f766e; background: #f0fdfa; }
-.vl-chip.vl-chip-active {
-  background: linear-gradient(135deg, #134e4a, #0f766e);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 2px 8px rgba(15,118,110,0.25);
-}
-.vl-chip.vl-chip-active:hover { color: #fff; }
-
-/* Section wrapper */
-.vl-section {
-  background: #f8fafc;
-  padding: 10px 20px 16px;
-}
-.vl-section:last-of-type { border-radius: 0 0 16px 16px; }
-
-/* Skeleton shimmer */
+/* ── Skeleton ─────────────────────────────────────────────────────── */
 .sk-shimmer {
-  display: inline-block;
-  border-radius: 4px;
+  display: block;
+  border-radius: 6px;
   background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
   background-size: 200% 100%;
   animation: sk-shimmer 1.4s infinite;
@@ -730,134 +405,57 @@
   100% { background-position: -200% 0; }
 }
 
-/* Date/ID filter fields using outline appearance */
-.vl-date-field,
-.vl-id-field {
-  width: 100%;
-}
-
-@media (max-width: 767px) {
-  .vl-page { width: 100%; }
-  .vl-chips-wrap { padding: 10px 12px; }
-  .vl-section { padding: 8px 12px 14px; }
-  .vl-hero-stat { padding: 6px 12px; }
-  .vl-hero-num { font-size: 1.1rem; }
-}
-
-/* Teacher-request visual parity */
-.vl-page {
+/* ── Pagination ───────────────────────────────────────────────────── */
+.vl-pagination {
   display: flex;
-  flex-direction: column;
-  padding-bottom: 0;
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-}
-
-.vl-hero {
-  border-radius: 16px;
-  margin: 0;
-}
-
-.vl-status-wrap {
-  background: #fff;
-  padding: 8px 20px;
-  border-bottom: 1px solid #eef0f5;
-}
-
-.vl-status-filters {
-  display: flex;
-  gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
-.vl-status-filter {
-  padding: 5px 14px;
-  border-radius: 16px;
-  border: 1.5px solid #d1d5db;
-  background: #f9fafb;
-  color: #374151;
-  font: 600 0.82rem inherit;
+.vl-page-btn,
+.vl-page-num {
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
 }
+.vl-page-btn { padding: 7px 14px; border-radius: 10px; }
+.vl-page-num { width: 34px; height: 34px; border-radius: 10px; }
+.vl-page-btn:hover:not(:disabled),
+.vl-page-num:hover { border-color: #2dd4bf; background: #f0fdfa; color: #0f766e; }
+.vl-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.vl-page-active,
+.vl-page-active:hover { border-color: transparent; background: linear-gradient(135deg, #0f766e, #2dd4bf); color: #fff; }
+.vl-ellipsis { padding: 0 4px; color: #94a3b8; user-select: none; }
 
-.vl-status-filter:hover {
-  border-color: #0f766e;
-  color: #0f766e;
-  background: #f0fdfa;
+/* ── Small phones ─────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .vl-page { gap: 12px; }
+  .vl-hero { padding: 16px; border-radius: 16px; gap: 12px; }
+  .vl-hero-icon { width: 44px; height: 44px; font-size: 1.3rem; border-radius: 12px; }
+  .vl-hero-title { font-size: 1.1rem; }
+  .vl-toolbar { padding: 12px; gap: 12px; border-radius: 16px; }
+  .vl-status-filter { font-size: 0.76rem; padding: 8px 2px; }
+  .vl-card { padding: 12px; gap: 10px; }
+  .vl-date-badge { width: 44px; height: 48px; }
+  .vl-date-day { font-size: 1.1rem; }
 }
 
-.vl-status-filter-active,
-.vl-status-filter-active:hover {
-  color: #fff;
-  border-color: transparent;
-  background: linear-gradient(135deg, #134e4a, #0f766e);
-  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.25);
+@media (max-width: 360px) {
+  .vl-status-filters { gap: 2px; padding: 3px; }
+  .vl-status-filter { font-size: 0.7rem; padding: 8px 0; letter-spacing: -0.1px; }
 }
 
-.vl-chips-wrap {
-  margin: 0;
-  padding: 7px 20px;
-  background: #fff;
-  border-bottom: 1px solid #eef0f5;
+@media (max-width: 340px) {
+  .vl-filter-row { grid-template-columns: 1fr; }
 }
 
-.vl-chips {
-  padding: 0;
-}
-
-.vl-class-filter-label {
-  margin-right: 2px;
-  color: #64748b;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.55px;
-  text-transform: uppercase;
-}
-
-.vl-filter-card {
-  margin: 0;
-  padding: 16px 24px;
-  border-radius: 0;
-  border-bottom: 1px solid #f1f5f9;
-  box-shadow: none;
-}
-
-.vl-filter-actions {
-  margin-top: 12px;
-}
-
-.vl-filter-group {
-  max-width: 260px;
-  min-width: 180px;
-}
-
-.vl-filter-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 9px 12px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  background: #f8fafc;
-  color: #374151;
-  font: 0.84rem inherit;
-  transition: border-color 0.15s ease;
-}
-
-.vl-filter-input:focus {
-  outline: none;
-  border-color: #0f766e;
-  background: #fff;
-}
-
-.vl-section,
-.vl-empty {
-  margin: 16px 0 0;
-  border-radius: 16px;
-}
-
-@media (max-width: 600px) {
-  .vl-filter-card { padding: 14px 16px; }
-  .vl-filter-group { min-width: 100%; max-width: none; }
-  .vl-hero { border-radius: 14px; padding: 18px 16px; }
-}
+/* Leave Phase 1: cancelled status and decision details */
+.vl-status-cancelled { background: #f1f5f9; color: #64748b; }
+.vl-card-meta { display: block; margin-top: 2px; font-size: 0.72rem; color: #64748b; }
