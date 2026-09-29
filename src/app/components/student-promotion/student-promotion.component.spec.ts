@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import { provideRouter } from '@angular/router';
 
 import { StudentPromotionComponent } from './student-promotion.component';
 import {
@@ -66,6 +67,7 @@ describe('StudentPromotionComponent', () => {
       errors: [],
       warnings: [],
       appliedDecisionState: 'NOT_APPLIED',
+      result: null,
       ...overrides,
     };
   }
@@ -84,7 +86,7 @@ describe('StudentPromotionComponent', () => {
 
   beforeEach(async () => {
     studentServiceSpy = jasmine.createSpyObj('StudentService', ['getPromotionPreview', 'executePromotion']);
-    academicSessionServiceSpy = jasmine.createSpyObj('AcademicSessionService', ['getAllSessions']);
+    academicSessionServiceSpy = jasmine.createSpyObj('AcademicSessionService', ['getAllSessions', 'getReadiness']);
     schoolServiceSpy = jasmine.createSpyObj('SchoolService', ['getManagedClasses']);
     sectionServiceSpy = jasmine.createSpyObj('SectionService', ['getSectionsForClass']);
     toastSpy = jasmine.createSpyObj('ToastService', ['success', 'error', 'warning', 'info', 'confirm']);
@@ -96,6 +98,7 @@ describe('StudentPromotionComponent', () => {
     await TestBed.configureTestingModule({
       imports: [StudentPromotionComponent],
       providers: [
+        provideRouter([]),
         { provide: StudentService, useValue: studentServiceSpy },
         { provide: AcademicSessionService, useValue: academicSessionServiceSpy },
         { provide: SchoolService, useValue: schoolServiceSpy },
@@ -311,7 +314,7 @@ describe('StudentPromotionComponent', () => {
       promoteTargetClassId: 11, promoteTargetSectionRequired: true,
     });
     studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([c])));
-    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 1, summary: {}, outcomes: [] }));
+    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 1, summary: {}, outcomes: [], run: null }));
     component.loadPreview();
     component.setDecision(c, 'PROMOTE');
     component.setTargetSection('S1', 21);
@@ -321,6 +324,7 @@ describe('StudentPromotionComponent', () => {
     expect(studentServiceSpy.executePromotion).toHaveBeenCalledWith({
       sourceSessionId: SOURCE.id,
       targetSessionId: TARGET.id,
+      classId: null,
       decisions: [{
         studentId: 'S1', action: 'PROMOTE',
         expectedSourceEnrollmentId: 777, expectedSourceClassId: 10,
@@ -336,7 +340,7 @@ describe('StudentPromotionComponent', () => {
       sourceEnrollmentId: 777, sourceClassId: 10,
     });
     studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([c])));
-    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 1, summary: {}, outcomes: [] }));
+    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 1, summary: {}, outcomes: [], run: null }));
     component.loadPreview();
     component.setDecision(c, 'PASS_OUT');
 
@@ -355,7 +359,7 @@ describe('StudentPromotionComponent', () => {
     });
     const ready = candidate({ studentId: 'S3', promoteTargetSectionRequired: false });
     studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([blocked, missingSection, ready])));
-    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 1, summary: {}, outcomes: [] }));
+    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 1, summary: {}, outcomes: [], run: null }));
     component.loadPreview();
     // missingSection was preselected to PROMOTE by recommendation but never given a section.
     component.setDecision(ready, 'PROMOTE');
@@ -409,10 +413,10 @@ describe('StudentPromotionComponent', () => {
 
     await component.confirmAndExecute();
     const dialogData = toastSpy.confirm.calls.mostRecent().args[0];
-    expect(dialogData.html).toContain('1 to Promote');
-    expect(dialogData.html).toContain('1 to Detain');
-    expect(dialogData.html).toContain('0 to Pass Out');
-    expect(dialogData.html).toContain('1 student(s) with no decision selected');
+    expect(dialogData.html).toContain('1 Promote');
+    expect(dialogData.html).toContain('1 Repeat');
+    expect(dialogData.html).toContain('0 Pass Out');
+    expect(dialogData.html).not.toContain('have no decision');   // the skipped row is already recorded
     expect(studentServiceSpy.executePromotion).not.toHaveBeenCalled(); // cancelled
   });
 
@@ -428,6 +432,7 @@ describe('StudentPromotionComponent', () => {
         { studentId: 'S1', code: 'PROMOTED', message: 'Year-end decision applied', sourceEnrollmentId: 500, targetEnrollmentId: 900, targetEnrollmentStatus: 'PLANNED', lifecycleFinalizationPending: false },
         { studentId: 'S9', code: 'CONFLICT', message: 'Target-session enrollment already exists', sourceEnrollmentId: 501, targetEnrollmentId: null, targetEnrollmentStatus: null, lifecycleFinalizationPending: false },
       ],
+      run: null,
     };
     studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([c])));
     studentServiceSpy.executePromotion.and.returnValue(of(result));
@@ -461,7 +466,7 @@ describe('StudentPromotionComponent', () => {
     fixture.detectChanges();
     const c = candidate({ studentId: 'S1', promoteTargetSectionRequired: false });
     studentServiceSpy.getPromotionPreview.and.returnValues(of(preview([c])), of(preview([c], { candidates: [] })));
-    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 1, summary: { PROMOTED: 1 }, outcomes: [] }));
+    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 1, summary: { PROMOTED: 1 }, outcomes: [], run: null }));
     component.loadPreview();
     component.setDecision(c, 'PROMOTE');
 
@@ -473,7 +478,7 @@ describe('StudentPromotionComponent', () => {
   it('keeps the just-shown per-student results visible after the automatic post-execute preview reload', () => {
     fixture.detectChanges();
     const c = candidate({ studentId: 'S1', promoteTargetSectionRequired: false });
-    const result: PromotionResultDTO = { submitted: 1, summary: { PROMOTED: 1 }, outcomes: [] };
+    const result: PromotionResultDTO = { submitted: 1, summary: { PROMOTED: 1 }, outcomes: [], run: null };
     studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([c])));
     studentServiceSpy.executePromotion.and.returnValue(of(result));
     component.loadPreview();
@@ -504,7 +509,7 @@ describe('StudentPromotionComponent', () => {
     fixture.detectChanges();
     const c = candidate({ studentId: 'S1', promoteTargetSectionRequired: false });
     studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([c])));
-    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 1, summary: {}, outcomes: [] }));
+    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 1, summary: {}, outcomes: [], run: null }));
     component.loadPreview();
     component.setDecision(c, 'PROMOTE');
     expect(component.canExecute).toBeTrue();
@@ -512,5 +517,210 @@ describe('StudentPromotionComponent', () => {
     component.executing = true;
 
     expect(component.canExecute).toBeFalse();
+  });
+
+  // ─── Phase 1: result context, extra decisions, bulk defaults, warnings ──────
+
+  const resultCtx = (result: 'PASS' | 'FAIL' | 'INCOMPLETE', pct = 70): PromotionCandidate['result'] => ({
+    source: 'REPORT_CARD', setupName: 'Annual', percentage: pct, grade: 'B1', result,
+    reportCardStatus: 'PUBLISHED', reportCardReference: 'RC-ABCDEFGHJK',
+  });
+
+  it('shows read-only result context and never pre-decides a Fail or Incomplete student', () => {
+    fixture.detectChanges();
+    const pass = candidate({ studentId: 'S1', result: resultCtx('PASS', 81.5) });
+    const fail = candidate({ studentId: 'S2', result: resultCtx('FAIL', 20) });
+    const incomplete = candidate({ studentId: 'S3', result: resultCtx('INCOMPLETE') });
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([pass, fail, incomplete])));
+    component.loadPreview();
+    fixture.detectChanges();
+    expect(component.getDecision('S1')).toBe('PROMOTE');
+    expect(component.getDecision('S2')).toBe('NONE');
+    expect(component.getDecision('S3')).toBe('NONE');
+    const text = (fixture.nativeElement as HTMLElement).textContent!;
+    expect(text).toContain('81.50%');
+    expect(text).toContain('Fail');
+    expect(text).toContain('Report card published');
+  });
+
+  it('offers Transfer and Keep Pending (never Withdraw) on every open row and sends transfer details', () => {
+    fixture.detectChanges();
+    const c = candidate({ studentId: 'S1', sourceEnrollmentId: 700 });
+    const p = candidate({ studentId: 'S2', sourceEnrollmentId: 701 });
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([c, p])));
+    studentServiceSpy.executePromotion.and.returnValue(of({ submitted: 2, summary: {}, outcomes: [], run: null }));
+    component.loadPreview();
+    expect(component.actionsFor(c)).toEqual(['PROMOTE', 'DETAIN', 'TRANSFER', 'PENDING']);
+    component.setDecision(c, 'TRANSFER');
+    component.setExitReason('S1', ' Moved city ');
+    component.setDecision(p, 'PENDING');
+    expect(component.rowIsReady(c)).toBeTrue();
+    expect(component.rowIsReady(p)).toBeTrue();
+
+    (component as any).doExecute();
+
+    const sent = studentServiceSpy.executePromotion.calls.mostRecent().args[0];
+    expect(sent.decisions).toEqual([
+      { studentId: 'S1', action: 'TRANSFER', expectedSourceEnrollmentId: 700, expectedSourceClassId: 10,
+        targetClassId: null, targetSectionId: null, reason: 'Moved city' },
+      { studentId: 'S2', action: 'PENDING', expectedSourceEnrollmentId: 701, expectedSourceClassId: 10,
+        targetClassId: null, targetSectionId: null },
+    ]);
+  });
+
+  it('counts decisions per class and keeps "no selection" separate from pending', () => {
+    fixture.detectChanges();
+    const a = candidate({ studentId: 'S1' });
+    const b = candidate({ studentId: 'S2' });
+    const d = candidate({ studentId: 'S3' });
+    const done = candidate({ studentId: 'S4', appliedDecisionState: 'ALREADY_APPLIED:PROMOTE' });
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([a, b, d, done])));
+    component.loadPreview();
+    component.setDecision(a, 'DETAIN');
+    component.setDecision(b, 'PENDING');
+    component.setDecision(d, 'NONE');
+    const s = component.summaryFor(component.preview!.candidates);
+    expect(s.total).toBe(4);
+    expect(s.detain).toBe(1);
+    expect(s.pending).toBe(1);
+    expect(s.undecided).toBe(1);
+    expect(s.alreadyRecorded).toBe(1);
+    expect(s.decided).toBe(2);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('2 / 4 decisions completed');
+  });
+
+  it('bulk defaults promote undecided students, set sections, match section letters — and never submit', () => {
+    fixture.detectChanges();
+    const a = candidate({ studentId: 'S1', sourceSectionName: 'B' });
+    const b = candidate({ studentId: 'S2', sourceSectionName: 'C', result: resultCtx('FAIL') });
+    const detained = candidate({ studentId: 'S3' });
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([a, b, detained])));
+    component.loadPreview();
+    component.setDecision(detained, 'DETAIN');
+    const group = component.groups[0];
+
+    component.promoteAllEligible(group);
+    expect(component.getDecision('S2')).toBe('PROMOTE');        // was undecided (Fail result)
+    expect(component.getDecision('S3')).toBe('DETAIN');         // manual choice kept
+
+    component.keepSameSectionLetter(group);                     // no section C in the target class
+    expect(component.getTargetSection('S1')).toBe(21);
+    expect(component.getTargetSection('S2')).toBeNull();
+
+    component.setBulkSection(group, 21);
+    component.promoteAllIntoSection(group);
+    expect(component.getTargetSection('S2')).toBe(21);
+    component.setDecision(a, 'NONE');
+    component.keepRestPending(group);
+    expect(component.getDecision('S1')).toBe('PENDING');
+    expect(studentServiceSpy.executePromotion).not.toHaveBeenCalled();
+  });
+
+  it('warns before confirming about pending, undecided, Fail/Incomplete promotions and missing sections', async () => {
+    fixture.detectChanges();
+    const fail = candidate({ studentId: 'S1', studentName: 'Asha', promoteTargetSectionRequired: false, result: resultCtx('FAIL') });
+    const incomplete = candidate({ studentId: 'S2', studentName: 'Bala', promoteTargetSectionRequired: false, result: resultCtx('INCOMPLETE') });
+    const noSection = candidate({ studentId: 'S3', studentName: 'Chitra' });
+    const pending = candidate({ studentId: 'S4' });
+    const undecided = candidate({ studentId: 'S5' });
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([fail, incomplete, noSection, pending, undecided])));
+    component.loadPreview();
+    component.setDecision(fail, 'PROMOTE');
+    component.setDecision(incomplete, 'PROMOTE');
+    component.setDecision(noSection, 'PROMOTE');
+    component.setDecision(pending, 'PENDING');
+    component.setDecision(undecided, 'NONE');
+    const w = component.preSubmitWarnings.join('\n');
+    expect(w).toContain('1 student(s) are kept pending');
+    expect(w).toContain('1 student(s) have no decision');
+    expect(w).toContain('Fail result are marked Promote: Asha');
+    expect(w).toContain('Incomplete result are marked Promote: Bala');
+    expect(w).toContain('need a target section and will not be submitted: Chitra');
+
+    toastSpy.confirm.and.resolveTo(false);
+    await component.confirmAndExecute();
+    expect(toastSpy.confirm.calls.mostRecent().args[0].html).toContain('Please check before confirming');
+    expect(studentServiceSpy.executePromotion).not.toHaveBeenCalled();
+  });
+
+  it('shows the run summary, outcome groups and links after executing', () => {
+    fixture.detectChanges();
+    const c = candidate({ studentId: 'S1', promoteTargetSectionRequired: false });
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([c])));
+    component.loadPreview();
+    component.result = {
+      submitted: 3, summary: { PROMOTED: 1, PENDING: 1, CONFLICT: 1 },
+      outcomes: [
+        { studentId: 'S1', code: 'PROMOTED', message: 'ok', sourceEnrollmentId: 1, targetEnrollmentId: 2, targetEnrollmentStatus: 'PLANNED', lifecycleFinalizationPending: false },
+        { studentId: 'S2', code: 'PENDING', message: 'Kept pending', sourceEnrollmentId: 3, targetEnrollmentId: null, targetEnrollmentStatus: null, lifecycleFinalizationPending: false },
+        { studentId: 'S3', code: 'CONFLICT', message: 'Different decision', sourceEnrollmentId: 4, targetEnrollmentId: null, targetEnrollmentStatus: null, lifecycleFinalizationPending: false },
+      ],
+      run: { id: 42, status: 'COMPLETED_WITH_ERRORS', sourceSessionId: 1, targetSessionId: 2, classId: null, startedBy: 'admin',
+        startedAt: '2026-03-15T10:00:00', finishedAt: '2026-03-15T10:00:05', totalStudents: 3, promoted: 1, detained: 0,
+        passOut: 0, transferred: 0, pending: 1, alreadyApplied: 0, failed: 1 },
+    };
+    expect(component.outcomeGroups()).toEqual([{ label: 'Applied', count: 1 }, { label: 'Conflict', count: 1 }, { label: 'Pending', count: 1 }]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Rollover run #42');
+    expect(el.textContent).toContain('Completed with errors');
+    expect(el.querySelector('a[href="/dashboard/student-details/S1"]')).not.toBeNull();
+    expect(el.textContent).toContain('readiness');
+  });
+
+  it('loads target-session readiness as warnings only', () => {
+    fixture.detectChanges();
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([candidate()])));
+    component.loadPreview();
+    academicSessionServiceSpy.getReadiness.and.returnValue(of({
+      sessionId: 2, sessionLabel: '2026-2027', current: false, previousSessionId: 1, previousSessionLabel: '2025-2026',
+      pendingStudents: 3, pendingSample: [{ studentId: 'S9', studentName: 'Nia', className: '9', sectionName: 'A' }],
+      targetEnrolled: 10, plannedEnrollments: 10, plannedDueNow: 0, classTeacherConfigured: 0, classTeacherIssues: false,
+      activeClasses: 4, timetableEntries: 0, classesWithTimetable: 0, studentsWithFees: 0, studentsWithoutFees: 10,
+      warnings: ['3 student(s) from 2025-2026 have no year-end decision yet.'],
+    }));
+    component.loadReadiness();
+    fixture.detectChanges();
+    expect(academicSessionServiceSpy.getReadiness).toHaveBeenCalledWith(TARGET.id);
+    const text = (fixture.nativeElement as HTMLElement).textContent!;
+    expect(text).toContain('Session readiness — 2026-2027');
+    expect(text).toContain('have no year-end decision yet');
+    expect(text).toContain('Warnings only');
+  });
+
+  it('shows the fixed effective date (the source session end) for Transfer — no date picker', () => {
+    fixture.detectChanges();
+    const c = candidate({ studentId: 'S1' });
+    const done = candidate({ studentId: 'S2', appliedDecisionState: 'ALREADY_APPLIED:TRANSFER' });
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([c, done])));
+    component.loadPreview();
+    component.setDecision(c, 'TRANSFER');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(component.exitEffectiveDate).toBe(SOURCE.endDate);
+    expect(el.textContent).toContain('Effective date');
+    expect(el.querySelector('.sp-exit-detail input[type="date"]')).toBeNull();
+    expect(component.appliedLabel('ALREADY_APPLIED:TRANSFER')).toBe('Transfer recorded');
+    expect(el.textContent).toContain('Transfer recorded');
+    expect(component.preSubmitWarnings.join(' ')).toContain(SOURCE.endDate);
+  });
+
+  it('has no Withdraw anywhere in the year-end flow and explains Choose decision vs Keep Pending', () => {
+    fixture.detectChanges();
+    const c = candidate({ studentId: 'S1' });
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([c])));
+    component.loadPreview();
+    component.setDecision(c, 'NONE');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const options = Array.from(el.querySelectorAll('.sp-decide-select option')).map(o => o.textContent!.trim());
+    expect(options[0]).toBe('Choose decision…');
+    expect(options.join('|')).not.toContain('Withdraw');
+    expect(options.join('|')).not.toContain('No decision');
+    const buttons = Array.from(el.querySelectorAll('.sp-decide-desktop button')).map(b => b.textContent!.trim());
+    expect(buttons.join('|')).not.toContain('Withdraw');
+    expect(buttons.join('|')).not.toContain('No decision');
+    expect(el.textContent).toContain('reviewed, final decision postponed');
   });
 });
