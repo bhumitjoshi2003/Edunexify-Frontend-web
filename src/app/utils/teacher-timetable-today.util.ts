@@ -11,6 +11,7 @@ export interface TeacherTimetableEntryLike {
   endTime?: string | null;
   isSubstitution?: boolean;
   originalTeacherName?: string | null;
+  substitutionNote?: string | null;
   /** The real timetable entry id (a covered period's entry for substitutions). */
   timetableEntryId?: number | null;
 }
@@ -26,6 +27,7 @@ export interface TeacherTodayClassEntry {
   status: TeacherTodayClassStatus;
   isSubstitution: boolean;
   originalTeacherName: string | null;
+  substitutionNote: string | null;
   timetableEntryId: number | null;
 }
 
@@ -82,6 +84,7 @@ export function buildTodayClasses(
         status,
         isSubstitution: !!entry.isSubstitution,
         originalTeacherName: entry.originalTeacherName ?? null,
+        substitutionNote: entry.substitutionNote ?? null,
         timetableEntryId: entry.timetableEntryId
           ?? (entry.id != null && entry.id > 0 && !entry.isSubstitution ? entry.id : null),
         sortMinutes: start,
