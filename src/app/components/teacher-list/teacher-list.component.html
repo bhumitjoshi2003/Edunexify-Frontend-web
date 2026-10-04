@@ -25,6 +25,9 @@
           <div class="teacher-info">
             <span class="teacher-name">{{ teacher.name }}</span>
             <span class="teacher-id">{{ teacher.teacherId }}</span>
+            <span class="teacher-status" *ngIf="teacher.status === 'UPCOMING'">Joins {{ (teacher.rejoinDate || teacher.joiningDate) | date: 'd MMM' }}</span>
+            <span class="teacher-status is-left" *ngIf="teacher.status === 'LEFT'">Left</span>
+            <span class="teacher-status is-leaving" *ngIf="teacher.status === 'ACTIVE' && teacher.leavingDate">Leaves after {{ teacher.leavingDate | date: 'd MMM' }}</span>
           </div>
           <button class="view-details-button"
                   (click)="viewTeacherDetails(teacher.teacherId)">

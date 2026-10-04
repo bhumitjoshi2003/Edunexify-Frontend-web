@@ -241,3 +241,8 @@
 
   .view-details-button { display: none; }
 }
+
+/* Teacher Lifecycle Phase 1: status hint */
+.teacher-status { display: inline-block; margin-top: 2px; padding: 1px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; background: #dbeafe; color: #1d4ed8; width: fit-content; }
+.teacher-status.is-left { background: #fee2e2; color: #b91c1c; }
+.teacher-status.is-leaving { background: #fff7ed; color: #9a3412; }
