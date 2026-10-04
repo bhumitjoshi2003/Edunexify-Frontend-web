@@ -323,8 +323,8 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
         this.toast.confirm({
           icon: 'success',
-          title: 'Reset Link Sent!',
-          html: `<p>A password reset link has been sent to <strong>${email}</strong>. Check your inbox and follow the link to set your new password.</p>`,
+          title: 'Check Your Email',
+          html: `<p>If the User ID and email match an account, a password reset link has been sent to <strong>${email}</strong>. Check your inbox (and spam folder) and follow the link to set your new password.</p>`,
           confirmText: 'Got it!'
         });
       },

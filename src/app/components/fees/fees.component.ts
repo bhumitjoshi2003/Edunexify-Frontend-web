@@ -94,6 +94,8 @@ export interface MonthBreakdownDetails {
 })
 export class PaymentTrackerComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  /** Fires when a parent switches child: cancels the previous child's in-flight fee reads. */
+  private readonly childRequest$ = new Subject<void>();
 
   constructor(
     private route: ActivatedRoute,
@@ -226,7 +228,13 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     this.parentPortalService.getMyProfile().pipe(takeUntil(this.destroy$)).subscribe({
       next: profile => {
         const child = profile.children.find(item => item.studentId === this.studentId);
-        if (!child || !child.canViewFees) {
+        if (!child) {
+          // The child switcher shows this child is unavailable and offers the others.
+          this.childRequest$.next();
+          this.toast.error('Student unavailable', 'You no longer have access to this student.');
+          return;
+        }
+        if (!child.canViewFees) {
           this.toast.error('Fee access unavailable', 'Please contact the school administrator.');
           return;
         }
@@ -244,6 +252,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
       this.toast.error('Fee access unavailable', 'Please contact the school administrator.');
       return;
     }
+    this.childRequest$.next();
     this.studentId = child.studentId;
     this.studentName = child.studentName;
     this.className = child.className;
@@ -260,7 +269,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
   fetchSessions(): void {
     this.feesService
       .getDistinctYearsByStudentId(this.studentId)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntil(this.destroy$), takeUntil(this.childRequest$))
       .subscribe({
         next: (sessions) => {
           this.years = sessions;
@@ -307,7 +316,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
         .getTotalUnappliedLeaveCount(this.studentId, this.session)
         .pipe(catchError(() => of(0))),
     ])
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntil(this.destroy$), takeUntil(this.childRequest$))
       .subscribe({
         next: ([fees, totalUnappliedLeaves]) => {
           this.className = fees.length > 0 ? fees[0].className : '';
@@ -413,7 +422,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     this.onlinePaymentPricingUnavailable = false;
     this.feesService
       .getCheckoutQuote(this.studentId, this.session, selectedMonths)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntil(this.destroy$), takeUntil(this.childRequest$))
       .subscribe({
         next: (quote) => this.applyCheckoutQuote(quote, selectedMonths),
         error: (error) => {
@@ -610,7 +619,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
             }),
           ),
       })
-        .pipe(takeUntil(this.destroy$))
+        .pipe(takeUntil(this.destroy$), takeUntil(this.childRequest$))
         .subscribe({
           next: ({ student, breakdown }) => {
             this.studentName = student.name;
