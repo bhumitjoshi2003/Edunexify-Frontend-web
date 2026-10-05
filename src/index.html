@@ -7,6 +7,28 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/png" href="/EdunexifyLogo.png?v=2">
+  <script>
+    // A browser restoring a long-idle (discarded) tab can reuse a cached index.html from an
+    // older deploy, whose main/chunk files no longer exist — the app would then never start and
+    // the page stays blank. When one of our own build files fails to load, load the current
+    // index.html once. Shares its once-a-minute guard with StaleBuildRecoveryService.
+    (function () {
+      var KEY = 'edunexify.stale-build-reload';
+      window.addEventListener('error', function (event) {
+        var el = event.target;
+        if (!el || (el.tagName !== 'SCRIPT' && el.tagName !== 'LINK')) return;
+        var url = el.src || el.href || '';
+        if (url.indexOf(location.origin + '/') !== 0) return;
+        if (!/\/(main|polyfills|chunk|styles)-[A-Za-z0-9]+\.(js|css)(\?|$)/.test(url)) return;
+        if (navigator.onLine === false) return;
+        try {
+          if (Date.now() - (Number(sessionStorage.getItem(KEY)) || 0) < 60000) return;
+          sessionStorage.setItem(KEY, String(Date.now()));
+        } catch (e) { return; }
+        location.reload();
+      }, true);
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">

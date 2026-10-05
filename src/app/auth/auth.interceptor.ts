@@ -20,7 +20,8 @@ import { ObservabilityService } from '../core/observability.service';
 import { newRequestId, REQUEST_ID_HEADER, validRequestId } from '../core/request-id';
 
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
-import { catchError, filter, finalize, switchMap, take, tap } from 'rxjs/operators';
+import { catchError, filter, finalize, switchMap, take, tap, timeout } from 'rxjs/operators';
+import { STARTUP_HTTP_TIMEOUT_MS } from '../core/startup.constants';
 
 @Injectable({ providedIn: 'root' })
 export class AuthInterceptor implements HttpInterceptor {
@@ -142,17 +143,27 @@ export class AuthInterceptor implements HttpInterceptor {
       // First failing request kicks off the refresh
       this.isRefreshing = true;
       this.refreshDone$.next(false);
+      let settled = false;
 
       return this.authService.refreshToken().pipe(
+        // A refresh started just before a mobile browser froze the tab can stay pending after
+        // it resumes. Bounded, so it fails as TRANSIENT (no logout) instead of leaving every
+        // later request queued behind it forever.
+        timeout(STARTUP_HTTP_TIMEOUT_MS),
         tap((userInfo) => {
           this.authStateService.setUser(userInfo);
         }),
         switchMap(() => {
+          settled = true;
           this.isRefreshing = false;
           this.refreshDone$.next(true);
           return next.handle(request);
         }),
         catchError((refreshError) => {
+          // Already settled: the refresh succeeded and this is the RETRIED request's own error
+          // (e.g. 403 feature-not-available) — that request's failure, never a logout.
+          if (settled) return throwError(() => refreshError);
+          settled = true;
           // Either way there is nothing left to retry queued requests with — release them
           // with an error (never let them hang) via error(), which bypasses
           // filter(done => done === true) and propagates immediately to each waiter.
@@ -187,8 +198,16 @@ export class AuthInterceptor implements HttpInterceptor {
         // switchMap nor catchError callback above runs at all, since RxJS teardown doesn't
         // trigger error handlers. Without this, isRefreshing would stay stuck true and every
         // later request (including a user-initiated Retry) would queue behind a refreshDone$
-        // that can never emit again.
-        finalize(() => { this.isRefreshing = false; })
+        // that can never emit again — and the requests already queued behind this refresh (and
+        // any loading state waiting on them) would wait forever, so they are released too.
+        finalize(() => {
+          this.isRefreshing = false;
+          if (!settled) {
+            const waiting = this.refreshDone$;
+            this.refreshDone$ = new BehaviorSubject<boolean>(false);
+            waiting.error(new Error('Session refresh was cancelled before it completed.'));
+          }
+        })
       );
     } else {
       // Other requests that fail while refresh is in progress wait here.

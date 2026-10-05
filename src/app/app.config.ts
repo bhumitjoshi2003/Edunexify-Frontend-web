@@ -1,5 +1,5 @@
 import { ApplicationConfig, ErrorHandler, provideZoneChangeDetection, provideAppInitializer, inject } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withNavigationErrorHandler } from '@angular/router';
 import { routes } from './app.routes';
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -7,11 +7,15 @@ import { AuthInterceptor } from './auth/auth.interceptor';
 import { GlobalErrorHandler } from './core/global-error-handler';
 import { StartupService } from './core/startup.service';
 import { STARTUP_BOOTSTRAP_GRACE_MS } from './core/startup.constants';
+import { recoverStaleChunkNavigation } from './core/stale-build-recovery';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
+    // A tab left open across a deploy still runs the old build; its next lazy route then fails
+    // to load (the old chunk is gone). Load the current build straight into that route instead
+    // of leaving the navigation silently failed on a half-empty page.
+    provideRouter(routes, withNavigationErrorHandler(recoverStaleChunkNavigation)),
     provideAnimations(),
     provideHttpClient(withInterceptorsFromDi()),
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },

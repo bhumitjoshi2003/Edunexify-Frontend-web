@@ -51,6 +51,8 @@ export interface UserInfo {
 export class AuthStateService {
   private readonly parentChildStorageKey = 'edunexify.parent.selected-child';
   private user: UserInfo | null = null;
+  /** How many times the server has confirmed a session (/auth/me, login or a refresh). */
+  private verifications = 0;
   private readonly status$$ = new BehaviorSubject<AuthStatus>('CHECKING');
   /** Reactive status stream — for anything that needs to re-render when a background
    * (re)check resolves, e.g. the root app shell's startup-recovery gate. Prefer the
@@ -85,6 +87,7 @@ export class AuthStateService {
           .pipe(timeout(STARTUP_HTTP_TIMEOUT_MS))
       );
       this.user = userInfo;
+      this.verifications++;
       this.status$$.next('AUTHENTICATED');
       if (userInfo.role !== 'PARENT') this.clearParentChildSelection();
     } catch (err) {
@@ -122,7 +125,13 @@ export class AuthStateService {
   setUser(userInfo: UserInfo): void {
     if (this.user?.userId !== userInfo.userId || userInfo.role !== 'PARENT') this.clearParentChildSelection();
     this.user = userInfo;
+    this.verifications++;
     this.status$$.next('AUTHENTICATED');
+  }
+
+  /** Lets a background re-check tell "confirmed just now" from "kept after a transient failure". */
+  verificationCount(): number {
+    return this.verifications;
   }
 
   getUser(): UserInfo | null {
