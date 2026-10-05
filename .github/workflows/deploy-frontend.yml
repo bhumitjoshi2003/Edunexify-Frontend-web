@@ -1,23 +1,32 @@
-name: Deploy Angular to VPS
+name: Web CI and Deploy
 
+# Tests (and the production build) run on every pull request and every push to main. Only a
+# push to main whose tests and build both pass is deployed — and it deploys exactly the build
+# that was checked, not a rebuild.
 on:
   push:
     branches:
       - main
+  pull_request:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # Each deploy gets its own directory; /var/www/frontend is a symlink to the live one.
   RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
-# Never let two frontend deploys run against the VPS at once.
+permissions:
+  contents: read
+
+# One run per PR (a newer commit cancels the older run) and one at a time on main (never
+# cancelled, so a deploy is never interrupted). The deploy job also holds its own lock below.
 concurrency:
-  group: frontend-deploy
-  cancel-in-progress: false
+  group: frontend-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -26,21 +35,72 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install Dependencies
         run: npm ci --legacy-peer-deps
 
+      # A failing spec fails this job, and with it the build and deploy below.
       - name: Run Tests
-        run: npx ng test --watch=false --browsers=ChromeHeadless || true
+        run: npm test -- --watch=false --browsers=ChromeHeadless
 
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      # Sentry settings only go into builds that can be deployed (pushes to main).
       - name: Build Angular (Production)
         env:
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_DSN: ${{ github.event_name == 'push' && secrets.SENTRY_DSN || '' }}
           SENTRY_ENVIRONMENT: production
           RELEASE_SHA: ${{ github.sha }}
         run: npm run build -- --configuration=production
 
-      # Fail before touching the VPS if the build output isn't a complete Angular app.
+      # Fail before anything can be deployed if the build output isn't a complete Angular app.
+      - name: Check build output
+        run: |
+          set -euo pipefail
+          test -s dist/ias/browser/index.html
+          ls dist/ias/browser/main-*.js >/dev/null
+
+      - name: Keep build for deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-browser
+          path: dist/ias/browser
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Never let two frontend deploys run against the VPS at once.
+    concurrency:
+      group: frontend-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-browser
+          path: dist/ias/browser
+
       - name: Check build output
         run: |
           set -euo pipefail

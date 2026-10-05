@@ -18,7 +18,7 @@ import { LoggerService } from '../../services/logger.service';
 import { WhatsNewService } from '../../services/whats-new.service';
 
 describe('Notification Delivery — SUPER_ADMIN-only access', () => {
-  let fixture: ComponentFixture<DashboardComponent>;
+  let fixture: ComponentFixture<DashboardComponent> | undefined;
   let authState: jasmine.SpyObj<AuthStateService>;
 
   function build(role: string): void {
@@ -56,11 +56,14 @@ describe('Notification Delivery — SUPER_ADMIN-only access', () => {
     fixture.detectChanges();
   }
 
-  afterEach(() => fixture.destroy());
+  // Not every spec builds a fixture (the route-guard check below never does), and build() can throw
+  // before createComponent — so reset per spec and only destroy what this spec actually created.
+  beforeEach(() => { fixture = undefined; });
+  afterEach(() => fixture?.destroy());
 
   it('shows the "Notification Delivery" nav link for SUPER_ADMIN', () => {
     build('SUPER_ADMIN');
-    const link = fixture.nativeElement.querySelector('a[routerLink="/dashboard/notification-deliveries"]');
+    const link = fixture!.nativeElement.querySelector('a[routerLink="/dashboard/notification-deliveries"]');
     expect(link).toBeTruthy();
     expect(link!.textContent).toContain('Notification Delivery');
   });
@@ -68,7 +71,7 @@ describe('Notification Delivery — SUPER_ADMIN-only access', () => {
   for (const role of ['ADMIN', 'SUB_ADMIN', 'TEACHER', 'STUDENT', 'PARENT']) {
     it(`never shows the Notification Delivery nav link for ${role}`, () => {
       build(role);
-      expect(fixture.nativeElement.querySelector('a[routerLink="/dashboard/notification-deliveries"]'))
+      expect(fixture!.nativeElement.querySelector('a[routerLink="/dashboard/notification-deliveries"]'))
         .withContext(`notification-deliveries link for ${role}`).toBeNull();
     });
   }

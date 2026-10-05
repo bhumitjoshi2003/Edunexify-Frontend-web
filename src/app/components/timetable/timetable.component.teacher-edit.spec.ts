@@ -68,6 +68,9 @@ describe('TEACHER edit flow (rendered template)', () => {
     fixture = TestBed.createComponent(TimetableComponent);
     c = fixture.componentInstance;
     fixture.detectChanges();
+    // ngOnInit opens on today's weekday; the fixtures sit on WEDNESDAY, so pick it explicitly
+    // (as a teacher would via the day tabs) to keep the rendered card list independent of the run date.
+    c.onDaySelect('WEDNESDAY');
     await fixture.whenStable();
     fixture.detectChanges();
   }
