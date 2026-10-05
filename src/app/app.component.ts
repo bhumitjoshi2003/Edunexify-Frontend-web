@@ -4,6 +4,7 @@ import { RouterOutlet } from '@angular/router';
 import { ToastContainerComponent } from './components/toast/toast-container.component';
 import { AuthStateService } from './auth/auth-state.service';
 import { StartupRecoveryComponent } from './components/startup-recovery/startup-recovery.component';
+import { AppResumeService } from './core/app-resume.service';
 
 @Component({
   selector: 'app-root',
@@ -23,5 +24,8 @@ export class AppComponent {
    * decide what an unauthenticated visitor sees (the public/login flow), so this gate only ever
    * needs to distinguish "we have a real verdict" from "we don't yet, or can't get one".
    */
-  constructor(public authState: AuthStateService) {}
+  constructor(public authState: AuthStateService, appResume: AppResumeService) {
+    // Tab resume / back-forward-cache restore / reconnect handling for every route.
+    appResume.start();
+  }
 }
