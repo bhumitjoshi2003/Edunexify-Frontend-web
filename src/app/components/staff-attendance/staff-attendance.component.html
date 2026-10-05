@@ -321,10 +321,13 @@
             <option value="">Select teacher</option>
             <option *ngFor="let t of availableTeachers" [value]="t.teacherId">{{ t.name }}</option>
           </select>
+          <span class="sa-optional" *ngIf="!isEditMode && !markableLoading && availableTeachers.length === 0">
+            No teachers are expected on this date — a holiday, their day off or approved leave, or everyone is already marked.
+          </span>
         </div>
         <div class="sa-dialog-field">
           <label>Date</label>
-          <input type="date" [(ngModel)]="markForm.date" [disabled]="isEditMode" [max]="todayStr" (change)="formDirty = true">
+          <input type="date" [(ngModel)]="markForm.date" [disabled]="isEditMode" [max]="todayStr" (change)="onMarkDateChange()">
         </div>
         <div class="sa-dialog-field">
           <label>Check-in Time</label>

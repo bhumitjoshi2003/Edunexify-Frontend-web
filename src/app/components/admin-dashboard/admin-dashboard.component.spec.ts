@@ -115,7 +115,7 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
     );
 
     const stats = opts.stats ?? { totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 0 };
-    const staffAttendance = opts.staffAttendance ?? { date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1 };
+    const staffAttendance = opts.staffAttendance ?? { date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1, expectedCount: 9, notCheckedInCount: 3 };
 
     teacherLeaveService = jasmine.createSpyObj('TeacherLeaveService', ['getLeaves']);
     teacherLeaveService.getLeaves.and.returnValue(of({
@@ -204,23 +204,25 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
     expect(pendingIdx).toBeLessThan(text.lastIndexOf('Staff Adoption'));
   });
 
-  it('computes Not Yet Checked In as totalTeachers minus the five accounted-for buckets', () => {
+  it('shows Not Yet Checked In from the backend\'s expected-to-attend count, not total staff minus check-ins', () => {
     configure('ADMIN', {
       stats: { totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 0 },
-      staffAttendance: { date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1 },
+      staffAttendance: { date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1, expectedCount: 7, notCheckedInCount: 2 },
     });
     fixture.detectChanges();
-    expect(component.notYetCheckedIn).toBe(4); // 10 - (4+1+0+0+1)
+    expect(component.notYetCheckedIn).toBe(2);   // not 10 − 6: two teachers are off today
     expect(fixture.nativeElement.textContent).toContain('Not Yet Checked In');
+    expect(fixture.nativeElement.textContent).toContain('Teachers not checked in');
   });
 
-  it('clamps Not Yet Checked In to zero rather than going negative', () => {
+  it('on a school holiday nobody is reported as not checked in', () => {
     configure('ADMIN', {
-      stats: { totalStudents: 0, totalTeachers: 5, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 0 },
-      staffAttendance: { date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 1, halfDayCount: 0, onLeaveCount: 1 },
+      stats: { totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 0 },
+      staffAttendance: { date: '2026-09-22', presentCount: 0, lateCount: 0, absentCount: 0, halfDayCount: 0, onLeaveCount: 0, expectedCount: 0, notCheckedInCount: 0 },
     });
     fixture.detectChanges();
     expect(component.notYetCheckedIn).toBe(0);
+    expect(fixture.nativeElement.textContent).not.toContain('Teachers not checked in');
   });
 
   it('never labels the not-yet-checked-in metric as "Absent"', () => {
@@ -343,7 +345,7 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
         { provide: DashboardAnalyticsService, useValue: { getStats: () => of({ totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 0 }) } },
         { provide: LeaveService, useValue: { getLeavesPaginated: () => of({ content: [] }), getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }) } },
         { provide: SchoolService, useValue: { getEntitlement: () => of(null), getSetupHealth: () => of({ completionPercentage: 80, completedRequired: 4, totalRequired: 5, status: 'IN_PROGRESS', items: [] }) } },
-        { provide: TeacherCheckinService, useValue: { getTodaySummary: () => of({ date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1 }) } },
+        { provide: TeacherCheckinService, useValue: { getTodaySummary: () => of({ date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1, expectedCount: 9, notCheckedInCount: 3 }) } },
         { provide: StaffAdoptionService, useValue: jasmine.createSpyObj('StaffAdoptionService', { getStaffAdoption: of({ summary: { totalTeachers: 1, startedTeachers: 1, notStartedTeachers: 0, attendanceUsedTeachers: 1, disabledTeachers: 0 }, teachers: [] }) }) },
         { provide: LoggerService, useValue: jasmine.createSpyObj('LoggerService', ['error']) },
         { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['error']) },
@@ -418,7 +420,7 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
         { provide: DashboardAnalyticsService, useValue: { getStats: () => of({ totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 0 }) } },
         { provide: LeaveService, useValue: { getLeavesPaginated: () => of({ content: [] }), getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }) } },
         { provide: SchoolService, useValue: { getEntitlement: () => of(null), getSetupHealth: () => of({ completionPercentage: 80, completedRequired: 4, totalRequired: 5, status: 'IN_PROGRESS', items: [] }) } },
-        { provide: TeacherCheckinService, useValue: { getTodaySummary: () => of({ date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1 }) } },
+        { provide: TeacherCheckinService, useValue: { getTodaySummary: () => of({ date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1, expectedCount: 9, notCheckedInCount: 3 }) } },
         { provide: StaffAdoptionService, useValue: jasmine.createSpyObj('StaffAdoptionService', { getStaffAdoption: of({ summary: { totalTeachers: 1, startedTeachers: 1, notStartedTeachers: 0, attendanceUsedTeachers: 1, disabledTeachers: 0 }, teachers: [] }) }) },
         { provide: LoggerService, useValue: jasmine.createSpyObj('LoggerService', ['error']) },
         { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['error']) },
@@ -562,7 +564,7 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
       attendanceCallCount++;
       return attendanceCallCount === 1
         ? throwError(() => new Error('attendance offline'))
-        : of({ date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1 });
+        : of({ date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1, expectedCount: 9, notCheckedInCount: 3 });
     });
     const authState = jasmine.createSpyObj('AuthStateService', ['getUser', 'hasFeature']);
     authState.getUser.and.returnValue({ userId: 'U1', role: 'ADMIN', name: 'Test', className: '' } as any);

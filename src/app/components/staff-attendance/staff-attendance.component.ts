@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Observable, Subject, takeUntil } from 'rxjs';
 import { TeacherCheckinService } from '../../services/teacher-checkin.service';
 import { TeacherService } from '../../services/teacher.service';
-import { TeacherAttendanceRecord, TeacherAttendanceSummary, TeacherAttendanceSessionSummary, SchoolTiming } from '../../interfaces/teacher-checkin';
+import { TeacherAttendanceRecord, TeacherAttendanceSummary, TeacherAttendanceSessionSummary, SchoolTiming, MarkableTeacher } from '../../interfaces/teacher-checkin';
 import { Teacher } from '../../interfaces/teacher';
 import { TenantService } from '../../services/tenant.service';
 import { LoggerService } from '../../services/logger.service';
@@ -25,6 +25,10 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
   selectedDate: string;
   records: TeacherAttendanceRecord[] = [];
   allTeachers: Teacher[] = [];
+  /** Teachers expected to attend on the dialog's date with no record yet (backend rule). */
+  markableTeachers: MarkableTeacher[] = [];
+  markableLoading = false;
+  private markableRequest = 0;
   isLoading = false;
 
   // Summary view
@@ -287,6 +291,39 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
     this.formDirty = false;
     this.markForm = { teacherId: '', date: this.selectedDate, status: 'ON_TIME', checkInTime: '', checkOutTime: '' };
     this.showMarkDialog = true;
+    this.loadMarkableTeachers();
+  }
+
+  /** The new-mark date changed: only teachers expected on that date can be selected. */
+  onMarkDateChange(): void {
+    this.formDirty = true;
+    this.loadMarkableTeachers();
+  }
+
+  private loadMarkableTeachers(): void {
+    const date = this.markForm.date;
+    const request = ++this.markableRequest;
+    this.markableTeachers = [];
+    if (!date) return;
+    this.markableLoading = true;
+    this.cdr.markForCheck();
+    this.checkinService.getMarkableTeachers(date)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (teachers) => {
+          if (request !== this.markableRequest) return;   // a newer date was picked meanwhile
+          this.markableTeachers = teachers;
+          if (!teachers.some(t => t.teacherId === this.markForm.teacherId)) this.markForm.teacherId = '';
+          this.markableLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          if (request !== this.markableRequest) return;
+          this.logger.error('Failed to load teachers to mark', err);
+          this.markableLoading = false;
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   openEditDialog(record: TeacherAttendanceRecord): void {
@@ -401,11 +438,10 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
     return new Date().toISOString().split('T')[0];
   }
 
-  /** Get unique teachers not already having a record for the selected date */
-  get availableTeachers(): Teacher[] {
-    if (this.isEditMode) return this.allTeachers;
-    const recordedIds = new Set(this.records.map(r => r.teacherId));
-    return this.allTeachers.filter(t => !recordedIds.has(t.teacherId));
+  /** Editing an existing record: any teacher (the select is fixed to that record). New mark:
+   *  only teachers expected to attend on the chosen date who aren't recorded yet. */
+  get availableTeachers(): { teacherId: string; name: string }[] {
+    return this.isEditMode ? this.allTeachers : this.markableTeachers;
   }
 
   private extractTime(isoTime: string): string {

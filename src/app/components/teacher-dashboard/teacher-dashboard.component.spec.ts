@@ -85,6 +85,22 @@ describe('TeacherDashboardComponent today classes', () => {
 
   afterEach(() => jasmine.clock().uninstall());
 
+  it('says "Not expected today" instead of "Not checked in" on a holiday, day off or approved leave', () => {
+    const summary = {
+      totalWorkingDays: 0, presentDays: 0, lateDays: 0, absentDays: 0, halfDayDays: 0, onLeaveDays: 0,
+      onTimePercentage: 0, attendancePercentage: 0, trackingStartDate: null, records: [],
+    };
+    checkinService.getMyAttendance.and.returnValue(of({ ...summary, expectedToday: false }));
+    const offToday = build();
+    offToday.ngOnInit();
+    expect(offToday.personalAttendanceStatus).toBe('Not expected today');
+
+    checkinService.getMyAttendance.and.returnValue(of({ ...summary, expectedToday: true }));
+    const workingToday = build();
+    workingToday.ngOnInit();
+    expect(workingToday.personalAttendanceStatus).toBe('Not checked in');
+  });
+
   it('reuses the teacher timetable API and builds the current/next view', () => {
     timetableService.getTeacherTimetable.and.returnValue(of([
       timetableEntry({ id: 1, startTime: '09:10', endTime: '09:50' }),

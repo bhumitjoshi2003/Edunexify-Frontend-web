@@ -52,8 +52,9 @@
               >In {{ formatAttendanceTime(todayTeacherRecord!.checkInTime) }} ·
               Out
               {{ formatAttendanceTime(todayTeacherRecord!.checkOutTime) }}</em
-            ><em *ngIf="!todayTeacherRecord?.checkInTime"
+            ><em *ngIf="!todayTeacherRecord?.checkInTime && !notExpectedToday"
               >Check in when you reach school</em
+            ><em *ngIf="notExpectedToday">No attendance needed today</em
             ></span
           ><mat-icon class="td-arrow">arrow_forward</mat-icon></a
         >
