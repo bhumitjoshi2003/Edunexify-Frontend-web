@@ -7,6 +7,13 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Each deploy gets its own directory; /var/www/frontend is a symlink to the live one.
+  RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+# Never let two frontend deploys run against the VPS at once.
+concurrency:
+  group: frontend-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -33,32 +40,159 @@ jobs:
           RELEASE_SHA: ${{ github.sha }}
         run: npm run build -- --configuration=production
 
-      - name: Clean and Prepare VPS
+      # Fail before touching the VPS if the build output isn't a complete Angular app.
+      - name: Check build output
+        run: |
+          set -euo pipefail
+          test -s dist/ias/browser/index.html
+          ls dist/ias/browser/main-*.js >/dev/null
+
+      # Upload into a NEW, not-yet-live directory. The live site is never touched here; a
+      # failed or partial upload just leaves an inactive ".partial" directory behind.
+      - name: Prepare release directory
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            sudo rm -rf /var/www/frontend/*
-            sudo mkdir -p /var/www/frontend
-            sudo chown -R $USER:$USER /var/www/frontend
+            set -euo pipefail
+            SUDO=""; [ "$(id -u)" -eq 0 ] || SUDO="sudo"
+            $SUDO mkdir -p /var/www/edunexify-releases
+            $SUDO rm -rf "/var/www/edunexify-releases/${{ env.RELEASE_ID }}.partial"
+            $SUDO mkdir -p "/var/www/edunexify-releases/${{ env.RELEASE_ID }}.partial"
+            $SUDO chown "$(id -un):$(id -gn)" "/var/www/edunexify-releases/${{ env.RELEASE_ID }}.partial"
 
-      - name: Deploy to VPS via SCP
+      - name: Upload release
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "dist/ias/browser/*" 
-          target: "/var/www/frontend"
+          source: "dist/ias/browser/*"
+          target: "/var/www/edunexify-releases/${{ env.RELEASE_ID }}.partial"
           strip_components: 3
 
-      - name: Restart Nginx
+      # Validate → switch the symlink atomically → verify through nginx → keep or roll back.
+      # nginx needs no reload: it resolves /var/www/frontend on every request.
+      - name: Activate release
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            sudo systemctl restart nginx
+            set -euo pipefail
+            RELEASES=/var/www/edunexify-releases
+            WEB=/var/www/frontend
+            SHARED_ACME=/var/www/edunexify-shared/.well-known
+            KEEP=5
+            PUBLIC_HOST=edunexify.co.in
+            ID="${{ env.RELEASE_ID }}"
+            STAGE="$RELEASES/$ID.partial"
+            NEW="$RELEASES/$ID"
+            SUDO=""; [ "$(id -u)" -eq 0 ] || SUDO="sudo"
+
+            exec 9>/tmp/edunexify-frontend-deploy.lock
+            flock -w 600 9 || { echo "Another frontend deploy is still running — giving up."; exit 1; }
+
+            # ── 1. Validate the uploaded release (live site untouched on failure). ──
+            fail_stage() { echo "Release rejected: $1 — the live site is unchanged."; $SUDO rm -rf "$STAGE"; exit 1; }
+            [ -s "$STAGE/index.html" ] || fail_stage "index.html missing"
+            MAIN_JS=$(grep -oE 'main-[A-Za-z0-9]+\.js' "$STAGE/index.html" | head -1 || true)
+            [ -n "$MAIN_JS" ] || fail_stage "index.html references no main-*.js"
+            # Every local script/stylesheet/asset index.html references must be present.
+            for ref in $(grep -oE '(src|href)="[^"]+"' "$STAGE/index.html" | sed -E 's/^(src|href)="([^"]+)"$/\2/' | sed -E 's/[?#].*$//' | sort -u); do
+              case "$ref" in http://*|https://*|//*|/|"") continue;; esac
+              [ -f "$STAGE/${ref#/}" ] || fail_stage "index.html references $ref but it was not uploaded"
+            done
+
+            # certbot's webroot challenge files live outside any release and are linked in.
+            $SUDO mkdir -p "$SHARED_ACME"
+            ln -sfn "$SHARED_ACME" "$STAGE/.well-known"
+            $SUDO rm -rf "$NEW"
+            $SUDO mv "$STAGE" "$NEW"
+
+            # ── 2. One-time move: /var/www/frontend is still a real directory. Keep its content as
+            # a release of its own (so it is the rollback target), carry certbot files over, then
+            # replace it with a symlink. The directory→symlink swap is two renames (milliseconds). ──
+            if [ -d "$WEB" ] && [ ! -L "$WEB" ]; then
+              INITIAL="$RELEASES/initial-$(date +%Y%m%d%H%M%S)"
+              if [ -d "$WEB/.well-known" ] && [ ! -L "$WEB/.well-known" ]; then
+                $SUDO cp -a "$WEB/.well-known/." "$SHARED_ACME/"
+              fi
+              $SUDO mv "$WEB" "$INITIAL"
+              $SUDO ln -sfn "$INITIAL" "$WEB"
+              if [ -d "$INITIAL/.well-known" ] && [ ! -L "$INITIAL/.well-known" ]; then
+                $SUDO rm -rf "$INITIAL/.well-known"
+                $SUDO ln -sfn "$SHARED_ACME" "$INITIAL/.well-known"
+              fi
+              echo "Moved the existing site to $INITIAL; $WEB is now a symlink."
+            fi
+
+            PREVIOUS=""
+            if [ -L "$WEB" ]; then PREVIOUS=$(readlink -f "$WEB"); fi
+
+            point_web_at() {  # atomic: rename a fresh symlink over the old one
+              $SUDO ln -sfn "$1" "$WEB.next" && $SUDO mv -T "$WEB.next" "$WEB"
+            }
+
+            # Served through nginx exactly as a browser gets it — locally first, then via public
+            # DNS in case nginx only listens on the public address.
+            serves() {  # $1 = main-*.js file the live index.html must reference
+              local url="https://$PUBLIC_HOST/" body
+              for i in 1 2 3; do
+                for extra in "--resolve $PUBLIC_HOST:443:127.0.0.1" ""; do
+                  # shellcheck disable=SC2086
+                  body=$(curl -fsS --max-time 10 -H 'Cache-Control: no-cache' $extra "$url" 2>/dev/null || true)
+                  if printf '%s' "$body" | grep -q "$1"; then
+                    # shellcheck disable=SC2086
+                    curl -fsS --max-time 10 -o /dev/null $extra "https://$PUBLIC_HOST/$1" 2>/dev/null && return 0
+                  fi
+                done
+                sleep 3
+              done
+              return 1
+            }
+
+            # ── 3. Switch. ──
+            if ! point_web_at "$NEW"; then
+              echo "Could not switch the symlink — the live site is unchanged."
+              $SUDO rm -rf "$WEB.next" "$NEW"; exit 1
+            fi
+
+            # ── 4. Verify, or put the previous release back BEFORE deleting the failed one. ──
+            if ! serves "$MAIN_JS"; then
+              echo "The new release is not being served correctly — rolling back."
+              if [ -n "$PREVIOUS" ] && [ -d "$PREVIOUS" ] && point_web_at "$PREVIOUS"; then
+                PREV_JS=$(grep -oE 'main-[A-Za-z0-9]+\.js' "$PREVIOUS/index.html" | head -1 || true)
+                if [ -n "$PREV_JS" ] && serves "$PREV_JS"; then
+                  echo "Previous release $PREVIOUS is live again."
+                else
+                  echo "WARNING: switched back to $PREVIOUS but could not confirm it through nginx."
+                fi
+                $SUDO rm -rf "$NEW"
+              else
+                echo "No previous release to restore — leaving $NEW live for inspection."
+              fi
+              exit 1
+            fi
+            echo "Frontend $ID is live (previous: ${PREVIOUS:-none})."
+
+            # ── 5. Prune: keep the newest $KEEP releases; never the live or the previous one. ──
+            ACTIVE=$(readlink -f "$WEB")
+            for d in "$RELEASES"/*.partial; do
+              [ -e "$d" ] && [ "$d" != "$STAGE" ] && $SUDO rm -rf "$d"
+            done
+            ls -1dt "$RELEASES"/*/ 2>/dev/null | {
+            i=0
+            while IFS= read -r d; do   # newest first; release names never contain spaces
+              d=${d%/}; i=$((i + 1))
+              [ "$i" -le "$KEEP" ] && continue
+              [ "$d" = "$ACTIVE" ] && continue
+              [ "$d" = "$PREVIOUS" ] && continue
+              $SUDO rm -rf "$d"
+            done
+            }
+            echo "Releases kept: $(ls -1t "$RELEASES" | head -"$KEEP" | tr '\n' ' ')"
+            echo "Rollback: re-run an earlier successful run, or on the VPS: ln -sfn <release> $WEB.next && mv -T $WEB.next $WEB"
