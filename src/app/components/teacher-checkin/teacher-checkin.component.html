@@ -18,8 +18,15 @@
 
   <!-- ── Check-in / Check-out Card ─────────────────── -->
   <div class="tc-action-card">
+    <!-- Not expected today: holiday, own day off or approved leave -->
+    <ng-container *ngIf="!hasCheckedIn && expectedToday === false">
+      <div class="tc-action-body">
+        <p class="tc-action-prompt">No attendance is needed from you today.</p>
+      </div>
+    </ng-container>
+
     <!-- Not checked in yet -->
-    <ng-container *ngIf="!hasCheckedIn">
+    <ng-container *ngIf="!hasCheckedIn && expectedToday !== false">
       <div class="tc-action-body">
         <p class="tc-action-prompt">Tap the button below to mark your attendance</p>
         <button class="tc-checkin-btn tc-btn-pulse" (click)="checkIn()" [disabled]="isCheckingIn">

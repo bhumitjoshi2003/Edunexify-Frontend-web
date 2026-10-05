@@ -28,6 +28,8 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
   userName = '';
   currentTime = '';
   todayRecord: TeacherAttendanceRecord | null = null;
+  /** False on a holiday, the teacher's own day off or approved leave (backend rule); null = unknown. */
+  expectedToday: boolean | null = null;
   monthlyData: TeacherAttendanceSummary | null = null;
   calendarDays: CalendarDay[] = [];
 
@@ -122,6 +124,7 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
     const now = new Date();
     if (this.selectedMonth === now.getMonth() + 1 && this.selectedYear === now.getFullYear()) {
       this.todayRecord = data.records.find(r => r.date === todayStr) ?? null;
+      this.expectedToday = data.expectedToday ?? null;
     }
   }
 

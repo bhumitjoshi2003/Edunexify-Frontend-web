@@ -526,8 +526,13 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
     return this.todayPresent;
   }
 
+  /** Holiday, own day off or approved leave: no attendance owed today (backend rule). */
+  get notExpectedToday(): boolean {
+    return !this.todayTeacherRecord && this.personalAttendance?.expectedToday === false;
+  }
+
   get personalAttendanceStatus(): string {
-    if (!this.todayTeacherRecord) return 'Not checked in';
+    if (!this.todayTeacherRecord) return this.notExpectedToday ? 'Not expected today' : 'Not checked in';
     return this.todayTeacherRecord.status.replaceAll('_', ' ').toLowerCase()
       .replace(/\b\w/g, character => character.toUpperCase());
   }
