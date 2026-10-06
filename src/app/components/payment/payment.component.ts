@@ -106,7 +106,8 @@ export class PaymentComponent implements OnDestroy {
           key: response.razorpayKey,
           amount: response.amount,
           currency: 'INR',
-          name: 'Edunexify School',
+          // Server-chosen from trusted school data — never a client-supplied name.
+          name: response.checkoutName || 'Edunexify',
           description: 'Edunexify Fee Payment',
           order_id: response.orderId,
           prefill: {
@@ -130,8 +131,17 @@ export class PaymentComponent implements OnDestroy {
         rzp.open();
       },
       error: (error) => {
-        this.logger.error('Error fetching student details for payment:', error);
-        this.toast.error('Error', 'Failed to load student details for payment.');
+        this.logger.error('Error starting payment:', error);
+        if (error?.status === 409) {
+          // The school has no active payment gateway (or online pricing isn't available): the
+          // server refused to create the order. Show its message — it's written for parents.
+          const body = error?.error;
+          const msg = typeof body === 'string' ? body : (body?.error || body?.message);
+          this.toast.warning('Online Payments Unavailable',
+            msg || 'Online payment is not available for this school right now. Please contact the school office.');
+        } else {
+          this.toast.error('Error', 'Could not start the payment. Please try again.');
+        }
         this.paymentProcessCompleted.emit();
       }
     });

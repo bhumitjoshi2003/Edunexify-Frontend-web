@@ -292,6 +292,58 @@ describe('PaymentTrackerComponent', () => {
     });
   });
 
+  const schoolGatewayQuote = (over: Partial<CheckoutQuote> = {}): CheckoutQuote => ({
+    studentId: 'S1', session: '2026-2027', months: [5],
+    schoolFeePaise: 580000, onlineConvenienceFeePaise: 0, totalPayablePaise: 580000,
+    currency: 'INR', additionalChargesPaise: 0, lateFeePaise: 0, unresolvedMonths: [], ...over,
+  });
+
+  const selectOneMonth = () => {
+    component.studentId = 'S1';
+    component.session = '2026-2027';
+    component.selectedYear = 2026;
+    const month: MonthViewModel = {
+      ...buildFee(5), monthNumber: 5, name: 'November', fee: 5000, busFee: 800,
+      selected: false, amountUnavailable: false,
+    };
+    component.months = [month];
+    component.toggleMonthSelection(month);
+  };
+
+  it('school gateway: the parent pays exactly the school amount and online payment stays available', () => {
+    fixture.detectChanges();
+    component.role = 'STUDENT';
+    feesServiceSpy.getCheckoutQuote.and.returnValue(of(schoolGatewayQuote({ onlinePaymentAvailable: true })));
+    selectOneMonth();
+    return fixture.whenStable().then(() => {
+      expect(component.totalAmountToPay).toBe(5800);
+      expect(component.onlineConvenienceFeeAmount).toBe(0);
+      expect(component.onlinePaymentPricingUnavailable).toBeFalse();
+    });
+  });
+
+  it('no active school gateway: shows the fees but switches off online payment', () => {
+    fixture.detectChanges();
+    component.role = 'STUDENT';
+    feesServiceSpy.getCheckoutQuote.and.returnValue(of(schoolGatewayQuote({ onlinePaymentAvailable: false })));
+    selectOneMonth();
+    return fixture.whenStable().then(() => {
+      expect(component.totalAmountToPay).toBe(5800);
+      expect(component.onlinePaymentPricingUnavailable).toBeTrue();
+    });
+  });
+
+  it('ADMIN manual collection is never blocked by the online-payment availability flag', () => {
+    fixture.detectChanges();
+    component.role = 'ADMIN';
+    feesServiceSpy.getCheckoutQuote.and.returnValue(of(schoolGatewayQuote({ onlinePaymentAvailable: false })));
+    selectOneMonth();
+    return fixture.whenStable().then(() => {
+      expect(component.onlinePaymentPricingUnavailable).toBeFalse();
+      expect(component.manualPaymentAmount).toBe(5800);
+    });
+  });
+
   it('does not request fees with an empty session for a newly registered student', () => {
     feesServiceSpy.getDistinctYearsByStudentId.and.returnValue(of([]));
     feesServiceSpy.getStudentFees.calls.reset();

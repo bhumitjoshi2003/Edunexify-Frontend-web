@@ -32,7 +32,10 @@ export interface SchoolSettings {
   maxStudents: number | null;
   expiryDate: string | null;
   active: boolean;
+  /** The school has an ACTIVE own Razorpay gateway (approved by SUPER_ADMIN). */
   razorpayConfigured: boolean;
+  /** "yyyy-MM-dd" last day of the temporary Edunexify-account fallback; null = none. */
+  platformPaymentFallbackUntil?: string | null;
   adminUserId?: string;
   // Academic calendar settings
   academicYearStartMonth: number;   // 1=Jan, 4=Apr (default), 7=Jul, etc.
@@ -345,10 +348,6 @@ export class SchoolService {
           );
         }),
       );
-  }
-
-  updateRazorpayKeys(keyId: string, keySecret: string): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl}/razorpay`, { keyId, keySecret });
   }
 
   // ── SUPER_ADMIN ──────────────────────────────────────────────────────────────

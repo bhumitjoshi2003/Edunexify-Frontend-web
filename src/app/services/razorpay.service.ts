@@ -6,6 +6,9 @@ import { environment } from '../../environments/environment';
 
 export interface RazorpayOrderResponse {
   razorpayKey: string;
+  /** Razorpay Checkout display name, chosen server-side from trusted data: the school's own name
+   * on its own gateway, Edunexify on the platform account. */
+  checkoutName?: string;
   /** Paise — the actual Razorpay order amount, freshly computed at order-creation time from
    * the CURRENTLY effective payment pricing (never the earlier checkout-quote figure). This is
    * what the Razorpay widget itself displays and charges — the true final confirmation. */
