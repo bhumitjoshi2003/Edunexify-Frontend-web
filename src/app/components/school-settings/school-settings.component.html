@@ -493,59 +493,150 @@
           <div class="ss-card-title-row">
             <div class="ss-card-icon-box ss-icon-box-purple">💳</div>
             <div>
-              <h2 class="ss-card-title">Payment Integration</h2>
-              <p class="ss-card-subtitle">Razorpay gateway configuration</p>
+              <h2 class="ss-card-title">Online fee payments</h2>
+              <p class="ss-card-subtitle">Your school's own Razorpay account — parents pay you directly</p>
             </div>
           </div>
-          <div class="ss-rzp-status-chip" [class.ss-rzp-chip-ok]="settings.razorpayConfigured"
-               [class.ss-rzp-chip-warn]="!settings.razorpayConfigured">
-            {{ settings.razorpayConfigured ? '✓ Configured' : '⚠ Not Set' }}
+          <div class="ss-rzp-status-chip" *ngIf="gatewayOverview as ov"
+               [class.ss-rzp-chip-ok]="ov.route === 'SCHOOL_GATEWAY'"
+               [class.ss-rzp-chip-warn]="ov.route !== 'SCHOOL_GATEWAY'">
+            {{ ov.route === 'SCHOOL_GATEWAY' ? '✓ Active' : ov.route === 'PLATFORM_FALLBACK' ? '⏳ Temporary' : '⚠ Not available' }}
           </div>
         </div>
 
-        <div class="ss-rzp-banner" [class.ss-rzp-banner-ok]="settings.razorpayConfigured"
-             [class.ss-rzp-banner-warn]="!settings.razorpayConfigured">
-          <div class="ss-rzp-banner-icon">{{ settings.razorpayConfigured ? '🔐' : '🔓' }}</div>
-          <div>
-            <p class="ss-rzp-banner-title">
-              {{ settings.razorpayConfigured ? 'School-specific keys active' : 'Using platform default keys' }}
-            </p>
-            <p class="ss-rzp-banner-sub">
-              {{ settings.razorpayConfigured
-                ? 'All fee payments route through your Razorpay account directly.'
-                : 'No school-specific keys set. Add your own keys for direct settlements.' }}
-            </p>
-          </div>
+        <div class="ss-policy-loading" *ngIf="gatewayLoading && !gatewayOverview">Loading payment gateway…</div>
+        <div class="ss-rzp-readonly-msg" *ngIf="!gatewayLoading && !gatewayOverview">
+          Couldn't load the payment gateway status.
+          <button class="ss-btn ss-btn-ghost" type="button" (click)="loadGatewayOverview()">Retry</button>
         </div>
 
-        <ng-container *ngIf="isAdmin">
-          <div class="ss-section-divider"><span>Update Keys</span></div>
+        <ng-container *ngIf="gatewayOverview as ov">
+          <!-- Where payments go right now -->
+          <div class="ss-rzp-banner" data-testid="gateway-route-banner"
+               [class.ss-rzp-banner-ok]="ov.route === 'SCHOOL_GATEWAY'"
+               [class.ss-rzp-banner-warn]="ov.route !== 'SCHOOL_GATEWAY'">
+            <div class="ss-rzp-banner-icon">{{ ov.route === 'SCHOOL_GATEWAY' ? '🔐' : ov.route === 'PLATFORM_FALLBACK' ? '⏳' : '🔓' }}</div>
+            <div>
+              <ng-container [ngSwitch]="ov.route">
+                <ng-container *ngSwitchCase="'SCHOOL_GATEWAY'">
+                  <p class="ss-rzp-banner-title">Online payments go to your Razorpay account</p>
+                  <p class="ss-rzp-banner-sub">Parents pay only the school fee — no online convenience fee is added.</p>
+                </ng-container>
+                <ng-container *ngSwitchCase="'PLATFORM_FALLBACK'">
+                  <p class="ss-rzp-banner-title">Temporarily using the Edunexify account until {{ ov.platformFallbackUntil | date:'d MMM yyyy' }}</p>
+                  <p class="ss-rzp-banner-sub">An online convenience fee applies. Connect your own Razorpay account before this date.</p>
+                </ng-container>
+                <ng-container *ngSwitchDefault>
+                  <p class="ss-rzp-banner-title">Online payment is not available yet</p>
+                  <p class="ss-rzp-banner-sub">Parents can see their fees but can't pay online until your Razorpay account is connected and approved.</p>
+                </ng-container>
+              </ng-container>
+            </div>
+          </div>
+
+          <!-- Gateways the school has submitted -->
+          <ng-container *ngIf="ov.gateways.length">
+            <div class="ss-section-divider"><span>Your Razorpay accounts</span></div>
+            <div class="ss-gw-list">
+              <div class="ss-gw-row" *ngFor="let g of ov.gateways" data-testid="gateway-row">
+                <div class="ss-gw-main">
+                  <code class="ss-gw-key">{{ g.maskedKeyId }}</code>
+                  <span class="ss-gw-badge" [ngClass]="'ss-gw-' + g.status.toLowerCase()">{{ g.status }}</span>
+                  <span class="ss-gw-badge" [class.ss-gw-live]="g.liveMode" [class.ss-gw-test]="!g.liveMode">
+                    {{ g.liveMode ? 'LIVE' : 'TEST' }}
+                  </span>
+                </div>
+                <div class="ss-gw-meta">
+                  <span *ngIf="g.submittedAt">Submitted {{ g.submittedAt | date:'d MMM yyyy, h:mm a' }}</span>
+                  <span *ngIf="g.activatedAt">· Activated {{ g.activatedAt | date:'d MMM yyyy' }}</span>
+                  <span *ngIf="g.retiredAt">· Retired {{ g.retiredAt | date:'d MMM yyyy' }}</span>
+                  <span *ngIf="g.rejectedAt">· Rejected {{ g.rejectedAt | date:'d MMM yyyy' }}</span>
+                </div>
+                <div class="ss-gw-meta" *ngIf="g.statusReason">Reason: {{ g.statusReason }}</div>
+                <div class="ss-gw-meta" *ngIf="g.status === 'PENDING'">
+                  Waiting for Edunexify approval. Create the Razorpay webhook below now if you haven't already.
+                </div>
+                <div class="ss-gw-meta" *ngIf="g.status === 'ACTIVE' || g.status === 'PENDING'"
+                     [class.ss-gw-warn-text]="g.status === 'ACTIVE' && isWebhookStale(g)" data-testid="gateway-webhook-status">
+                  <ng-container *ngIf="g.lastWebhookAt; else noWebhook">
+                    Last valid webhook: {{ g.lastWebhookAt | date:'d MMM yyyy, h:mm a' }}
+                  </ng-container>
+                  <ng-template #noWebhook>No valid webhook received yet.</ng-template>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Webhook setup for the pending/active gateway -->
+          <ng-container *ngIf="webhookGateway as wg">
+            <div class="ss-section-divider">
+              <span>{{ wg.status === 'PENDING' ? 'Next step: create the Razorpay webhook' : 'Razorpay webhook' }}</span>
+            </div>
+            <div class="ss-rzp-security-note" *ngIf="wg.webhookUrl" data-testid="gateway-webhook-instructions">
+              This URL was generated when you submitted your keys. In your Razorpay Dashboard → Settings → Webhooks,
+              create a webhook with this URL, the <strong>same webhook secret you submitted here</strong>, and these events:
+              <div class="ss-gw-webhook-url">
+                <code data-testid="gateway-webhook-url">{{ wg.webhookUrl }}</code>
+                <button class="ss-btn ss-btn-ghost" type="button" (click)="copyWebhookUrl(wg.webhookUrl)">Copy</button>
+              </div>
+              <ul class="ss-gw-events">
+                <li *ngFor="let ev of ov.requiredWebhookEvents"><code>{{ ev }}</code></li>
+              </ul>
+            </div>
+          </ng-container>
+
+          <!-- Submit / rotate -->
+          <div class="ss-section-divider">
+            <span>{{ activeGateway ? 'Replace Razorpay keys' : pendingGateway ? 'Resubmit Razorpay keys' : 'Connect Razorpay' }}</span>
+          </div>
+          <ol class="ss-gw-steps" data-testid="gateway-steps">
+            <li>Choose a webhook secret (any strong value — keep it, you'll enter it in Razorpay too).</li>
+            <li>Enter your Razorpay Key ID, Key Secret, that webhook secret and your password, then submit.</li>
+            <li>We check the keys with Razorpay and show your webhook URL on this page.</li>
+            <li>In Razorpay, create the webhook with that URL, the same webhook secret and the events listed.</li>
+            <li>Edunexify approves the account; the first payment confirms the webhook is working.</li>
+          </ol>
           <div class="ss-rzp-security-note">
-            🔒 Keys are encrypted at rest. The secret is write-only and never returned to the browser.
+            🔒 Keys are checked with Razorpay, encrypted at rest and reviewed by Edunexify before use.
+            Secrets are write-only and never shown again.
+            <ng-container *ngIf="activeGateway"> Your current account keeps working until the new one is approved.</ng-container>
+            <ng-container *ngIf="pendingGateway"> Submitting again replaces the request waiting for approval.</ng-container>
           </div>
-          <div class="ss-form-grid">
-            <div class="ss-form-group ss-full">
-              <label class="ss-label">Razorpay Key ID</label>
-              <input class="ss-input" type="text" [(ngModel)]="razorpayKeyId"
-                     placeholder="rzp_live_xxxxxxxxxxxxxxxxxx" autocomplete="off">
+          <div class="ss-rzp-readonly-msg" *ngIf="!ov.encryptionConfigured">
+            Payment gateway setup is temporarily unavailable. Please contact Edunexify support.
+          </div>
+          <form *ngIf="ov.encryptionConfigured" (ngSubmit)="submitGateway()" autocomplete="off">
+            <div class="ss-form-grid">
+              <div class="ss-form-group ss-full">
+                <label class="ss-label" for="gwKeyId">Razorpay Key ID</label>
+                <input id="gwKeyId" name="keyId" class="ss-input" type="text" [(ngModel)]="gatewayForm.keyId"
+                       [placeholder]="ov.requireLiveKeys ? 'rzp_live_…' : 'rzp_live_… or rzp_test_…'" autocomplete="off">
+              </div>
+              <div class="ss-form-group ss-full">
+                <label class="ss-label" for="gwKeySecret">Razorpay Key Secret</label>
+                <input id="gwKeySecret" name="keySecret" class="ss-input" type="password" [(ngModel)]="gatewayForm.keySecret"
+                       placeholder="Enter key secret" autocomplete="new-password">
+              </div>
+              <div class="ss-form-group ss-full">
+                <label class="ss-label" for="gwWebhookSecret">Webhook Secret (choose one)</label>
+                <input id="gwWebhookSecret" name="webhookSecret" class="ss-input" type="password"
+                       [(ngModel)]="gatewayForm.webhookSecret"
+                       placeholder="At least 8 characters, no spaces — you'll enter the same value in Razorpay"
+                       autocomplete="new-password">
+              </div>
+              <div class="ss-form-group ss-full">
+                <label class="ss-label" for="gwPassword">Your Edunexify password</label>
+                <input id="gwPassword" name="currentPassword" class="ss-input" type="password"
+                       [(ngModel)]="gatewayForm.currentPassword" placeholder="Confirm it's you" autocomplete="current-password">
+              </div>
             </div>
-            <div class="ss-form-group ss-full">
-              <label class="ss-label">Razorpay Key Secret</label>
-              <input class="ss-input" type="password" [(ngModel)]="razorpayKeySecret"
-                     placeholder="Enter key secret" autocomplete="new-password">
+            <div class="ss-form-actions">
+              <button class="ss-btn ss-btn-primary" type="submit" [disabled]="submittingGateway">
+                {{ submittingGateway ? 'Verifying…' : 'Verify & submit for approval' }}
+              </button>
             </div>
-          </div>
-          <div class="ss-form-actions">
-            <button class="ss-btn ss-btn-primary" (click)="saveRazorpayKeys()"
-                    [disabled]="savingRazorpay">
-              {{ savingRazorpay ? 'Saving…' : settings.razorpayConfigured ? '🔄 Update Keys' : '+ Add Keys' }}
-            </button>
-          </div>
+          </form>
         </ng-container>
-
-        <div class="ss-rzp-readonly-msg" *ngIf="!isAdmin">
-          Contact your school administrator to configure payment keys.
-        </div>
       </div>
     </ng-container>
 

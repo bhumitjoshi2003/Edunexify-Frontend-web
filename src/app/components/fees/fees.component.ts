@@ -471,6 +471,12 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     // PaymentController.createOrder), so it's given just the bare school-fee-due portion.
     const schoolFeeDueAlone = (quote.schoolFeePaise - quote.additionalChargesPaise - quote.lateFeePaise) / 100;
 
+    // The school has no ACTIVE own Razorpay gateway (and no temporary platform fallback): the
+    // fees are still shown, but online payment can't be taken — the server would refuse the order.
+    if (quote.onlinePaymentAvailable === false && this.role !== 'ADMIN') {
+      this.onlinePaymentPricingUnavailable = true;
+    }
+
     this.totalAmountToPay = totalPayable;
     if (this.role === 'ADMIN') this.manualPaymentAmount = totalPayable;
     this.onlineConvenienceFeeAmount = onlineConvenienceFee;

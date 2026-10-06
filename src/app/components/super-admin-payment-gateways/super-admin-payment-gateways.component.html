@@ -1,0 +1,118 @@
+<div class="pg-page">
+
+  <div class="pg-hero">
+    <div class="pg-hero-icon">🏦</div>
+    <div>
+      <h1 class="pg-hero-title">School Payment Gateways</h1>
+      <p class="pg-hero-sub">Approve schools' own Razorpay accounts and manage the temporary Edunexify-account fallback.</p>
+    </div>
+  </div>
+
+  <div class="pg-card pg-center" *ngIf="loading">Loading payment gateways…</div>
+
+  <div class="pg-card pg-center" *ngIf="!loading && loadError">
+    <p>Could not load payment gateways.</p>
+    <button type="button" class="pg-btn pg-btn-primary" (click)="load()">Retry</button>
+  </div>
+
+  <ng-container *ngIf="!loading && !loadError">
+
+    <!-- Pending approval -->
+    <section class="pg-card">
+      <h2 class="pg-title">Waiting for approval <span class="pg-count">{{ pending.length }}</span></h2>
+      <p class="pg-empty" *ngIf="!pending.length">No gateways are waiting for approval.</p>
+      <div class="pg-row" *ngFor="let g of pending" data-testid="pending-gateway">
+        <div class="pg-row-main">
+          <strong>{{ g.schoolName ?? ('School #' + g.schoolId) }}</strong>
+          <code>{{ g.maskedKeyId }}</code>
+          <span class="pg-badge" [class.pg-live]="g.liveMode" [class.pg-test]="!g.liveMode">{{ g.liveMode ? 'LIVE' : 'TEST' }}</span>
+        </div>
+        <div class="pg-meta">
+          Submitted by {{ g.submittedBy || '—' }} on {{ g.submittedAt | date:'d MMM yyyy, h:mm a' }}
+          · Keys verified {{ g.verifiedAt | date:'d MMM, h:mm a' }}
+          · <span [class.pg-warn]="!g.lastWebhookAt">
+              {{ g.lastWebhookAt ? ('Valid webhook received ' + (g.lastWebhookAt | date:'d MMM, h:mm a')) : 'No valid webhook received yet' }}
+            </span>
+        </div>
+        <div class="pg-actions">
+          <button type="button" class="pg-btn pg-btn-primary" [disabled]="busyGatewayId === g.id" (click)="activate(g)">
+            {{ busyGatewayId === g.id ? 'Working…' : 'Activate' }}
+          </button>
+          <button type="button" class="pg-btn pg-btn-danger" [disabled]="busyGatewayId === g.id" (click)="reject(g)">Reject</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active -->
+    <section class="pg-card">
+      <h2 class="pg-title">Active gateways <span class="pg-count">{{ active.length }}</span></h2>
+      <p class="pg-empty" *ngIf="!active.length">No school has an active gateway yet.</p>
+      <div class="pg-row" *ngFor="let g of active" data-testid="active-gateway">
+        <div class="pg-row-main">
+          <strong>{{ g.schoolName ?? ('School #' + g.schoolId) }}</strong>
+          <code>{{ g.maskedKeyId }}</code>
+          <span class="pg-badge" [class.pg-live]="g.liveMode" [class.pg-test]="!g.liveMode">{{ g.liveMode ? 'LIVE' : 'TEST' }}</span>
+        </div>
+        <div class="pg-meta">
+          Activated {{ g.activatedAt | date:'d MMM yyyy' }} by {{ g.activatedBy || '—' }}
+          · <span [class.pg-warn]="!g.lastWebhookAt">
+              {{ g.lastWebhookAt ? ('Last valid webhook ' + (g.lastWebhookAt | date:'d MMM, h:mm a')) : 'No valid webhook received yet' }}
+            </span>
+        </div>
+        <div class="pg-actions">
+          <button type="button" class="pg-btn pg-btn-ghost" [disabled]="busyGatewayId === g.id" (click)="retire(g)">Retire</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Platform fallback -->
+    <section class="pg-card">
+      <h2 class="pg-title">Edunexify-account fallback</h2>
+      <p class="pg-meta">
+        Lets a school without an active gateway take online payments through the Edunexify Razorpay account
+        (with the online convenience fee) until a date no later than
+        <strong data-testid="fallback-cutoff">{{ fallbackCutoff ? (fallbackCutoff | date:'d MMM yyyy') : '—' }}</strong>.
+        An active school gateway always takes precedence.
+      </p>
+
+      <div class="pg-current" *ngIf="schoolsWithFallback.length">
+        <div *ngFor="let s of schoolsWithFallback" class="pg-meta">
+          <strong>{{ s.name }}</strong> — until {{ s.platformPaymentFallbackUntil | date:'d MMM yyyy' }}
+          <span *ngIf="(s.platformPaymentFallbackUntil ?? '') < today" class="pg-warn">(lapsed)</span>
+          <span *ngIf="s.razorpayConfigured">(own gateway active — fallback not used)</span>
+        </div>
+      </div>
+
+      <div class="pg-form">
+        <label class="pg-label" for="fbSchool">School</label>
+        <select id="fbSchool" class="pg-input" [(ngModel)]="fallbackSchoolId" name="fbSchool">
+          <option [ngValue]="null" disabled>Choose a school</option>
+          <option *ngFor="let s of schools" [ngValue]="s.id">{{ s.name }}</option>
+        </select>
+
+        <ng-container *ngIf="selectedSchool as s">
+          <p class="pg-meta" data-testid="fallback-current">
+            Current: {{ s.platformPaymentFallbackUntil ? ('until ' + (s.platformPaymentFallbackUntil | date:'d MMM yyyy')) : 'no fallback' }}
+            · Own gateway: {{ s.razorpayConfigured ? 'active' : 'none' }}
+          </p>
+        </ng-container>
+
+        <label class="pg-label" for="fbUntil">Last day</label>
+        <input id="fbUntil" class="pg-input" type="date" name="fbUntil" [(ngModel)]="fallbackUntil"
+               [min]="today" [attr.max]="fallbackCutoff">
+
+        <label class="pg-label" for="fbReason">Reason (required)</label>
+        <input id="fbReason" class="pg-input" type="text" name="fbReason" maxlength="500" [(ngModel)]="fallbackReason"
+               placeholder="e.g. School's Razorpay KYC in progress">
+
+        <div class="pg-actions">
+          <button type="button" class="pg-btn pg-btn-primary" [disabled]="savingFallback" (click)="saveFallback(false)">
+            {{ savingFallback ? 'Saving…' : 'Grant / change fallback' }}
+          </button>
+          <button type="button" class="pg-btn pg-btn-danger" [disabled]="savingFallback || !selectedSchool?.platformPaymentFallbackUntil"
+                  (click)="saveFallback(true)">Stop fallback</button>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+</div>

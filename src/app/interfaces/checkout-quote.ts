@@ -21,4 +21,7 @@ export interface CheckoutQuote {
   additionalChargesPaise: number;
   lateFeePaise: number;
   unresolvedMonths: number[];
+  /** false = the school has no ACTIVE own payment gateway and no platform fallback, so online
+   * payment can't be taken (fees are shown but only payable offline). Absent/null for ADMIN quotes. */
+  onlinePaymentAvailable?: boolean | null;
 }
