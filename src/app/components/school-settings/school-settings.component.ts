@@ -13,13 +13,12 @@ import { AcademicSessionService } from '../../services/academic-session.service'
 import { AcademicSession } from '../../interfaces/academic-session';
 import { FeeWorkflowSettings } from '../../interfaces/fee-workflow';
 import { FeeWorkflowService } from '../../services/fee-workflow.service';
-import { PaymentGatewayService } from '../../services/payment-gateway.service';
-import { SchoolPaymentGateway, SchoolPaymentGatewayOverview } from '../../interfaces/payment-gateway';
+import { SchoolPaymentConnectionComponent } from '../school-payment-connection/school-payment-connection.component';
 
 @Component({
   selector: 'app-school-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SchoolPaymentConnectionComponent],
   templateUrl: './school-settings.component.html',
   styleUrl: './school-settings.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,7 +30,6 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
   settings: SchoolSettings | null = null;
   loading = false;
   saving = false;
-  submittingGateway = false;
   feePolicy?: FeeWorkflowSettings;
   feePolicyLoading = false;
   feePolicySaving = false;
@@ -40,13 +38,6 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
   editForm: Partial<SchoolSettings> = {};
 
   activeTab: 'general' | 'razorpay' | 'features' | 'subscription' | 'staff-attendance' = 'general';
-
-  // Payments tab — school-owned Razorpay gateway (secrets are write-only, never returned)
-  gatewayOverview: SchoolPaymentGatewayOverview | null = null;
-  gatewayLoading = false;
-  gatewayForm = { keyId: '', keySecret: '', webhookSecret: '', currentPassword: '' };
-  /** A gateway that hasn't received a valid webhook for this long is flagged on the Payments tab. */
-  static readonly WEBHOOK_STALE_DAYS = 14;
 
   // Features tab
   featuresLoading = false;
@@ -118,8 +109,7 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     private toast: ToastService,
     private route: ActivatedRoute,
     private academicSessionService: AcademicSessionService,
-    private feeWorkflowService: FeeWorkflowService,
-    private paymentGatewayService: PaymentGatewayService
+    private feeWorkflowService: FeeWorkflowService
   ) {}
 
   ngOnInit(): void {
@@ -134,7 +124,6 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     this.loadEntitlement();
     this.loadSessions();
     this.loadFeePolicy();
-    this.loadGatewayOverview();
     if (this.activeTab === 'subscription') {
       this.loadAvailablePlans();
     }
@@ -306,96 +295,6 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     }
     this.editForm.workingDays = days.join(',');
   }
-
-  loadGatewayOverview(): void {
-    this.gatewayLoading = true;
-    this.cdr.markForCheck();
-    this.paymentGatewayService.getOverview().pipe(takeUntil(this.destroy$)).subscribe({
-      next: (overview) => {
-        this.gatewayOverview = overview;
-        this.gatewayLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: (e) => {
-        this.logger.error('Failed to load payment gateway status', e);
-        this.gatewayLoading = false;
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
-  get activeGateway(): SchoolPaymentGateway | null {
-    return this.gatewayOverview?.gateways.find(g => g.status === 'ACTIVE') ?? null;
-  }
-
-  get pendingGateway(): SchoolPaymentGateway | null {
-    return this.gatewayOverview?.gateways.find(g => g.status === 'PENDING') ?? null;
-  }
-
-  /** The gateway whose webhook setup the admin needs to see: the pending one first (it must be
-   * configured in Razorpay before approval), else the active one. */
-  get webhookGateway(): SchoolPaymentGateway | null {
-    return this.pendingGateway ?? this.activeGateway;
-  }
-
-  isWebhookStale(gateway: SchoolPaymentGateway): boolean {
-    if (!gateway.lastWebhookAt) return true;
-    const ageMs = Date.now() - new Date(gateway.lastWebhookAt).getTime();
-    return ageMs > SchoolSettingsComponent.WEBHOOK_STALE_DAYS * 24 * 60 * 60 * 1000;
-  }
-
-  copyWebhookUrl(url: string): void {
-    try {
-      navigator.clipboard.writeText(url).then(
-        () => this.toast.success('Copied', 'Webhook URL copied to clipboard.'),
-        () => this.toast.info('Copy manually', 'Select the webhook URL and copy it.'));
-    } catch {
-      this.toast.info('Copy manually', 'Select the webhook URL and copy it.');
-    }
-  }
-
-  submitGateway(): void {
-    const f = this.gatewayForm;
-    const keyId = f.keyId.trim();
-    if (!keyId || !f.keySecret.trim() || !f.webhookSecret.trim() || !f.currentPassword) {
-      this.toast.warning('Validation', 'Key ID, Key Secret, Webhook Secret and your password are all required.');
-      return;
-    }
-    if (!/^rzp_(live|test)_[A-Za-z0-9]{8,40}$/.test(keyId)) {
-      this.toast.warning('Validation', 'The Key ID should look like rzp_live_XXXXXXXXXXXXXX.');
-      return;
-    }
-    if (this.gatewayOverview?.requireLiveKeys && keyId.startsWith('rzp_test_')) {
-      this.toast.warning('Validation', 'Test-mode keys can\'t be used. Use your live Key ID (rzp_live_…).');
-      return;
-    }
-    this.submittingGateway = true;
-    this.cdr.markForCheck();
-    this.paymentGatewayService.submit({
-      keyId,
-      keySecret: f.keySecret.trim(),
-      webhookSecret: f.webhookSecret.trim(),
-      currentPassword: f.currentPassword,
-    }).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
-        this.gatewayForm = { keyId: '', keySecret: '', webhookSecret: '', currentPassword: '' };
-        this.submittingGateway = false;
-        this.toast.success('Submitted for approval',
-          'Your keys were verified. Now create the Razorpay webhook using the URL shown below and the same webhook secret.');
-        this.loadGatewayOverview();
-      },
-      error: (e) => {
-        this.logger.error('Failed to submit payment gateway', e);
-        // Secrets are cleared on failure too, so they never linger in the page.
-        this.gatewayForm = { ...this.gatewayForm, keySecret: '', webhookSecret: '', currentPassword: '' };
-        const msg = typeof e?.error === 'string' ? e.error : e?.error?.message;
-        this.toast.error('Not submitted', msg || 'Could not submit your Razorpay keys. Please try again.');
-        this.submittingGateway = false;
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
 
   loadFeatures(): void {
     if (this.schoolFeatures.length || this.featuresLoading) return;

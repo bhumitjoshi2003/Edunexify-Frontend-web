@@ -17,7 +17,7 @@ describe('SuperAdminPaymentGatewaysComponent', () => {
     id: 11, schoolId: 5, schoolName: 'Green Valley', provider: 'RAZORPAY', maskedKeyId: 'rzp_live_••••9876',
     liveMode: true, status: 'PENDING', submittedBy: 'gv_admin', submittedAt: '2026-10-05T09:00:00',
     verifiedAt: '2026-10-05T09:00:00', activatedAt: null, activatedBy: null, retiredAt: null, rejectedAt: null,
-    statusReason: null, lastWebhookAt: null, webhookUrl: null, ...over,
+    statusReason: null, lastWebhookAt: null, setupConfirmedAt: null, ...over,
   });
 
   const school = (over: Partial<SchoolSettings> = {}): SchoolSettings => ({
@@ -60,8 +60,19 @@ describe('SuperAdminPaymentGatewaysComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('[data-testid="active-gateway"]').length).toBe(1);
     expect(text()).toContain('rzp_live_••••9876');
     expect(text()).toContain('LIVE');
-    expect(text()).toContain('No valid webhook received yet');
-    expect(text()).toContain('Last valid webhook');
+    expect(text()).toContain('none received yet');
+    expect(text()).toContain('last valid one');
+  });
+
+  it("shows whether the school says it finished the Razorpay-side setup", () => {
+    expect(fixture.nativeElement.querySelector('[data-testid="setup-confirmed"]').textContent)
+      .toContain("School hasn't confirmed the Razorpay webhook setup yet");
+
+    c.pending = [gateway({ setupConfirmedAt: '2026-10-06T10:05:00' })];
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="setup-confirmed"]').textContent)
+      .toContain('School says the Razorpay webhook is set up');
   });
 
   it('takes the fallback cut-off from the server and limits the date picker with it', () => {

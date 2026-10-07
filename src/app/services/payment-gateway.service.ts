@@ -7,6 +7,8 @@ import {
   SchoolPaymentGateway,
   SchoolPaymentGatewayOverview,
   SchoolPaymentGatewaySubmitRequest,
+  SchoolPaymentGatewaySubmitResponse,
+  SchoolPaymentSetupDetails,
 } from '../interfaces/payment-gateway';
 
 /** School-owned Razorpay gateways: ADMIN submits (SchoolPaymentGatewayController), SUPER_ADMIN
@@ -27,8 +29,19 @@ export class PaymentGatewayService {
     return this.http.get<SchoolPaymentGatewayOverview>(this.schoolUrl);
   }
 
-  submit(request: SchoolPaymentGatewaySubmitRequest): Observable<SchoolPaymentGateway> {
-    return this.http.post<SchoolPaymentGateway>(this.schoolUrl, request);
+  /** Verifies the keys with Razorpay and creates the waiting connection; returns its setup details once. */
+  submit(request: SchoolPaymentGatewaySubmitRequest): Observable<SchoolPaymentGatewaySubmitResponse> {
+    return this.http.post<SchoolPaymentGatewaySubmitResponse>(this.schoolUrl, request);
+  }
+
+  /** Shows the Connection URL and Security code again — requires the current password every time. */
+  getSetupDetails(id: number, currentPassword: string): Observable<SchoolPaymentSetupDetails> {
+    return this.http.post<SchoolPaymentSetupDetails>(`${this.schoolUrl}/${id}/setup-details`, { currentPassword });
+  }
+
+  /** Records that the admin finished the Razorpay-side setup. */
+  confirmSetup(id: number): Observable<SchoolPaymentGateway> {
+    return this.http.post<SchoolPaymentGateway>(`${this.schoolUrl}/${id}/setup-confirmed`, {});
   }
 
   // ── SUPER_ADMIN ──────────────────────────────────────────────────────────────

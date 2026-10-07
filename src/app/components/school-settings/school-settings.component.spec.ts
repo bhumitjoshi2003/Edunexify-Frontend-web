@@ -10,8 +10,6 @@ import { ToastService } from '../../services/toast.service';
 import { AcademicSessionService } from '../../services/academic-session.service';
 import { FeeWorkflowService } from '../../services/fee-workflow.service';
 import { PaymentGatewayService } from '../../services/payment-gateway.service';
-import { SchoolPaymentGateway, SchoolPaymentGatewayOverview } from '../../interfaces/payment-gateway';
-import { throwError } from 'rxjs';
 
 describe('Teacher attendance reminder settings', () => {
   let c: SchoolSettingsComponent;
@@ -41,7 +39,7 @@ describe('Teacher attendance reminder settings', () => {
     logger = { error: jasmine.createSpy() };
     c = new SchoolSettingsComponent(
       schoolService, {} as any, {} as any, { markForCheck: () => {} } as any, logger, toast,
-      { snapshot: { queryParamMap: { get: () => null } } } as any, {} as any, {} as any, {} as any
+      { snapshot: { queryParamMap: { get: () => null } } } as any, {} as any, {} as any
     );
   });
 
@@ -306,196 +304,32 @@ describe('School Settings — Notification Channels UI removed', () => {
   });
 });
 
-describe('School Settings — Payments tab (school-owned Razorpay gateway)', () => {
-  let fixture: ComponentFixture<SchoolSettingsComponent>;
-  let gatewayService: any;
-  let toast: any;
-  let overview: SchoolPaymentGatewayOverview;
-
-  const settings = (): SchoolSettings => ({
-    id: 1, name: 'Test School', slug: 'test-school',
-    address: null, city: null, state: null, pincode: null, phone: null, email: null,
-    website: null, logoUrl: null, themeColor: null, contactPersonName: null, boardType: null,
-    plan: null, maxStudents: null, expiryDate: null, active: true, razorpayConfigured: false,
-    academicYearStartMonth: 4, workingDays: 'MONDAY', periodsPerDay: 8, gradingSystem: 'CBSE',
-  });
-
-  const gateway = (over: Partial<SchoolPaymentGateway> = {}): SchoolPaymentGateway => ({
-    id: 7, schoolId: 1, schoolName: 'Test School', provider: 'RAZORPAY', maskedKeyId: 'rzp_live_••••3456',
-    liveMode: true, status: 'ACTIVE', submittedBy: 'admin1', submittedAt: '2026-10-01T10:00:00',
-    verifiedAt: '2026-10-01T10:00:00', activatedAt: '2026-10-02T10:00:00', activatedBy: 'sa',
-    retiredAt: null, rejectedAt: null, statusReason: null, lastWebhookAt: new Date().toISOString(),
-    webhookUrl: 'https://edunexify.co.in/api/webhooks/razorpay/tok123', ...over,
-  });
-
-  const baseOverview = (over: Partial<SchoolPaymentGatewayOverview> = {}): SchoolPaymentGatewayOverview => ({
-    route: 'UNAVAILABLE', platformFallbackUntil: null, requireLiveKeys: true, encryptionConfigured: true,
-    requiredWebhookEvents: ['payment.captured', 'refund.processed', 'refund.failed'], gateways: [], ...over,
-  });
-
-  beforeEach(async () => {
-    overview = baseOverview();
-    gatewayService = {
-      getOverview: jasmine.createSpy().and.callFake(() => of(overview)),
-      submit: jasmine.createSpy().and.returnValue(of(gateway({ status: 'PENDING' }))),
-    };
-    toast = jasmine.createSpyObj('ToastService', ['success', 'error', 'warning', 'info']);
+describe('School Settings — Payments tab', () => {
+  it('hosts the guided Razorpay connection instead of any credential form of its own', async () => {
     await TestBed.configureTestingModule({
       imports: [SchoolSettingsComponent],
       providers: [
-        { provide: SchoolService, useValue: {
-          getSettings: () => of(settings()),
-          getEntitlement: () => of(null),
-        } },
-        { provide: AuthStateService, useValue: { getUser: () => ({ role: 'ADMIN' }) } },
+        { provide: SchoolService, useValue: { getSettings: () => of({ id: 1, name: 'S', razorpayConfigured: false } as any), getEntitlement: () => of(null) } },
+        { provide: AuthStateService, useValue: { getUser: () => ({ role: 'ADMIN', userId: 'Admin_1' }) } },
         { provide: TenantService, useValue: { getLogoUrl: (u: string) => u } },
         { provide: LoggerService, useValue: jasmine.createSpyObj('LoggerService', ['error']) },
-        { provide: ToastService, useValue: toast },
+        { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['success', 'error', 'warning', 'info']) },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: (k: string) => k === 'tab' ? 'razorpay' : null } } } },
         { provide: AcademicSessionService, useValue: { getAllSessions: () => of([]) } },
         { provide: FeeWorkflowService, useValue: { getSettings: () => of(null) } },
-        { provide: PaymentGatewayService, useValue: gatewayService },
+        { provide: PaymentGatewayService, useValue: { getOverview: () => of({ route: 'UNAVAILABLE', platformFallbackUntil: null,
+            requireLiveKeys: true, encryptionConfigured: true, gateways: [] }) } },
       ]
     }).compileComponents();
-    fixture = TestBed.createComponent(SchoolSettingsComponent);
-  });
-
-  const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
-
-  it('no longer has the old direct Razorpay key form or school-service call', () => {
+    const fixture = TestBed.createComponent(SchoolSettingsComponent);
     fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('app-school-payment-connection')).not.toBeNull();
+    expect(el.querySelector('[data-testid="connect"]')).not.toBeNull();
     const instance = fixture.componentInstance as any;
+    expect(instance.gatewayForm).toBeUndefined();
+    expect(instance.submitGateway).toBeUndefined();
     expect(instance.saveRazorpayKeys).toBeUndefined();
-    expect(instance.razorpayKeyId).toBeUndefined();
-    expect(instance.razorpayKeySecret).toBeUndefined();
-    expect(text()).not.toContain('Using platform default keys');
-  });
-
-  it('shows online payment as unavailable when no gateway is active and there is no fallback', () => {
-    fixture.detectChanges();
-    expect(text()).toContain('Online payment is not available yet');
-    expect(fixture.nativeElement.querySelector('[data-testid="gateway-row"]')).toBeNull();
-  });
-
-  it('shows the active gateway masked, with LIVE badge, last valid webhook, webhook URL and required events', () => {
-    overview = baseOverview({ route: 'SCHOOL_GATEWAY', gateways: [gateway()] });
-    fixture.detectChanges();
-    const t = text();
-    expect(t).toContain('Online payments go to your Razorpay account');
-    expect(t).toContain('no online convenience fee');
-    expect(t).toContain('rzp_live_••••3456');
-    expect(t).toContain('ACTIVE');
-    expect(t).toContain('LIVE');
-    expect(t).toContain('Last valid webhook');
-    expect(fixture.nativeElement.querySelector('[data-testid="gateway-webhook-url"]').textContent)
-      .toContain('/api/webhooks/razorpay/tok123');
-    expect(t).toContain('payment.captured');
-    expect(t).toContain('refund.processed');
-    expect(t).toContain('refund.failed');
-  });
-
-  it('flags an active gateway that has never received a valid webhook', () => {
-    overview = baseOverview({ route: 'SCHOOL_GATEWAY', gateways: [gateway({ lastWebhookAt: null })] });
-    fixture.detectChanges();
-    const status = fixture.nativeElement.querySelector('[data-testid="gateway-webhook-status"]') as HTMLElement;
-    expect(status.textContent).toContain('No valid webhook received yet');
-    expect(status.classList).toContain('ss-gw-warn-text');
-  });
-
-  it('shows a pending gateway as waiting for approval and the temporary fallback date', () => {
-    overview = baseOverview({ route: 'PLATFORM_FALLBACK', platformFallbackUntil: '2026-11-15',
-      gateways: [gateway({ status: 'PENDING', activatedAt: null, lastWebhookAt: null })] });
-    fixture.detectChanges();
-    expect(text()).toContain('Waiting for Edunexify approval');
-    expect(text()).toContain('15 Nov 2026');
-  });
-
-  it('describes onboarding in the real order: choose secret → submit → URL generated → create webhook → approval', () => {
-    fixture.detectChanges();
-    const steps = Array.from(fixture.nativeElement.querySelectorAll('[data-testid="gateway-steps"] li') as NodeListOf<HTMLElement>)
-      .map(li => li.textContent ?? '');
-    expect(steps.length).toBe(5);
-    expect(steps[0]).toContain('Choose a webhook secret');
-    expect(steps[1]).toContain('submit');
-    expect(steps[2]).toContain('webhook URL');
-    expect(steps[3]).toContain('same webhook secret');
-    expect(steps[4]).toContain('approves');
-    // Before submitting there is no URL yet, so no webhook instructions are shown.
-    expect(fixture.nativeElement.querySelector('[data-testid="gateway-webhook-url"]')).toBeNull();
-    // The webhook-secret field asks the admin to choose one, not to copy one from an existing webhook.
-    const secretInput = fixture.nativeElement.querySelector('#gwWebhookSecret') as HTMLInputElement;
-    expect(secretInput.placeholder).toContain('same value in Razorpay');
-  });
-
-  it('after submission, the pending gateway shows the generated URL as the next step with the same secret and events', () => {
-    overview = baseOverview({ gateways: [gateway({ status: 'PENDING', activatedAt: null, lastWebhookAt: null })] });
-    fixture.detectChanges();
-    expect(text()).toContain('Next step: create the Razorpay webhook');
-    const instructions = fixture.nativeElement.querySelector('[data-testid="gateway-webhook-instructions"]') as HTMLElement;
-    expect(instructions.textContent).toContain('generated when you submitted');
-    expect(instructions.textContent).toContain('same webhook secret you submitted');
-    expect(fixture.nativeElement.querySelector('[data-testid="gateway-webhook-url"]').textContent).toContain('/api/webhooks/razorpay/tok123');
-    expect(instructions.textContent).toContain('payment.captured');
-    expect(instructions.textContent).toContain('refund.processed');
-    expect(instructions.textContent).toContain('refund.failed');
-  });
-
-  it('never renders any secret field values returned by mistake', () => {
-    overview = baseOverview({ route: 'SCHOOL_GATEWAY',
-      gateways: [{ ...gateway(), keySecret: 'SHOULD_NOT_RENDER', webhookSecret: 'NOR_THIS' } as any] });
-    fixture.detectChanges();
-    expect(text()).not.toContain('SHOULD_NOT_RENDER');
-    expect(text()).not.toContain('NOR_THIS');
-  });
-
-  it('rejects a test key client-side when live keys are required, without calling the API', () => {
-    fixture.detectChanges();
-    const c = fixture.componentInstance;
-    c.gatewayForm = { keyId: 'rzp_test_AbCdEf123456', keySecret: 'x'.repeat(20), webhookSecret: 'whsecret1', currentPassword: 'pw' };
-    c.submitGateway();
-    expect(gatewayService.submit).not.toHaveBeenCalled();
-    expect(toast.warning).toHaveBeenCalled();
-  });
-
-  it('requires every field including the current password', () => {
-    fixture.detectChanges();
-    const c = fixture.componentInstance;
-    c.gatewayForm = { keyId: 'rzp_live_AbCdEf123456', keySecret: 'x'.repeat(20), webhookSecret: 'whsecret1', currentPassword: '' };
-    c.submitGateway();
-    expect(gatewayService.submit).not.toHaveBeenCalled();
-  });
-
-  it('submits trimmed values, clears every secret afterwards and reloads the status', () => {
-    fixture.detectChanges();
-    const c = fixture.componentInstance;
-    c.gatewayForm = { keyId: ' rzp_live_AbCdEf123456 ', keySecret: ' ' + 'x'.repeat(20) + ' ', webhookSecret: 'whsecret1', currentPassword: 'pw' };
-    c.submitGateway();
-    expect(gatewayService.submit).toHaveBeenCalledWith({
-      keyId: 'rzp_live_AbCdEf123456', keySecret: 'x'.repeat(20), webhookSecret: 'whsecret1', currentPassword: 'pw',
-    });
-    expect(c.gatewayForm).toEqual({ keyId: '', keySecret: '', webhookSecret: '', currentPassword: '' });
-    expect(gatewayService.getOverview).toHaveBeenCalledTimes(2);
-    expect(toast.success).toHaveBeenCalled();
-  });
-
-  it('shows the server message on failure and still clears the secrets', () => {
-    gatewayService.submit.and.returnValue(throwError(() => ({ status: 400, error: { message: 'Razorpay rejected this Key ID and Key Secret.' } })));
-    fixture.detectChanges();
-    const c = fixture.componentInstance;
-    c.gatewayForm = { keyId: 'rzp_live_AbCdEf123456', keySecret: 'x'.repeat(20), webhookSecret: 'whsecret1', currentPassword: 'pw' };
-    c.submitGateway();
-    expect(toast.error).toHaveBeenCalledWith('Not submitted', 'Razorpay rejected this Key ID and Key Secret.');
-    expect(c.gatewayForm.keyId).toBe('rzp_live_AbCdEf123456');
-    expect(c.gatewayForm.keySecret).toBe('');
-    expect(c.gatewayForm.webhookSecret).toBe('');
-    expect(c.gatewayForm.currentPassword).toBe('');
-    expect(c.submittingGateway).toBeFalse();
-  });
-
-  it('hides the form when server-side encryption is not configured', () => {
-    overview = baseOverview({ encryptionConfigured: false });
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('#gwKeySecret')).toBeNull();
-    expect(text()).toContain('temporarily unavailable');
   });
 });
