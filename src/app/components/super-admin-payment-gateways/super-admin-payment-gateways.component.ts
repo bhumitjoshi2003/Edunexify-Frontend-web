@@ -92,6 +92,17 @@ export class SuperAdminPaymentGatewaysComponent implements OnInit, OnDestroy {
     return this.schools.find(s => s.id === this.fallbackSchoolId) ?? null;
   }
 
+  /** Two-letter avatar text for a school row. */
+  initials(name: string | null | undefined): string {
+    const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
+    return ((words[0]?.[0] ?? '#') + (words[1]?.[0] ?? '')).toUpperCase();
+  }
+
+  /** Fallbacks that are still running today (shown as a hero figure). */
+  get runningFallbacks(): number {
+    return this.schools.filter(s => !!s.platformPaymentFallbackUntil && s.platformPaymentFallbackUntil >= this.today).length;
+  }
+
   /** Schools that currently have a fallback date set (it may already have lapsed). */
   get schoolsWithFallback(): SchoolSettings[] {
     return this.schools.filter(s => !!s.platformPaymentFallbackUntil);
