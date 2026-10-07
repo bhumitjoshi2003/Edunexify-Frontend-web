@@ -70,4 +70,43 @@ describe('PaymentComponent — order creation failures', () => {
       expect(opened[0].name).toBe('Edunexify');
     });
   });
+
+  describe('verification result', () => {
+    const rzpResponse = { razorpay_payment_id: 'pay_1', razorpay_order_id: 'order_1', razorpay_signature: 'sig' };
+    const order = { razorpayKey: 'rzp_live_x', orderId: 'order_1', amount: 580000 } as any;
+
+    beforeEach(() => {
+      razorpayService.verifyPayment = jasmine.createSpy();
+      toast.info = jasmine.createSpy();
+    });
+
+    it('a payment Razorpay has not confirmed yet is reported as received, never as failed', () => {
+      razorpayService.verifyPayment.and.returnValue(of({ success: false, pending: true,
+        message: 'Payment received. We\'re confirming it with Razorpay — it will show as paid shortly. Please don\'t pay again.' }));
+      const success = spyOn(c.paymentSuccess, 'emit');
+      const done = spyOn(c.paymentProcessCompleted, 'emit');
+
+      c.verifyPayment(rzpResponse, order);
+
+      expect(toast.info).toHaveBeenCalledWith('Payment received', jasmine.stringMatching(/don't pay again/));
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(success).not.toHaveBeenCalled();
+      expect(done).toHaveBeenCalled();
+    });
+
+    it('a confirmed payment still reports success', () => {
+      razorpayService.verifyPayment.and.returnValue(of({ success: true }));
+      const success = spyOn(c.paymentSuccess, 'emit');
+      c.verifyPayment(rzpResponse, order);
+      expect(success).toHaveBeenCalled();
+      expect(toast.info).not.toHaveBeenCalled();
+    });
+
+    it('a refused payment still reports a verification failure', () => {
+      razorpayService.verifyPayment.and.returnValue(of({ success: false, message: 'We couldn\'t confirm this payment' }));
+      c.verifyPayment(rzpResponse, order);
+      expect(toast.error).toHaveBeenCalled();
+      expect(toast.info).not.toHaveBeenCalled();
+    });
+  });
 });

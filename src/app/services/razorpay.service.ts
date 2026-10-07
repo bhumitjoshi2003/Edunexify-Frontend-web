@@ -29,6 +29,10 @@ export interface RazorpayPaymentResponse {
 export interface RazorpayVerifyResponse {
   success: boolean;
   message?: string;
+  /** Razorpay's capture couldn't be confirmed yet (e.g. Razorpay briefly unreachable). The
+   * payment is kept and confirmed automatically in the background — not a failure. */
+  pending?: boolean;
+  paymentId?: string;
 }
 
 @Injectable({

@@ -152,6 +152,12 @@ export class PaymentComponent implements OnDestroy {
       next: (result) => {
         if (result.success) {
           this.paymentSuccess.emit(paymentResponse);
+        } else if (result.pending) {
+          // Money taken, confirmation with Razorpay still in progress: reassure, never "failed",
+          // so nobody pays twice. The server settles it automatically once Razorpay confirms.
+          this.toast.info('Payment received',
+            result.message || 'We\'re confirming your payment with Razorpay. It will show as paid shortly — please don\'t pay again.');
+          this.paymentProcessCompleted.emit();
         } else {
           this.toast.error('Verification Failed!', 'Payment could not be verified. Please contact support.');
           this.paymentProcessCompleted.emit();
