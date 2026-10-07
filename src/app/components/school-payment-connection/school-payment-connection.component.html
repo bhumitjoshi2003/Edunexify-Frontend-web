@@ -1,0 +1,242 @@
+<section class="pc-card" data-testid="payment-connection">
+  <header class="pc-header">
+    <div class="pc-icon" aria-hidden="true">💳</div>
+    <div class="pc-heading">
+      <h2 class="pc-title">Online Payments</h2>
+      <p class="pc-subtitle">Let parents pay school fees online, straight to your school's bank account.</p>
+    </div>
+    <span class="pc-status" *ngIf="overview && step === null" data-testid="connection-status"
+          [class.pc-status-ok]="state === 'connected'"
+          [class.pc-status-wait]="state === 'waiting' || state === 'finish-setup'"
+          [class.pc-status-off]="state === 'not-connected' || state === 'unavailable'">
+      <ng-container [ngSwitch]="state">
+        <ng-container *ngSwitchCase="'connected'">✓ Connected</ng-container>
+        <ng-container *ngSwitchCase="'waiting'">Waiting for approval</ng-container>
+        <ng-container *ngSwitchCase="'finish-setup'">Almost done</ng-container>
+        <ng-container *ngSwitchDefault>Not connected</ng-container>
+      </ng-container>
+    </span>
+  </header>
+
+  <p class="pc-muted" *ngIf="loading && !overview">Loading…</p>
+  <div class="pc-note" *ngIf="loadFailed && !overview">
+    We couldn't load your online payment settings.
+    <button type="button" class="pc-btn pc-btn-ghost" (click)="load()">Try again</button>
+  </div>
+
+  <ng-container *ngIf="overview">
+
+    <!-- ══════════ STATUS (outside the wizard) ══════════ -->
+    <ng-container *ngIf="step === null">
+
+      <div class="pc-note pc-note-info" *ngIf="usingTemporaryEdunexifyAccount" data-testid="temporary-account">
+        Online payments are temporarily handled through Edunexify until
+        <strong>{{ overview.platformFallbackUntil | date:'d MMM yyyy' }}</strong>
+        (a small online convenience fee applies). Connect your own Razorpay account before then.
+      </div>
+
+      <div class="pc-note pc-note-warn" *ngIf="notApproved as na" data-testid="not-approved">
+        Your Razorpay connection wasn't approved<ng-container *ngIf="na.statusReason">: {{ na.statusReason }}</ng-container>.
+        Please connect again.
+      </div>
+
+      <ng-container [ngSwitch]="state">
+
+        <!-- Not connected -->
+        <div *ngSwitchCase="'not-connected'" class="pc-body" data-testid="state-not-connected">
+          <p>Connect your school's Razorpay account and parents can pay fees online. The money goes directly to
+            your school — Edunexify adds no extra fee.</p>
+          <button type="button" class="pc-btn pc-btn-primary" (click)="startWizard()" data-testid="connect">
+            Connect Razorpay
+          </button>
+        </div>
+
+        <div *ngSwitchCase="'unavailable'" class="pc-body" data-testid="state-unavailable">
+          <p>Online payment setup is temporarily unavailable. Please contact Edunexify support.</p>
+        </div>
+
+        <!-- Keys verified, Razorpay side not finished -->
+        <div *ngSwitchCase="'finish-setup'" class="pc-body" data-testid="state-finish-setup">
+          <p><strong>One last step in Razorpay.</strong> Your Razorpay account was verified. Finish the setup in
+            Razorpay so Edunexify can confirm payments automatically.</p>
+          <button type="button" class="pc-btn pc-btn-primary" (click)="askToReveal(waiting!)">Finish Razorpay setup</button>
+        </div>
+
+        <!-- Waiting for approval -->
+        <div *ngSwitchCase="'waiting'" class="pc-body" data-testid="state-waiting">
+          <p><strong>Waiting for Edunexify approval</strong></p>
+          <p>We're reviewing your Razorpay connection. Online payments will become available after approval.</p>
+          <button type="button" class="pc-btn pc-btn-link" (click)="askToReveal(waiting!)">View setup instructions again</button>
+        </div>
+
+        <!-- Connected -->
+        <div *ngSwitchCase="'connected'" class="pc-body" data-testid="state-connected">
+          <p>Parents can now pay fees directly to your school through Razorpay.</p>
+          <dl class="pc-facts" *ngIf="connected as c">
+            <div><dt>Razorpay account</dt><dd><code>{{ c.maskedKeyId }}</code></dd></div>
+            <div><dt>Connected on</dt><dd>{{ c.activatedAt | date:'d MMM yyyy' }}</dd></div>
+            <div>
+              <dt>Payment confirmations</dt>
+              <dd data-testid="confirmations">
+                <ng-container *ngIf="confirmationsWorking; else notYet">
+                  ✓ Working — last received {{ c.lastWebhookAt | date:'d MMM yyyy, h:mm a' }}
+                </ng-container>
+                <ng-template #notYet>Not received yet — this updates after the first online payment.</ng-template>
+              </dd>
+            </div>
+          </dl>
+
+          <div class="pc-note pc-note-info" *ngIf="waiting as w" data-testid="switch-waiting">
+            <ng-container *ngIf="w.setupConfirmedAt; else switchSetup">
+              Your new Razorpay account ({{ w.maskedKeyId }}) is waiting for Edunexify approval. The current account keeps
+              working until then.
+            </ng-container>
+            <ng-template #switchSetup>
+              Your new Razorpay account ({{ w.maskedKeyId }}) was verified.
+              <button type="button" class="pc-btn pc-btn-link" (click)="askToReveal(w)">Finish its Razorpay setup</button>
+            </ng-template>
+          </div>
+
+          <details class="pc-manage">
+            <summary>Manage connection</summary>
+            <button type="button" class="pc-btn pc-btn-link" (click)="askToReveal(connected!)">View setup instructions</button>
+            <button type="button" class="pc-btn pc-btn-link" (click)="startWizard()">Connect a different Razorpay account</button>
+            <p class="pc-muted">Your current account keeps working until a new one is approved.</p>
+          </details>
+        </div>
+      </ng-container>
+
+      <!-- Password before showing the setup details again -->
+      <form *ngIf="revealFor" class="pc-reveal" (ngSubmit)="reveal()" data-testid="reveal-form">
+        <p>For your security, confirm your Edunexify password to see the setup details.</p>
+        <input type="text" class="pc-hidden-username" name="username" autocomplete="username" [value]="username"
+               readonly tabindex="-1" aria-hidden="true">
+        <label class="pc-label" for="pcRevealPassword">Your Edunexify password</label>
+        <input id="pcRevealPassword" name="current-password" class="pc-input" type="password"
+               autocomplete="current-password" [(ngModel)]="revealPassword">
+        <p class="pc-error" *ngIf="revealError" role="alert">{{ revealError }}</p>
+        <div class="pc-actions">
+          <button type="submit" class="pc-btn pc-btn-primary" [disabled]="revealing">{{ revealing ? 'Checking…' : 'Continue' }}</button>
+          <button type="button" class="pc-btn pc-btn-ghost" (click)="cancelReveal()">Cancel</button>
+        </div>
+      </form>
+    </ng-container>
+
+    <!-- ══════════ WIZARD ══════════ -->
+    <div *ngIf="step !== null" class="pc-wizard" data-testid="wizard">
+      <ol class="pc-progress" aria-label="Progress">
+        <li *ngFor="let s of [1,2,3,4]" [class.pc-progress-done]="step > s" [class.pc-progress-now]="step === s">
+          <span>{{ s }}</span>
+        </li>
+      </ol>
+      <p class="pc-step-label">Step {{ step }} of 4</p>
+
+      <!-- STEP 1 -->
+      <div *ngIf="step === 1" data-testid="step-1">
+        <h3 class="pc-step-title">Open your school's Razorpay account</h3>
+        <p>You'll need two values from Razorpay to connect your account securely.</p>
+        <p class="pc-muted">Make sure the switch at the top of Razorpay says <strong>Live mode</strong>.</p>
+        <div class="pc-actions">
+          <a class="pc-btn pc-btn-ghost" [href]="razorpayDashboardUrl" target="_blank" rel="noopener noreferrer">
+            Open Razorpay Dashboard ↗
+          </a>
+          <button type="button" class="pc-btn pc-btn-primary" (click)="ready()">I'm ready</button>
+        </div>
+        <button type="button" class="pc-btn pc-btn-link" (click)="cancelWizard()">Cancel</button>
+      </div>
+
+      <!-- STEP 2 — Razorpay values only; no password field in this form -->
+      <form *ngIf="step === 2" data-testid="step-2" autocomplete="off" (ngSubmit)="continueFromKeys()">
+        <h3 class="pc-step-title">Copy your Razorpay keys</h3>
+        <p>In Razorpay, go to <strong>Account &amp; Settings → API Keys → Generate Key</strong>, then copy the two values here.</p>
+        <label class="pc-label" for="pcRzpKeyId">Razorpay Key ID</label>
+        <input id="pcRzpKeyId" name="rzp-key-id" class="pc-input" type="text" [(ngModel)]="keyId"
+               placeholder="rzp_live_…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+               data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
+        <label class="pc-label" for="pcRzpKeySecret">Razorpay Key Secret</label>
+        <div class="pc-input-row">
+          <input id="pcRzpKeySecret" name="rzp-key-secret" class="pc-input" type="text" [(ngModel)]="keySecret"
+                 [class.pc-masked]="canMaskText && !showKeySecret"
+                 autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                 data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
+          <button type="button" class="pc-btn pc-btn-ghost" *ngIf="canMaskText" (click)="showKeySecret = !showKeySecret"
+                  [attr.aria-pressed]="showKeySecret">{{ showKeySecret ? 'Hide' : 'Show' }}</button>
+        </div>
+        <p class="pc-muted">Both values come directly from Razorpay. Razorpay shows the Key Secret only once, so copy it now.</p>
+        <p class="pc-error" *ngIf="stepError" role="alert">{{ stepError }}</p>
+        <div class="pc-actions">
+          <button type="button" class="pc-btn pc-btn-ghost" (click)="back()">Back</button>
+          <button type="submit" class="pc-btn pc-btn-primary">Continue</button>
+        </div>
+      </form>
+
+      <!-- STEP 3 — Edunexify password only; a separate form from the Razorpay values -->
+      <form *ngIf="step === 3" data-testid="step-3" (ngSubmit)="verify()">
+        <h3 class="pc-step-title">Confirm it's you</h3>
+        <p>Enter your Edunexify password. We'll then check your keys with Razorpay.</p>
+        <input type="text" class="pc-hidden-username" name="username" autocomplete="username" [value]="username"
+               readonly tabindex="-1" aria-hidden="true">
+        <label class="pc-label" for="pcPassword">Your Edunexify password</label>
+        <input id="pcPassword" name="current-password" class="pc-input" type="password" autocomplete="current-password"
+               [(ngModel)]="password">
+        <p class="pc-error" *ngIf="stepError" role="alert">{{ stepError }}</p>
+        <div class="pc-actions">
+          <button type="button" class="pc-btn pc-btn-ghost" (click)="back()" [disabled]="verifying">Back</button>
+          <button type="submit" class="pc-btn pc-btn-primary" [disabled]="verifying">
+            {{ verifying ? 'Checking with Razorpay…' : 'Verify Razorpay account' }}
+          </button>
+        </div>
+      </form>
+
+      <!-- STEP 4 -->
+      <div *ngIf="step === 4 && setup as s" data-testid="step-4">
+        <h3 class="pc-step-title">Finish Razorpay setup</h3>
+        <p>Razorpay needs one final connection so Edunexify can automatically confirm successful payments.</p>
+
+        <div class="pc-copy-field">
+          <span class="pc-label">Connection URL</span>
+          <div class="pc-input-row">
+            <code class="pc-value" data-testid="connection-url">{{ s.connectionUrl }}</code>
+            <button type="button" class="pc-btn pc-btn-ghost" (click)="copy(s.connectionUrl, 'Connection URL')">Copy</button>
+          </div>
+        </div>
+        <div class="pc-copy-field">
+          <span class="pc-label">Security code</span>
+          <div class="pc-input-row">
+            <code class="pc-value" data-testid="security-code">{{ showSecurityCode ? s.securityCode : '••••••••••••••••' }}</code>
+            <button type="button" class="pc-btn pc-btn-ghost" (click)="showSecurityCode = !showSecurityCode">
+              {{ showSecurityCode ? 'Hide' : 'Show' }}
+            </button>
+            <button type="button" class="pc-btn pc-btn-ghost" (click)="copy(s.securityCode, 'Security code')">Copy</button>
+          </div>
+          <p class="pc-muted">Keep this code private. Edunexify created it for your school.</p>
+        </div>
+
+        <div class="pc-help" data-testid="razorpay-instructions">
+          <p class="pc-help-title">In Razorpay:</p>
+          <ol>
+            <li><a [href]="razorpayDashboardUrl" target="_blank" rel="noopener noreferrer">Open Razorpay Dashboard ↗</a>
+              (in <strong>Live mode</strong>)</li>
+            <li>Go to <strong>Account &amp; Settings → Webhooks</strong></li>
+            <li>Click <strong>Add New Webhook</strong></li>
+            <li>Paste the <em>Connection URL</em> into the box called <strong>Webhook URL</strong></li>
+            <li>Paste the <em>Security code</em> into the box called <strong>Secret</strong></li>
+            <li>Under <strong>Active Events</strong>, tick exactly these:
+              <ul class="pc-events">
+                <li *ngFor="let ev of s.razorpayEvents"><strong>{{ ev }}</strong></li>
+              </ul>
+            </li>
+            <li>Click <strong>Create Webhook</strong></li>
+          </ol>
+        </div>
+
+        <div class="pc-actions">
+          <button type="button" class="pc-btn pc-btn-primary" (click)="completeSetup()" [disabled]="confirming">
+            {{ confirming ? 'Saving…' : 'I\'ve completed this in Razorpay' }}
+          </button>
+          <button type="button" class="pc-btn pc-btn-ghost" (click)="closeSetup()">I'll do this later</button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</section>

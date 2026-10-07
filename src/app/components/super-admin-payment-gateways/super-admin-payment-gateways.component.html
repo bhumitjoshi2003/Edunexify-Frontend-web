@@ -29,10 +29,19 @@
         </div>
         <div class="pg-meta">
           Submitted by {{ g.submittedBy || '—' }} on {{ g.submittedAt | date:'d MMM yyyy, h:mm a' }}
-          · Keys verified {{ g.verifiedAt | date:'d MMM, h:mm a' }}
-          · <span [class.pg-warn]="!g.lastWebhookAt">
-              {{ g.lastWebhookAt ? ('Valid webhook received ' + (g.lastWebhookAt | date:'d MMM, h:mm a')) : 'No valid webhook received yet' }}
-            </span>
+          · Keys verified with Razorpay {{ g.verifiedAt | date:'d MMM, h:mm a' }}
+        </div>
+        <div class="pg-meta" data-testid="setup-confirmed">
+          <span *ngIf="g.setupConfirmedAt; else notConfirmed">
+            ✓ School says the Razorpay webhook is set up ({{ g.setupConfirmedAt | date:'d MMM, h:mm a' }}) — not verifiable until the first payment.
+          </span>
+          <ng-template #notConfirmed><span class="pg-warn">School hasn't confirmed the Razorpay webhook setup yet.</span></ng-template>
+        </div>
+        <div class="pg-meta">
+          Payment confirmations (webhook):
+          <span [class.pg-warn]="!g.lastWebhookAt">
+            {{ g.lastWebhookAt ? ('valid one received ' + (g.lastWebhookAt | date:'d MMM, h:mm a')) : 'none received yet' }}
+          </span>
         </div>
         <div class="pg-actions">
           <button type="button" class="pg-btn pg-btn-primary" [disabled]="busyGatewayId === g.id" (click)="activate(g)">
@@ -55,8 +64,9 @@
         </div>
         <div class="pg-meta">
           Activated {{ g.activatedAt | date:'d MMM yyyy' }} by {{ g.activatedBy || '—' }}
-          · <span [class.pg-warn]="!g.lastWebhookAt">
-              {{ g.lastWebhookAt ? ('Last valid webhook ' + (g.lastWebhookAt | date:'d MMM, h:mm a')) : 'No valid webhook received yet' }}
+          · Payment confirmations (webhook):
+            <span [class.pg-warn]="!g.lastWebhookAt">
+              {{ g.lastWebhookAt ? ('last valid one ' + (g.lastWebhookAt | date:'d MMM, h:mm a')) : 'none received yet' }}
             </span>
         </div>
         <div class="pg-actions">
