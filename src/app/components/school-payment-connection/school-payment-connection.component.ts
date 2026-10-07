@@ -146,6 +146,20 @@ export class SchoolPaymentConnectionComponent implements OnInit, OnDestroy {
     return !!this.connected?.lastWebhookAt;
   }
 
+  /** Labels for the wizard progress indicator. */
+  readonly stepLabels = ['Open Razorpay', 'Copy keys', 'Confirm', 'Finish setup'];
+
+  /** The connection's progress for the waiting / almost-done tracker. */
+  trackerFor(g: SchoolPaymentGateway): { label: string; detail: string | null; done: boolean; current: boolean }[] {
+    const setupDone = !!g.setupConfirmedAt;
+    return [
+      { label: 'Razorpay keys verified', detail: g.verifiedAt, done: true, current: false },
+      { label: 'Razorpay setup finished', detail: g.setupConfirmedAt, done: setupDone, current: !setupDone },
+      { label: 'Edunexify approval', detail: null, done: false, current: setupDone },
+      { label: 'Online payments on', detail: null, done: false, current: false },
+    ];
+  }
+
   // ── wizard ────────────────────────────────────────────────────────────────
 
   startWizard(): void {

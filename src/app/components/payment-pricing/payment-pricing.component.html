@@ -70,7 +70,7 @@
         </div>
         <div class="pp-grid-item">
           <span class="pp-grid-label">Effective Since</span>
-          <span class="pp-grid-value pp-grid-value-sm">{{ current.effectiveFrom | date: 'medium' }}</span>
+          <span class="pp-grid-value pp-grid-value-sm">{{ current.effectiveFrom | date: 'd MMM yyyy, h:mm a' }}</span>
         </div>
       </div>
 
@@ -113,7 +113,7 @@
           </div>
           <div class="pp-upcoming-meta">
             <span class="pp-status-badge pp-status-scheduled">SCHEDULED</span>
-            <span class="pp-upcoming-date">Effective {{ c.effectiveFrom | date: 'medium' }}</span>
+            <span class="pp-upcoming-date">Effective {{ c.effectiveFrom | date: 'd MMM yyyy, h:mm a' }}</span>
           </div>
         </div>
         <button type="button" class="pp-btn pp-btn-danger-ghost" (click)="cancelScheduled(c)">Cancel Scheduled Change</button>
@@ -149,7 +149,7 @@
               <td>{{ bpsToPercent(c.gatewayRateBps) }}%</td>
               <td>{{ bpsToPercent(c.gatewayTaxRateBps) }}%</td>
               <td>&#8377;{{ paiseToRupees(c.edunexifyTransactionFeePaise) }}</td>
-              <td>{{ c.effectiveFrom | date: 'medium' }}</td>
+              <td>{{ c.effectiveFrom | date: 'd MMM yyyy, h:mm a' }}</td>
               <td>
                 <span class="pp-status-badge" [class.pp-status-cancelled]="c.status === 'CANCELLED'"
                       [class.pp-status-historical]="c.status === 'HISTORICAL'">{{ c.status }}</span>
