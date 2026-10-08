@@ -218,6 +218,14 @@ export interface UpgradeVerification {
   billingCycle?: string;
 }
 
+/** 202 from /subscription/upgrade/verify: payment received, Razorpay confirmation still in progress —
+ * the plan is activated automatically once Razorpay confirms. Not a failure. */
+export interface UpgradePending {
+  pending: true;
+  paymentId: string;
+  message: string;
+}
+
 export interface OnboardSchoolRequest {
   name: string;
   slug: string;
@@ -424,8 +432,10 @@ export class SchoolService {
     return this.http.post<RazorpayOrder>(`${this.baseUrl}/subscription/upgrade/order`, { planId, billingCycle });
   }
 
-  verifyUpgradePayment(data: UpgradeVerification): Observable<void> {
-    return this.http.post<void>(`${this.baseUrl}/subscription/upgrade/verify`, data);
+  /** Resolves with the activated subscription, or with {@link UpgradePending} (HTTP 202) while
+   * Razorpay's confirmation is still in progress. */
+  verifyUpgradePayment(data: UpgradeVerification): Observable<UpgradePending | unknown> {
+    return this.http.post<UpgradePending | unknown>(`${this.baseUrl}/subscription/upgrade/verify`, data);
   }
 
   // ── School-level feature overrides (ADMIN) ────────────────────────────────
