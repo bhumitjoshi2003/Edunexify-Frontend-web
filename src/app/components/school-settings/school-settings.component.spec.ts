@@ -1,4 +1,4 @@
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute } from '@angular/router';
 import { SchoolSettingsComponent } from './school-settings.component';
@@ -331,5 +331,66 @@ describe('School Settings — Payments tab', () => {
     expect(instance.gatewayForm).toBeUndefined();
     expect(instance.submitGateway).toBeUndefined();
     expect(instance.saveRazorpayKeys).toBeUndefined();
+  });
+});
+
+describe('School Settings — subscription payment verification result', () => {
+  let c: SchoolSettingsComponent;
+  let schoolService: any;
+  let toast: any;
+  const rzp = { razorpay_payment_id: 'pay_SUB1', razorpay_order_id: 'order_SUB1', razorpay_signature: 'sig' };
+
+  beforeEach(() => {
+    schoolService = {
+      verifyUpgradePayment: jasmine.createSpy(),
+      getEntitlement: jasmine.createSpy().and.returnValue(of(null)),
+      getSubscriptionHistory: jasmine.createSpy().and.returnValue(of([])),
+    };
+    toast = jasmine.createSpyObj('ToastService', ['success', 'error', 'warning', 'info']);
+    c = new SchoolSettingsComponent(
+      schoolService, {} as any, {} as any, { markForCheck: () => {} } as any, jasmine.createSpyObj('LoggerService', ['error']),
+      toast, { snapshot: { queryParamMap: { get: () => null } } } as any, {} as any, {} as any
+    );
+    c.upgradingPlanId = 4;
+  });
+
+  it('a payment Razorpay has not confirmed yet is reported as received — never as failed or activated', () => {
+    schoolService.verifyUpgradePayment.and.returnValue(of({ pending: true, paymentId: 'pay_SUB1',
+      message: 'Payment received. We\'re confirming it with Razorpay — your plan will be activated shortly. Please don\'t pay again.' }));
+
+    (c as any).verifyUpgrade(rzp, 4);
+
+    expect(toast.info).toHaveBeenCalledWith('Payment received', jasmine.stringMatching(/don't pay again/));
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(schoolService.getEntitlement).not.toHaveBeenCalled();
+    expect(c.upgradingPlanId).toBeNull();
+  });
+
+  it('an activated subscription still reports success and reloads the plan', () => {
+    schoolService.verifyUpgradePayment.and.returnValue(of({ status: 'ACTIVE' }));
+
+    (c as any).verifyUpgrade(rzp, 4);
+
+    expect(toast.success).toHaveBeenCalledWith('Upgraded!', jasmine.any(String));
+    expect(toast.info).not.toHaveBeenCalled();
+    expect(schoolService.getEntitlement).toHaveBeenCalled();
+  });
+
+  it('a refused payment shows the server explanation with the payment id', () => {
+    schoolService.verifyUpgradePayment.and.returnValue(throwError(() => ({ status: 409, error: {
+      message: 'Razorpay reports this payment as refunded, so the plan can\'t be activated. Please contact Edunexify support with Payment ID pay_SUB1.' } })));
+
+    (c as any).verifyUpgrade(rzp, 4);
+
+    expect(toast.error).toHaveBeenCalledWith('Verification Failed', jasmine.stringMatching(/pay_SUB1/));
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('the plan and billing cycle are still sent (the server ignores them and uses its own order record)', () => {
+    schoolService.verifyUpgradePayment.and.returnValue(of({ status: 'ACTIVE' }));
+    (c as any).verifyUpgrade(rzp, 4);
+    expect(schoolService.verifyUpgradePayment).toHaveBeenCalledWith(jasmine.objectContaining({
+      razorpay_payment_id: 'pay_SUB1', razorpay_order_id: 'order_SUB1', razorpay_signature: 'sig' }));
   });
 });

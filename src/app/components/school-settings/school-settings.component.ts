@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil, firstValueFrom } from 'rxjs';
-import { SchoolService, SchoolSettings, SchoolEntitlementSummary, PlanDetail, SubscriptionHistoryItem, SchoolFeature } from '../../services/school.service';
+import { SchoolService, SchoolSettings, SchoolEntitlementSummary, PlanDetail, SubscriptionHistoryItem, SchoolFeature, UpgradePending } from '../../services/school.service';
 import { AuthStateService } from '../../auth/auth-state.service';
 import { TenantService } from '../../services/tenant.service';
 import { LoggerService } from '../../services/logger.service';
@@ -467,7 +467,16 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
       billingCycle:        this.billingCycle,
     };
     this.schoolService.verifyUpgradePayment(payload).pipe(takeUntil(this.destroy$)).subscribe({
-      next: () => {
+      next: (result) => {
+        if ((result as UpgradePending | null)?.pending) {
+          // Money taken, Razorpay confirmation still in progress: reassure, never "failed", so the
+          // admin doesn't pay twice. The server activates the plan automatically once confirmed.
+          this.toast.info('Payment received', (result as UpgradePending).message
+            || 'We\'re confirming your payment with Razorpay. Your plan will be activated shortly — please don\'t pay again.');
+          this.upgradingPlanId = null;
+          this.cdr.markForCheck();
+          return;
+        }
         this.toast.success('Upgraded!', 'Your subscription has been activated successfully.');
         this.upgradingPlanId = null;
         this.entitlement = null;
@@ -475,8 +484,11 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
         this.loadEntitlement(true);
         this.cdr.markForCheck();
       },
-      error: () => {
-        this.toast.error('Verification Failed', 'Payment received but activation failed. Please contact support with your payment ID.');
+      error: (e) => {
+        const body = e?.error;
+        const msg = typeof body === 'string' ? body : body?.message;
+        this.toast.error('Verification Failed', msg
+          || 'Payment received but activation failed. Please contact support with your payment ID.');
         this.upgradingPlanId = null;
         this.cdr.markForCheck();
       }
