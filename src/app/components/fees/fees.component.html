@@ -64,6 +64,25 @@
       </div>
     </div>
 
+    <!-- ── Online payments taken but not yet recorded (server state) ──── -->
+    <div
+      *ngFor="let pending of pendingConfirmations; trackBy: trackByPaymentId"
+      class="pt-alert"
+      [ngClass]="pending.status === 'NEEDS_REVIEW' ? 'pt-alert--review' : 'pt-alert--confirming'"
+      data-testid="pending-confirmation"
+    >
+      <div class="pt-alert-icon">{{ pending.status === 'NEEDS_REVIEW' ? '⚠️' : '⏳' }}</div>
+      <div class="pt-alert-body">
+        <span class="pt-alert-title">{{
+          pending.status === 'NEEDS_REVIEW' ? 'Payment needs review' : 'Payment being confirmed'
+        }} — {{ pendingMonthNames(pending) }}</span>
+        <span class="pt-alert-text">{{
+          pending.status === 'NEEDS_REVIEW' ? needsReviewCopy : confirmingCopy
+        }}</span>
+        <span class="pt-alert-text pt-alert-ref">Payment ID: {{ pending.paymentId }}</span>
+      </div>
+    </div>
+
     <!-- ── Summary Strip ────────────────────────────────────────────── -->
     <div class="pt-summary" *ngIf="role !== 'ADMIN' && totalAmountToPay > 0">
       <span class="pt-summary-label">Selected Total</span>
@@ -84,7 +103,9 @@
           'pt-month--unpaid':
             !month.paid && !month.manuallyPaid && !isLate(month),
           'pt-month--selected': month.selected,
+          'pt-month--confirming': !!month.pendingConfirmation && !month.paid && !month.manuallyPaid,
         }"
+        [attr.data-pending]="month.pendingConfirmation?.status || null"
         (click)="
           role !== 'ADMIN' && !month.paid && !month.manuallyPaid
             ? toggleMonthSelection(month)
@@ -96,11 +117,13 @@
         <!-- status icon -->
         <div class="pt-month-icon">
           <span *ngIf="month.paid || month.manuallyPaid">✓</span>
-          <span *ngIf="isLate(month) && !month.paid && !month.manuallyPaid"
+          <span *ngIf="month.pendingConfirmation && !month.paid && !month.manuallyPaid">⏳</span>
+          <span *ngIf="!month.pendingConfirmation && isLate(month) && !month.paid && !month.manuallyPaid"
             >!</span
           >
           <span
             *ngIf="
+              !month.pendingConfirmation &&
               !month.paid &&
               !month.manuallyPaid &&
               !isLate(month) &&
@@ -150,11 +173,16 @@
             paymentProvenanceLabel(month)
           }}</ng-container>
           <ng-container
-            *ngIf="isLate(month) && !month.paid && !month.manuallyPaid"
+            *ngIf="month.pendingConfirmation && !month.paid && !month.manuallyPaid"
+            >{{ month.pendingConfirmation.status === 'NEEDS_REVIEW' ? 'Needs review' : 'Confirming' }}</ng-container
+          >
+          <ng-container
+            *ngIf="!month.pendingConfirmation && isLate(month) && !month.paid && !month.manuallyPaid"
             >Overdue</ng-container
           >
           <ng-container
             *ngIf="
+              !month.pendingConfirmation &&
               !month.paid &&
               !month.manuallyPaid &&
               !isLate(month) &&
@@ -204,6 +232,8 @@
         [paymentData]="paymentData"
         (paymentSuccess)="handleSuccessfulPayment()"
         (paymentProcessingStarted)="onPaymentProcessingStarted()"
+        (paymentPending)="onPaymentPending()"
+        (paymentConflict)="onPaymentConflict($event)"
         [disabled]="isLoadingPayment || (role === 'PARENT' && !parentCanPay)"
       >
       </app-payment>
