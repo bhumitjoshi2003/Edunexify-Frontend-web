@@ -63,6 +63,14 @@ describe('PaymentComponent — order creation failures', () => {
       expect(opened[0].key).toBe('rzp_live_schoolA');
     });
 
+    it('closes the Razorpay checkout after 600 seconds, inside the server\'s 15-minute open-checkout window', () => {
+      razorpayService.createOrder.and.returnValue(of(order()));
+      c.loadStudentDetails('S1');
+      expect(opened[0].timeout).toBe(600);
+      expect(typeof opened[0].handler).toBe('function');
+      expect(typeof opened[0].modal.ondismiss).toBe('function');
+    });
+
     it('ignores any client-side name in paymentData and keeps Edunexify branding when the server sends none', () => {
       c.paymentData = { ...c.paymentData, checkoutName: 'Spoofed Name', schoolName: 'Spoofed School' } as any;
       razorpayService.createOrder.and.returnValue(of(order()));
@@ -107,6 +115,92 @@ describe('PaymentComponent — order creation failures', () => {
       c.verifyPayment(rzpResponse, order);
       expect(toast.error).toHaveBeenCalled();
       expect(toast.info).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('order refused because of an earlier payment (409)', () => {
+    it('a payment being confirmed: says so with the payment ID, never a retry prompt, and tells the page', () => {
+      razorpayService.createOrder.and.returnValue(throwError(() => ({ status: 409, error: {
+        error: 'A payment for these months is already being confirmed. Please don\'t pay again.',
+        pending: true, paymentId: 'pay_P1', status: 'CONFIRMING' } })));
+      const conflict = spyOn(c.paymentConflict, 'emit');
+      const done = spyOn(c.paymentProcessCompleted, 'emit');
+
+      c.loadStudentDetails('S1');
+
+      expect(toast.warning).toHaveBeenCalledWith('Payment being confirmed',
+        'A payment for these months is already being confirmed. Please don\'t pay again. Payment ID: pay_P1');
+      expect(conflict).toHaveBeenCalledWith(jasmine.objectContaining({ kind: 'pending', status: 'CONFIRMING', paymentId: 'pay_P1' }));
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(done).toHaveBeenCalled();
+    });
+
+    it('a payment that needs review: says so and points to the school office', () => {
+      razorpayService.createOrder.and.returnValue(throwError(() => ({ status: 409, error: {
+        error: 'A payment for these months needs to be checked by the school before it can be recorded. Please don\'t pay again — contact the school office.',
+        pending: true, paymentId: 'pay_R1', status: 'NEEDS_REVIEW' } })));
+
+      c.loadStudentDetails('S1');
+
+      const [title, message] = toast.warning.calls.mostRecent().args;
+      expect(title).toBe('Payment needs review');
+      expect(message).toContain('contact the school office');
+      expect(message).toContain('pay_R1');
+    });
+
+    it('a checkout started recently: asks to wait until the server time or check the existing checkout', () => {
+      razorpayService.createOrder.and.returnValue(throwError(() => ({ status: 409, error: {
+        error: 'A payment for some of these months was started a few minutes ago.', retryAfter: '2026-10-09T10:15:30.123' } })));
+      const conflict = spyOn(c.paymentConflict, 'emit');
+
+      c.loadStudentDetails('S1');
+
+      expect(toast.warning).toHaveBeenCalledWith('Payment already started',
+        'An online payment for these fees was started recently. Please wait until 10:15 IST or check the existing checkout before trying again.');
+      expect(conflict).toHaveBeenCalledWith(jasmine.objectContaining({ kind: 'retry-later' }));
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('verification outcomes that must stop a second payment', () => {
+    const rzpResponse = { razorpay_payment_id: 'pay_9', razorpay_order_id: 'order_9', razorpay_signature: 'sig' };
+    const order = { razorpayKey: 'rzp_live_x', orderId: 'order_9', amount: 580000 } as any;
+
+    beforeEach(() => {
+      razorpayService.verifyPayment = jasmine.createSpy();
+      toast.info = jasmine.createSpy();
+    });
+
+    it('pending: tells the page (which reloads the server state) and shows the payment ID', () => {
+      razorpayService.verifyPayment.and.returnValue(of({ success: false, pending: true, paymentId: 'pay_9', message: 'Payment received.' }));
+      const pending = spyOn(c.paymentPending, 'emit');
+
+      c.verifyPayment(rzpResponse, order);
+
+      expect(pending).toHaveBeenCalledWith('pay_9');
+      expect(toast.info).toHaveBeenCalledWith('Payment received', 'Payment received. Payment ID: pay_9');
+    });
+
+    it('server unreachable after checkout: may already be received, don\'t pay again — never "try again"', () => {
+      razorpayService.verifyPayment.and.returnValue(throwError(() => ({ status: 0 })));
+      const pending = spyOn(c.paymentPending, 'emit');
+
+      c.verifyPayment(rzpResponse, order);
+
+      const [title, message] = toast.warning.calls.mostRecent().args;
+      expect(title).toBe('Payment being confirmed');
+      expect(message).toContain('may already have been received');
+      expect(message).toContain('don\'t pay again');
+      expect(message).toContain('pay_9');
+      expect(message).not.toContain('try again');
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(pending).toHaveBeenCalledWith('pay_9');
+    });
+
+    it('refused: shows the server\'s message', () => {
+      razorpayService.verifyPayment.and.returnValue(of({ success: false, message: 'Razorpay could not confirm this payment. Payment ID: pay_9' }));
+      c.verifyPayment(rzpResponse, order);
+      expect(toast.error).toHaveBeenCalledWith('Payment not confirmed', 'Razorpay could not confirm this payment. Payment ID: pay_9');
     });
   });
 });

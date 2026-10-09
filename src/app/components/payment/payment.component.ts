@@ -7,8 +7,13 @@ import { PaymentData } from '../../interfaces/payment-data';
 import { ToastService } from '../../services/toast.service';
 import { StudentService } from '../../services/student.service';
 import { AuthStateService } from '../../auth/auth-state.service';
+import { PaymentConflict, paymentConflict } from '../../utils/payment-conflict.util';
 
 declare var Razorpay: any;
+
+/** Razorpay Checkout closes itself after this long — safely inside the server's 15-minute
+ * open-checkout window, so an abandoned checkout can't be paid after the server treats it as stale. */
+export const CHECKOUT_TIMEOUT_SECONDS = 600;
 
 @Component({
   selector: 'app-payment',
@@ -58,6 +63,11 @@ export class PaymentComponent implements OnDestroy {
   @Output() paymentSuccess = new EventEmitter<RazorpayPaymentResponse>();
   @Output() paymentProcessingStarted = new EventEmitter<void>();
   @Output() paymentProcessCompleted = new EventEmitter<void>();
+  /** Money was taken but is still being confirmed (or verification couldn't be reached): the
+   * page must reload its server state and stop offering these months. Emits the payment id. */
+  @Output() paymentPending = new EventEmitter<string>();
+  /** The server refused a new order (409) because of an earlier payment for these months. */
+  @Output() paymentConflict = new EventEmitter<PaymentConflict>();
 
   studentDetails: { name: string; email?: string; phoneNumber?: string } | null = null;
 
@@ -116,6 +126,7 @@ export class PaymentComponent implements OnDestroy {
             contact: this.studentDetails?.phoneNumber || ''
           },
           theme: { color: '#4fbdbd' },
+          timeout: CHECKOUT_TIMEOUT_SECONDS,
           method: { netbanking: true, card: true, upi: true, wallet: false },
           handler: (paymentResponse: RazorpayPaymentResponse) => {
             this.verifyPayment(paymentResponse, response);
@@ -133,12 +144,21 @@ export class PaymentComponent implements OnDestroy {
       error: (error) => {
         this.logger.error('Error starting payment:', error);
         if (error?.status === 409) {
-          // The school has no active payment gateway (or online pricing isn't available): the
-          // server refused to create the order. Show its message — it's written for parents.
-          const body = error?.error;
-          const msg = typeof body === 'string' ? body : (body?.error || body?.message);
-          this.toast.warning('Online Payments Unavailable',
-            msg || 'Online payment is not available for this school right now. Please contact the school office.');
+          const conflict = paymentConflict(error);
+          if (conflict.kind === 'pending') {
+            // An earlier payment for these months was taken and isn't recorded yet: never a retry prompt.
+            this.toast.warning(conflict.status === 'NEEDS_REVIEW' ? 'Payment needs review' : 'Payment being confirmed',
+              conflict.message + (conflict.paymentId ? ` Payment ID: ${conflict.paymentId}` : ''));
+            this.paymentConflict.emit(conflict);
+          } else if (conflict.kind === 'retry-later') {
+            this.toast.warning('Payment already started', conflict.message);
+            this.paymentConflict.emit(conflict);
+          } else {
+            // The school has no active payment gateway (or online pricing isn't available): the
+            // server refused to create the order. Show its message — it's written for parents.
+            this.toast.warning('Online Payments Unavailable',
+              conflict.message || 'Online payment is not available for this school right now. Please contact the school office.');
+          }
         } else {
           this.toast.error('Error', 'Could not start the payment. Please try again.');
         }
@@ -148,6 +168,7 @@ export class PaymentComponent implements OnDestroy {
   }
 
   verifyPayment(paymentResponse: RazorpayPaymentResponse, orderDetails: RazorpayOrderResponse) {
+    const paymentId = paymentResponse.razorpay_payment_id;
     this.razorpayService.verifyPayment(paymentResponse, orderDetails).pipe(takeUntil(this.destroy$)).subscribe({
       next: (result) => {
         if (result.success) {
@@ -155,17 +176,28 @@ export class PaymentComponent implements OnDestroy {
         } else if (result.pending) {
           // Money taken, confirmation with Razorpay still in progress: reassure, never "failed",
           // so nobody pays twice. The server settles it automatically once Razorpay confirms.
+          const id = result.paymentId || paymentId;
           this.toast.info('Payment received',
-            result.message || 'We\'re confirming your payment with Razorpay. It will show as paid shortly — please don\'t pay again.');
+            (result.message || 'We\'re confirming your payment with Razorpay. It will show as paid shortly — please don\'t pay again.')
+            + (id ? ` Payment ID: ${id}` : ''));
+          this.paymentPending.emit(id);
           this.paymentProcessCompleted.emit();
         } else {
-          this.toast.error('Verification Failed!', 'Payment could not be verified. Please contact support.');
+          // Refused: the server's message names the payment ID for the school office.
+          this.toast.error('Payment not confirmed', result.message
+            || `Payment could not be verified. Please contact the school office with Payment ID ${paymentId}.`);
           this.paymentProcessCompleted.emit();
         }
       },
       error: (err) => {
+        // Checkout already succeeded, so money may have been taken even though the server couldn't
+        // be reached: never invite a second payment.
         this.logger.error('Error during payment verification:', err);
-        this.toast.error('Verification Error!', 'An error occurred during payment verification. Please try again or contact support.');
+        this.toast.warning('Payment being confirmed',
+          'We couldn\'t confirm your payment yet. It may already have been received — please don\'t pay again. '
+          + 'It will be confirmed automatically; contact the school office if it isn\'t shown as paid soon.'
+          + (paymentId ? ` Payment ID: ${paymentId}` : ''));
+        this.paymentPending.emit(paymentId);
         this.paymentProcessCompleted.emit();
       }
     });

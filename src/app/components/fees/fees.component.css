@@ -49,6 +49,11 @@
 .pt-alert-text  { font-size: 0.78rem; font-weight: 500; line-height: 1.4; }
 .pt-alert--overdue  .pt-alert-text { color: #be123c; }
 .pt-alert--reminder .pt-alert-text { color: #92400e; }
+.pt-alert--confirming { background: #f0fdf4; border: 1px solid #bbf7d0; }
+.pt-alert--review     { background: #fff7ed; border: 1px solid #fed7aa; }
+.pt-alert--confirming .pt-alert-text { color: #166534; }
+.pt-alert--review     .pt-alert-text { color: #9a3412; }
+.pt-alert-ref { font-variant-numeric: tabular-nums; opacity: 0.85; word-break: break-all; }
 
 /* ── Summary Strip ────────────────────────────────────────────── */
 .pt-summary {
@@ -116,6 +121,23 @@
 .pt-month--late     .pt-month-chip { background: #fee2e2; color: #b91c1c; }
 .pt-month--unpaid   .pt-month-chip { background: #f1f5f9; color: #64748b; }
 .pt-month--selected .pt-month-chip { background: #dbeafe; color: #1d4ed8; }
+
+/* An online payment for this month is being confirmed / needs review: not selectable. */
+.pt-month--confirming,
+.pt-month--confirming.pt-month--late {
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border-color: #86efac; cursor: not-allowed;
+  border-style: dashed;
+}
+.pt-month--confirming:hover, .pt-month--confirming:active { transform: none; box-shadow: none; }
+.pt-month--confirming .pt-month-icon { background: #22c55e; color: #fff; }
+.pt-month--confirming .pt-month-name,
+.pt-month--confirming .pt-month-amount { color: #166534; }
+.pt-month--confirming .pt-month-chip { background: #dcfce7; color: #166534; }
+.pt-month--confirming[data-pending="NEEDS_REVIEW"] { background: linear-gradient(135deg, #fff7ed, #ffedd5); border-color: #fdba74; }
+.pt-month--confirming[data-pending="NEEDS_REVIEW"] .pt-month-icon { background: #f97316; }
+.pt-month--confirming[data-pending="NEEDS_REVIEW"] .pt-month-name,
+.pt-month--confirming[data-pending="NEEDS_REVIEW"] .pt-month-amount { color: #9a3412; }
+.pt-month--confirming[data-pending="NEEDS_REVIEW"] .pt-month-chip { background: #ffedd5; color: #9a3412; }
 
 /* ── Sticky Footer ────────────────────────────────────────────── */
 .pt-footer {

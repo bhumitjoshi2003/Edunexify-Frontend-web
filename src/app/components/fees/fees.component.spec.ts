@@ -76,7 +76,9 @@ describe('PaymentTrackerComponent', () => {
       'getCheckoutQuote',
       'recordManualPayment',
       'getMonthFeeBreakdown',
+      'getPendingConfirmations',
     ]);
+    feesServiceSpy.getPendingConfirmations.and.returnValue(of([]));
     feesServiceSpy.getDistinctYearsByStudentId.and.returnValue(
       of(['2026-2027']),
     );
@@ -476,6 +478,123 @@ describe('PaymentTrackerComponent', () => {
         ?.textContent ?? '';
     expect(amountText).toContain('5,800');
     expect(amountText).not.toContain('3,000');
+  });
+
+  // ── Online payments taken but not yet recorded (pending-confirmations, server state) ──
+
+  describe('pending payment confirmations', () => {
+    const confirming = { paymentId: 'pay_CONF1', months: [5], pendingSince: '2026-10-09T10:00:00', status: 'CONFIRMING' as const };
+    const review = { paymentId: 'pay_REV1', months: [6], pendingSince: '2026-10-01T10:00:00', status: 'NEEDS_REVIEW' as const };
+    const root = () => fixture.nativeElement as HTMLElement;
+    const card = (month: number) =>
+      Array.from(root().querySelectorAll('.pt-month'))[component.months.findIndex((m) => m.month === month)] as HTMLElement;
+
+    it('loads them with the fees, for this student and session, on every page load', () => {
+      fixture.detectChanges();
+      expect(feesServiceSpy.getPendingConfirmations).toHaveBeenCalledWith(component.studentId, '2026-2027');
+    });
+
+    it('marks a CONFIRMING month as being confirmed, with the don\'t-pay-again copy and the payment ID', () => {
+      feesServiceSpy.getPendingConfirmations.and.returnValue(of([confirming]));
+      fixture.detectChanges();
+
+      const notice = root().querySelector('[data-testid="pending-confirmation"]')!;
+      expect(notice.textContent).toContain('Payment being confirmed');
+      expect(notice.textContent).toContain('Payment received. We’re confirming it with Razorpay. Please don’t pay again.');
+      expect(notice.textContent).toContain('pay_CONF1');
+      expect(card(5).getAttribute('data-pending')).toBe('CONFIRMING');
+      expect(card(5).classList).toContain('pt-month--confirming');
+      expect(card(5).querySelector('.pt-month-chip')!.textContent).toContain('Confirming');
+      expect(card(6).getAttribute('data-pending')).toBeNull();
+    });
+
+    it('marks a NEEDS_REVIEW month as needing review, telling the user to contact the school office', () => {
+      feesServiceSpy.getPendingConfirmations.and.returnValue(of([review]));
+      fixture.detectChanges();
+
+      const notice = root().querySelector('[data-testid="pending-confirmation"]')!;
+      expect(notice.textContent).toContain('Payment needs review');
+      expect(notice.textContent).toContain('Please don’t pay again — contact the school office.');
+      expect(notice.textContent).toContain('pay_REV1');
+      expect(card(6).getAttribute('data-pending')).toBe('NEEDS_REVIEW');
+      expect(card(6).querySelector('.pt-month-chip')!.textContent).toContain('Needs review');
+    });
+
+    it('a month being confirmed cannot be selected; an ordinary unpaid month still can', () => {
+      feesServiceSpy.getPendingConfirmations.and.returnValue(of([confirming]));
+      feesServiceSpy.getCheckoutQuote.and.returnValue(of({ studentId: 'S1', session: '2026-2027', months: [6],
+        schoolFeePaise: 580000, additionalChargesPaise: 0, lateFeePaise: 0, onlineConvenienceFeePaise: 0,
+        totalPayablePaise: 580000, currency: 'INR', unresolvedMonths: [] } as any));
+      fixture.detectChanges();
+      component.selectedYear = 2026;
+
+      component.toggleMonthSelection(component.months.find((m) => m.month === 5)!);
+      expect(component.selectedMonthsByYear[2026] ?? []).not.toContain(5);
+
+      component.toggleMonthSelection(component.months.find((m) => m.month === 6)!);
+      expect(component.selectedMonthsByYear[2026]).toEqual([6]);
+    });
+
+    it('a selected month that turns out to be pending on reload is dropped from the selection', () => {
+      fixture.detectChanges();
+      component.selectedMonthsByYear = { [component.selectedYear]: [5] };
+      feesServiceSpy.getPendingConfirmations.and.returnValue(of([confirming]));
+
+      component.fetchFees();
+
+      expect(component.selectedMonthsByYear[component.selectedYear]).toEqual([]);
+      expect(component.months.find((m) => m.month === 5)!.selected).toBeFalse();
+    });
+
+    it('if the pending list can\'t be loaded, the fees still load (the server still refuses a second order)', () => {
+      feesServiceSpy.getPendingConfirmations.and.returnValue(throwError(() => ({ status: 500 })));
+      fixture.detectChanges();
+      expect(component.feesLoaded).toBeTrue();
+      expect(component.months.length).toBe(2);
+      expect(component.pendingConfirmations).toEqual([]);
+    });
+
+    it('after a pending verification or a pending 409, reloads the server state and clears the selection', () => {
+      fixture.detectChanges();
+      component.selectedMonthsByYear = { 2026: [5] };
+      feesServiceSpy.getPendingConfirmations.calls.reset();
+
+      component.onPaymentConflict({ kind: 'pending', status: 'CONFIRMING', paymentId: 'pay_X', message: 'm' });
+
+      expect(feesServiceSpy.getPendingConfirmations).toHaveBeenCalled();
+      expect(component.selectedMonthsByYear).toEqual({});
+    });
+
+    it('a "started recently" 409 does not reload or clear anything', () => {
+      fixture.detectChanges();
+      component.selectedMonthsByYear = { 2026: [5] };
+      feesServiceSpy.getPendingConfirmations.calls.reset();
+
+      component.onPaymentConflict({ kind: 'retry-later', retryAfter: '2026-10-09T10:15:00', message: 'm' });
+
+      expect(feesServiceSpy.getPendingConfirmations).not.toHaveBeenCalled();
+      expect(component.selectedMonthsByYear).toEqual({ 2026: [5] });
+    });
+
+    it('a manual payment refused because of an online payment shows the server message and reloads', async () => {
+      fixture.detectChanges();
+      component.studentId = 'S1';
+      component.selectedYear = 2026;
+      component.selectedMonthsByYear = { 2026: [5] };
+      component.manualPaymentAmount = 5800;
+      feesServiceSpy.recordManualPayment.and.returnValue(throwError(() => ({ status: 409,
+        error: { error: 'An online payment for some of these months was started recently…', retryAfter: '2026-10-09T10:15' } })));
+      feesServiceSpy.getPendingConfirmations.calls.reset();
+
+      component.markAsManuallyPaid();
+      await fixture.whenStable();
+
+      expect(toastSpy.warning).toHaveBeenCalledWith('Online payment in progress',
+        'An online payment for some of these months was started recently and may still be completed. '
+        + 'Wait until 10:15 IST, or check with the parent, before recording a manual payment.');
+      expect(toastSpy.error).not.toHaveBeenCalled();
+      expect(feesServiceSpy.getPendingConfirmations).toHaveBeenCalled();
+    });
   });
 
   // ── Phase 1B: authoritative current session, not a locally-guessed one ─────

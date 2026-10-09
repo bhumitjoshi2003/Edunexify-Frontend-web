@@ -33,6 +33,8 @@ import { AcademicSessionService } from '../../services/academic-session.service'
 import { take } from 'rxjs/operators';
 import { ParentPortalService } from '../../services/parent-portal.service';
 import { ParentChildContextComponent } from '../parent-child-context/parent-child-context.component';
+import { PendingConfirmation } from '../../interfaces/pending-confirmation';
+import { CONFIRMING_COPY, NEEDS_REVIEW_COPY, PaymentConflict, manualRetryLaterCopy } from '../../utils/payment-conflict.util';
 import { ChildAccess } from '../../interfaces/parent-portal';
 
 export interface FeeLineItem {
@@ -51,6 +53,9 @@ export interface MonthViewModel extends StudentFee {
   /** True when baseAmountDue is null or snapshotStatus isn't COMPUTED — the amount shown is
    * NOT confidently known. Never treated as ₹0; selection is disabled for such months. */
   amountUnavailable: boolean;
+  /** An online payment for this month was taken but isn't recorded yet (server state): the month
+   * is shown as being confirmed / needing review and can't be selected for payment. */
+  pendingConfirmation?: PendingConfirmation | null;
 }
 
 export interface MonthBreakdownDetails {
@@ -154,6 +159,10 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
    * payment must be disabled with a clean, non-technical message; manual/admin recording is
    * unaffected (it never consults pricing at all). */
   onlinePaymentPricingUnavailable: boolean = false;
+  /** Online payments taken but not yet recorded for this student's session (from the server). */
+  pendingConfirmations: PendingConfirmation[] = [];
+  readonly confirmingCopy = CONFIRMING_COPY;
+  readonly needsReviewCopy = NEEDS_REVIEW_COPY;
 
   currentMonth = new Date().getMonth() + 1;
   academicCurrentMonth: number = 0;
@@ -315,13 +324,23 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
       this.attendanceService
         .getTotalUnappliedLeaveCount(this.studentId, this.session)
         .pipe(catchError(() => of(0))),
+      // Server state, so it survives refresh and other devices. If it can't be read, the server
+      // still refuses a second order for these months (409) — the page just can't pre-mark them.
+      this.feesService.getPendingConfirmations(this.studentId, this.session).pipe(
+        catchError((error) => {
+          this.logger.error('Could not load pending payment confirmations:', error);
+          return of([] as PendingConfirmation[]);
+        }),
+      ),
     ])
       .pipe(takeUntil(this.destroy$), takeUntil(this.childRequest$))
       .subscribe({
-        next: ([fees, totalUnappliedLeaves]) => {
+        next: ([fees, totalUnappliedLeaves, pending]) => {
           this.className = fees.length > 0 ? fees[0].className : '';
           this.totalUnappliedLeaves = totalUnappliedLeaves;
           this.totalUnappliedLeaveCharge = totalUnappliedLeaves * 25;
+          this.pendingConfirmations = pending ?? [];
+          this.dropPendingMonthsFromSelection();
           this.months = fees.map((fee) => this.buildMonthViewModel(fee));
           this.feesLoaded = true;
           this.checkAndDisplayFeeWarnings();
@@ -350,7 +369,33 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
       fee: fee.baseAmountDue ?? 0,
       busFee: fee.busFeeDue ?? 0,
       amountUnavailable,
+      pendingConfirmation: this.pendingFor(fee.month),
     };
+  }
+
+  /** The unresolved online payment covering {@code month}, if any. */
+  pendingFor(month: number): PendingConfirmation | null {
+    return this.pendingConfirmations.find((p) => p.months.includes(month)) ?? null;
+  }
+
+  /** Month names of a pending payment, for its notice. */
+  pendingMonthNames(pending: PendingConfirmation): string {
+    return pending.months.map((m) => this.feesCalc.getMonthName(m)).join(', ');
+  }
+
+  /** A month that is being confirmed can never stay selected (e.g. selected before a reload). */
+  private dropPendingMonthsFromSelection(): void {
+    const selected = this.selectedMonthsByYear[this.selectedYear];
+    if (!selected?.length) return;
+    const kept = selected.filter((m) => !this.pendingFor(m));
+    if (kept.length !== selected.length) {
+      this.selectedMonthsByYear[this.selectedYear] = kept;
+      if (!kept.length) {
+        this.lastSelectedMonth = null;
+        this.selectedMonthDetails = null;
+      }
+      this.recalculateTotals();
+    }
   }
 
   /** selectedYear/currentYear here only ever gate WHICH warnings are shown (display), never
@@ -527,7 +572,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
   }
 
   toggleMonthSelection(month: MonthViewModel): void {
-    if (month.paid || this.isLoadingPayment || month.amountUnavailable) return;
+    if (month.paid || this.isLoadingPayment || month.amountUnavailable || month.pendingConfirmation) return;
 
     const year = this.selectedYear;
     if (!this.selectedMonthsByYear[year]) {
@@ -667,6 +712,24 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Money was taken but is still being confirmed: reload the server state, which now marks
+   * these months as being confirmed and stops offering them. */
+  onPaymentPending(): void {
+    this.ngZone.run(() => {
+      this.selectedMonthsByYear = {};
+      this.lastSelectedMonth = null;
+      this.selectedMonthDetails = null;
+      this.totalAmountToPay = 0;
+      this.initPaymentData();
+      this.fetchFees();
+    });
+  }
+
+  /** The server refused a new order because of an earlier payment for these months. */
+  onPaymentConflict(conflict: PaymentConflict): void {
+    if (conflict.kind === 'pending') this.onPaymentPending();
+  }
+
   handleSuccessfulPayment(): void {
     this.ngZone.run(() => {
       this.initPaymentData();
@@ -760,6 +823,15 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
             error: (err) => {
               const message =
                 err?.error?.error || 'Failed to record manual payment.';
+              if (err?.status === 409) {
+                // An online payment for these months is being confirmed, needs review, or was just
+                // started: the server's message tells the office what to check first.
+                const retryAfter = err?.error?.retryAfter;
+                this.toast.warning('Online payment in progress',
+                  typeof retryAfter === 'string' ? manualRetryLaterCopy(retryAfter) : message);
+                this.fetchFees();
+                return;
+              }
               this.toast.error('Error!', message);
             },
           });
@@ -783,6 +855,10 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
       !month.manuallyPaid &&
       month.month <= this.academicCurrentMonth
     );
+  }
+
+  trackByPaymentId(index: number, pending: PendingConfirmation): string {
+    return pending.paymentId;
   }
 
   trackByMonth(index: number, month: MonthViewModel): number {
