@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { catchError, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { AcademicSession } from '../../interfaces/academic-session';
 import {
@@ -14,7 +15,9 @@ import {
   FeeGenerationResult,
   FeeLifecycleHistory,
   FeeReadinessReport,
+  FeeReconciliationRow,
   FeeReconciliationSummary,
+  FeeUnresolvedMonth,
   FeeStudentPreview,
   FeeTransportHistoryRow,
   FeeWorkflowChangeResult,
@@ -31,7 +34,7 @@ type FeeAssignmentTab = 'assign' | 'discounts' | 'history';
 @Component({
   selector: 'app-fee-assignment',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './fee-assignment.component.html',
   styleUrls: ['./fee-assignment.component.css'],
 })
@@ -40,6 +43,9 @@ export class FeeAssignmentComponent implements OnInit, OnDestroy {
   private reload$ = new Subject<void>();
 
   schoolPolicy = 'Loading school policy…';
+  schoolPolicyCode: string | null = null;
+  /** True once the admin has picked an effective date themselves (the default is today). */
+  effectiveDateChosen = false;
   activeTab: FeeAssignmentTab = 'assign';
   private historyTabLoaded = false;
 
@@ -127,6 +133,7 @@ export class FeeAssignmentComponent implements OnInit, OnDestroy {
       next: settings => {
         const labels = { FROM_EFFECTIVE_MONTH: 'Include the full effective month', NEXT_MONTH: 'Start next month', PRORATE_JOINING_MONTH: 'Prorate the effective month' };
         this.schoolPolicy = labels[settings.midSessionPolicy];
+        this.schoolPolicyCode = settings.midSessionPolicy ?? null;
         this.cdr.markForCheck();
       },
       error: () => { this.schoolPolicy = 'School policy unavailable — review the generation preview'; this.cdr.markForCheck(); },
@@ -257,6 +264,22 @@ export class FeeAssignmentComponent implements OnInit, OnDestroy {
   toggleMonth(month: number): void {
     this.selectedMonths.has(month) ? this.selectedMonths.delete(month) : this.selectedMonths.add(month);
   }
+  onEffectiveDateChange(value: string): void {
+    this.assignForm.effectiveDate = value;
+    this.effectiveDateChosen = true;
+  }
+
+  /** What the school policy does to the month the effective date falls in (display only). */
+  effectiveMonthConsequence(month: number): string {
+    const label = this.monthLabel(month, true);
+    switch (this.schoolPolicyCode) {
+      case 'NEXT_MONTH': return `${label} will not be charged; billing starts from the following month.`;
+      case 'FROM_EFFECTIVE_MONTH': return `${label} will be charged in full.`;
+      case 'PRORATE_JOINING_MONTH': return `${label} will be charged only for the remaining days.`;
+      default: return 'Check the preview to see how this month is charged.';
+    }
+  }
+
   conflictMonth(): number | null {
     if (!this.assignForm.effectiveDate) return null;
     const effective = new Date(`${this.assignForm.effectiveDate}T00:00:00`);
@@ -437,10 +460,20 @@ export class FeeAssignmentComponent implements OnInit, OnDestroy {
       });
   }
 
+  /** Every unresolved month in the session, one entry per student-month, for the review list. */
+  unresolvedMonthEntries(): { row: FeeReconciliationRow; month: FeeUnresolvedMonth }[] {
+    return (this.reconciliation?.students || []).flatMap((row) =>
+      (row.unresolvedMonths || []).map((month) => ({ row, month })));
+  }
+  trackByUnresolved(index: number, entry: { row: FeeReconciliationRow; month: FeeUnresolvedMonth }): string {
+    return `${entry.row.studentId}:${entry.month.month}`;
+  }
+
   visibleReconciliationRows() {
     const rows = this.reconciliation?.students || [];
     return this.showOnlyMissing
-      ? rows.filter((row) => row.missingMonths.length || row.status === 'GENERATION_FAILED')
+      ? rows.filter((row) => row.missingMonths.length || row.status === 'GENERATION_FAILED'
+          || (row.unresolvedMonths?.length ?? 0) > 0)
       : rows;
   }
   pagedReconciliationRows() {

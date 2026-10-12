@@ -5,6 +5,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnIni
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, take, takeUntil } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
 import { FeesService } from '../../services/fees.service';
 import { SchoolService } from '../../services/school.service';
 import { FeesCalculationService } from '../../services/fees-calculation.service';
@@ -56,12 +57,27 @@ export class FeeRecalculationComponent implements OnInit, OnDestroy {
     private toast: ToastService,
     private logger: LoggerService,
     private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
+    // Opened from Fee Assignment → History & Reconciliation for one unresolved month: prefill the
+    // student, session and month(s). Nothing runs until the admin previews and applies.
+    const params = this.route.snapshot.queryParamMap;
+    this.studentId = params.get('studentId') ?? this.studentId;
+    this.session = params.get('session') ?? this.session;
+    const prefillMonths = (params.get('months') ?? '').split(',').map(Number)
+      .filter(m => Number.isInteger(m) && m >= 1 && m <= 12);
+    const prefill = () => {
+      this.onSessionChange();
+      if (prefillMonths.length) {
+        this.monthOptions.forEach(m => m.selectedForPreview = prefillMonths.includes(m.month));
+        this.cdr.markForCheck();
+      }
+    };
     this.sessionsApi.getAllSessions().pipe(take(1), takeUntil(this.destroy$)).subscribe({
-      next: sessions => { this.sessions = sessions; this.onSessionChange(); },
-      error: e => { this.logger.error('Session dates unavailable', e); this.onSessionChange(); },
+      next: sessions => { this.sessions = sessions; prefill(); },
+      error: e => { this.logger.error('Session dates unavailable', e); prefill(); },
     });
   }
 

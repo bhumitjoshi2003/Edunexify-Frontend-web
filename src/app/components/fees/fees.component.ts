@@ -28,7 +28,8 @@ import { AttendanceService } from '../../services/attendance.service';
 import { ComingSoonComponent } from '../coming-soon/coming-soon.component';
 import { MODULE_MESSAGES } from '../../config/module-messages.config';
 import { FeesCalculationService } from '../../services/fees-calculation.service';
-import { FeeBreakdownComponent } from './fee-breakdown.component';
+import { FeeBreakdownComponent, SelectionQuoteSummary } from './fee-breakdown.component';
+import { InrPipe } from '../../pipes/inr.pipe';
 import { LoggerService } from '../../services/logger.service';
 import { SchoolService } from '../../services/school.service';
 import { AcademicSessionService } from '../../services/academic-session.service';
@@ -94,6 +95,7 @@ export interface MonthBreakdownDetails {
     MatInputModule,
     FeeBreakdownComponent,
     ParentChildContextComponent,
+    InrPipe,
   ],
   templateUrl: './fees.component.html',
   styleUrls: ['./fees.component.css'],
@@ -109,6 +111,8 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
   private initialized = false;
   quoteValid = false;
   quoteLoading = false;
+  /** The current selection's quote, for the payment summary; null whenever the selection changes. */
+  quoteSummary: SelectionQuoteSummary | null = null;
 
   monthLabel(month: number): string {
     return feeMonthLabel(this.sessions.find(s => s.label === this.session)?.startDate, month);
@@ -118,6 +122,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     this.quoteRequest$.next();
     this.quoteVersion++;
     this.quoteValid = false;
+    this.quoteSummary = null;
     this.quoteLoading = false;
     this.totalAmountToPay = 0;
     this.manualPaymentAmount = 0;
@@ -488,6 +493,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     this.quoteRequest$.next();
     const version = ++this.quoteVersion;
     this.quoteValid = false;
+    this.quoteSummary = null;
     this.quoteLoading = selectedMonths.length > 0;
     this.totalAmountToPay = 0;
     this.manualPaymentAmount = 0;
@@ -571,6 +577,14 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     }
 
     this.quoteValid = true;
+    this.quoteSummary = {
+      monthNames: [...selectedMonths].sort((a, b) => a - b).map((m) => this.monthLabel(m)),
+      schoolFee: schoolFeeDueAlone,
+      lateFee,
+      leaveCharges: quote.additionalChargesPaise / 100,
+      convenienceFee: onlineConvenienceFee,
+      total: totalPayable,
+    };
     this.totalAmountToPay = totalPayable;
     if (this.role === 'ADMIN') this.manualPaymentAmount = quote.schoolFeePaise / 100;
     this.onlineConvenienceFeeAmount = onlineConvenienceFee;
@@ -907,6 +921,11 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
       !month.paid &&
       month.month <= this.academicCurrentMonth
     );
+  }
+
+  /** Some money allocated but the month isn't fulfilled: still payable, never shown as Paid. */
+  isPartial(month: MonthViewModel): boolean {
+    return !month.paid && this.netAmountPaid(month) > 0;
   }
 
   trackByPaymentId(index: number, pending: PendingConfirmation): string {

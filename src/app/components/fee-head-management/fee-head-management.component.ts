@@ -48,6 +48,10 @@ export class FeeHeadManagementComponent implements OnInit, OnDestroy {
     });
   }
 
+  needsReview(head: FeeHead): boolean {
+    return this.suspiciousSchedules.includes(head);
+  }
+
   selectedMonths: Set<number> = new Set();
 
   constructor(
