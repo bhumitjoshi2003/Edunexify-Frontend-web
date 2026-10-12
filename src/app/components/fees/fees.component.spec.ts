@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
 
 import { PaymentTrackerComponent, MonthViewModel } from './fees.component';
@@ -92,9 +92,9 @@ describe('PaymentTrackerComponent', () => {
       of({ academicYearStartMonth: 7 } as any),
     );
 
-    academicSessionServiceSpy = jasmine.createSpyObj('AcademicSessionService', ['getCurrentSession']);
-    academicSessionServiceSpy.getCurrentSession.and.returnValue(
-      of({ id: 1, label: '2026-2027', startDate: '2026-07-01', endDate: '2027-06-30', current: true }),
+    academicSessionServiceSpy = jasmine.createSpyObj('AcademicSessionService', ['getAllSessions']);
+    academicSessionServiceSpy.getAllSessions.and.returnValue(
+      of([{ id: 1, label: '2026-2027', startDate: '2026-07-01', endDate: '2027-06-30', current: true }]),
     );
 
     toastSpy = jasmine.createSpyObj('ToastService', [
@@ -227,7 +227,9 @@ describe('PaymentTrackerComponent', () => {
     component.selectedYear = 2026;
     component.selectedMonthsByYear = { 2026: [5] };
     component.manualPaymentAmount = 5887;
+    component.quoteValid = true;
     component.manualPaymentMode = 'CHEQUE';
+    component.quoteValid = true;
     feesServiceSpy.recordManualPayment.and.returnValue(
       of({ message: 'ok', paymentId: 'p1' } as any),
     );
@@ -248,6 +250,7 @@ describe('PaymentTrackerComponent', () => {
     component.selectedYear = 2026;
     component.selectedMonthsByYear = { 2026: [] };
     component.manualPaymentAmount = 100;
+    component.quoteValid = true;
 
     component.markAsManuallyPaid();
 
@@ -290,7 +293,7 @@ describe('PaymentTrackerComponent', () => {
 
     return fixture.whenStable().then(() => {
       expect(component.totalAmountToPay).toBe(5887);
-      expect(component.manualPaymentAmount).toBe(5887);
+      expect(component.manualPaymentAmount).toBe(5800);
     });
   });
 
@@ -542,7 +545,7 @@ describe('PaymentTrackerComponent', () => {
 
       component.fetchFees();
 
-      expect(component.selectedMonthsByYear[component.selectedYear]).toEqual([]);
+      expect(component.selectedMonthsByYear[component.selectedYear] ?? []).toEqual([]);
       expect(component.months.find((m) => m.month === 5)!.selected).toBeFalse();
     });
 
@@ -582,6 +585,7 @@ describe('PaymentTrackerComponent', () => {
       component.selectedYear = 2026;
       component.selectedMonthsByYear = { 2026: [5] };
       component.manualPaymentAmount = 5800;
+    component.quoteValid = true;
       feesServiceSpy.recordManualPayment.and.returnValue(throwError(() => ({ status: 409,
         error: { error: 'An online payment for some of these months was started recently…', retryAfter: '2026-10-09T10:15' } })));
       feesServiceSpy.getPendingConfirmations.calls.reset();
@@ -603,12 +607,12 @@ describe('PaymentTrackerComponent', () => {
     it('uses the backend AcademicSession label, never a value computed from today\'s date and academicYearStartMonth', () => {
       fixture.detectChanges();
 
-      expect(academicSessionServiceSpy.getCurrentSession).toHaveBeenCalled();
+      expect(academicSessionServiceSpy.getAllSessions).toHaveBeenCalled();
       expect(component.currentAcademicYear).toBe('2026-2027');
     });
 
     it('still loads the fee grid when the school has no current session configured', () => {
-      academicSessionServiceSpy.getCurrentSession.and.returnValue(
+      academicSessionServiceSpy.getAllSessions.and.returnValue(
         throwError(() => ({ error: 'No current academic session found.' })),
       );
 
@@ -659,5 +663,90 @@ describe('PaymentTrackerComponent', () => {
 
       expect(component.isLate(month)).toBeTrue();
     });
+  });
+
+  function regressionQuote(): CheckoutQuote {
+    return { studentId: 'S1', session: '2026-2027', months: [1], schoolFeePaise: 380000,
+      additionalChargesPaise: 0, lateFeePaise: 0, onlineConvenienceFeePaise: 0,
+      totalPayablePaise: 380000, currency: 'INR', unresolvedMonths: [] } as CheckoutQuote;
+  }
+
+  it('labels October and November from the viewed session, regardless of school settings', () => {
+    fixture.detectChanges();
+    component.sessions = [{ id: 9, label: 'Autumn 2026', startDate: '2026-10-01', endDate: '2027-09-30', current: true }];
+    component.session = 'Autumn 2026';
+    expect(component.monthLabel(1)).toBe('October 2026');
+    expect(component.monthLabel(2)).toBe('November 2026');
+  });
+
+  it('keeps a manually funded partial remainder outstanding and selectable', () => {
+    feesServiceSpy.getStudentFees.and.returnValue(of([{ ...buildFee(1), paid: false, manuallyPaid: true, amountPaid: 2000, paymentProvenance: 'CASH' }]));
+    feesServiceSpy.getCheckoutQuote.and.returnValue(of(regressionQuote()));
+    fixture.detectChanges();
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.pt-month')!;
+    expect(card.textContent).toContain('Partial');
+    expect(card.textContent).toContain('3,800');
+    expect(card.querySelector('.pt-month-chip')?.textContent).not.toContain('Paid');
+    (card as HTMLElement).click();
+    expect(feesServiceSpy.getCheckoutQuote).toHaveBeenCalled();
+    expect(component.quoteValid).toBeTrue();
+  });
+
+  it('clears old totals immediately and ignores an old quote after exact session switch', () => {
+    fixture.detectChanges();
+    const oldQuote = new Subject<CheckoutQuote>();
+    feesServiceSpy.getCheckoutQuote.and.returnValue(oldQuote);
+    const month = monthWith(null);
+    month.paid = false;
+    component.months = [month];
+    component.toggleMonthSelection(month);
+    expect(component.quoteValid).toBeFalse();
+    component.onYearChange({ target: { value: 'Autumn 2027' } } as unknown as Event);
+    oldQuote.next(regressionQuote());
+    expect(component.session).toBe('Autumn 2027');
+    expect(component.totalAmountToPay).toBe(0);
+    expect(component.paymentData.studentId).toBe('');
+    expect(component.quoteValid).toBeFalse();
+  });
+
+  it('shows the reason for an unresolved month without inventing a zero amount', () => {
+    feesServiceSpy.getStudentFees.and.returnValue(of([{ ...buildFee(1), paid: false,
+      baseAmountDue: null, snapshotStatus: 'NO_ACTIVE_RULE_THIS_MONTH',
+      amountUnavailableReason: 'No fee rule covers this billing month.' }]));
+    fixture.detectChanges();
+    const card = (fixture.nativeElement as HTMLElement).querySelector('.pt-month')!;
+    expect(card.textContent).toContain('Amount unavailable');
+    expect(card.textContent).toContain('No fee rule covers this billing month.');
+    expect(card.querySelector('.pt-month-amount')?.textContent).not.toContain('₹0');
+    component.toggleMonthSelection(component.months[0]);
+    expect(feesServiceSpy.getCheckoutQuote).not.toHaveBeenCalled();
+  });
+
+  it('does not let a previous session fee response overwrite the new session', () => {
+    fixture.detectChanges();
+    const oldFees = new Subject<StudentFee[]>();
+    feesServiceSpy.getStudentFees.and.returnValue(oldFees);
+    component.fetchFees();
+    feesServiceSpy.getStudentFees.and.returnValue(of([buildFee(2)]));
+    component.onYearChange({ target: { value: 'Autumn 2027' } } as unknown as Event);
+    oldFees.next([buildFee(11)]);
+    expect(component.months.map(m => m.month)).toEqual([2]);
+    expect(component.totalAmountToPay).toBe(0);
+    expect(component.quoteValid).toBeFalse();
+  });
+  it('invalidates the quote immediately when selection changes and ignores the former response', () => {
+    fixture.detectChanges();
+    const first = new Subject<CheckoutQuote>();
+    const second = new Subject<CheckoutQuote>();
+    feesServiceSpy.getCheckoutQuote.and.returnValues(first, second);
+    const months = component.months;
+    component.toggleMonthSelection(months[0]);
+    component.toggleMonthSelection(months[1]);
+    first.next(regressionQuote());
+    expect(component.quoteValid).toBeFalse();
+    expect(component.totalAmountToPay).toBe(0);
+    second.next(regressionQuote());
+    expect(component.quoteValid).toBeTrue();
+    expect(component.paymentData.monthSelectionString).toBe('000011000000');
   });
 });

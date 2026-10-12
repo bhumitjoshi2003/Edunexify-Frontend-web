@@ -1,3 +1,5 @@
+import { AcademicSession } from '../../interfaces/academic-session';
+import { feeMonthLabel, feeAcademicMonth } from '../../utils/fee-session.util';
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -99,6 +101,49 @@ export interface MonthBreakdownDetails {
 })
 export class PaymentTrackerComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private context$ = new Subject<void>();
+  private quoteRequest$ = new Subject<void>();
+  private contextVersion = 0;
+  private quoteVersion = 0;
+  sessions: AcademicSession[] = [];
+  private initialized = false;
+  quoteValid = false;
+  quoteLoading = false;
+
+  monthLabel(month: number): string {
+    return feeMonthLabel(this.sessions.find(s => s.label === this.session)?.startDate, month);
+  }
+
+  private clearPaymentContext(): void {
+    this.quoteRequest$.next();
+    this.quoteVersion++;
+    this.quoteValid = false;
+    this.quoteLoading = false;
+    this.totalAmountToPay = 0;
+    this.manualPaymentAmount = 0;
+    this.lateFees = 0;
+    this.selectedMonthDetails = null;
+    this.lastSelectedMonth = null;
+    this.onlinePaymentPricingUnavailable = false;
+    this.onlineConvenienceFeeAmount = 0;
+    this.lateFees = 0;
+    this.initPaymentData();
+  }
+
+  private resetContext(): void {
+    this.context$.next();
+    this.contextVersion++;
+    this.clearPaymentContext();
+    this.selectedMonthsByYear = {};
+    this.months = [];
+    this.totalUnappliedLeaves = 0;
+    this.totalUnappliedLeaveCharge = 0;
+    this.pendingConfirmations = [];
+    this.pastUnpaidMonthNames = [];
+    this.unpaidCurrentMonthName = '';
+    this.feesLoaded = false;
+    this.cdr.markForCheck();
+  }
   /** Fires when a parent switches child: cancels the previous child's in-flight fee reads. */
   private readonly childRequest$ = new Subject<void>();
 
@@ -174,57 +219,35 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     this.role = this.authService.getUserRole();
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe((params) => {
       const studentIdFromParams = params['studentId'];
-      if (studentIdFromParams) {
+      if (studentIdFromParams && this.studentId !== studentIdFromParams) {
         this.studentId = studentIdFromParams;
+        if (this.initialized) { this.fetchSessions(); if (this.role === 'PARENT') this.loadParentChildAccess(); }
       }
     });
     if (this.role === 'STUDENT') this.getStudentId();
     if (this.role === 'PARENT') this.loadParentChildAccess();
 
-    // Load school settings first — academicYearStartMonth is still needed here, but only to
-    // order/label calendar months WITHIN whatever session turns out to be current (see
-    // FeesCalculationService.getAcademicMonth/getMonthName), never to decide which session
-    // that is. Kept sequential (settings before initCalendarState, exactly as before) so
-    // academicCurrentMonth is always computed with the correct start month, never a
-    // momentarily-default one from a race between this call and the session lookup below.
-    this.schoolService
-      .getSettings()
-      .pipe(take(1), takeUntil(this.destroy$))
-      .subscribe({
-        next: (settings) => {
-          this.feesCalc.setStartMonth(settings.academicYearStartMonth ?? 4);
-          this.initCalendarState();
-        },
-        error: () => this.initCalendarState(),
-      });
+    this.initialized = true;
+    this.initCalendarState();
   }
 
-  /** Sources "what's the current academic session" from the backend's authoritative
-   * AcademicSession record — never guessed client-side from today's date. If the school has
-   * no current session configured, currentAcademicYear is left blank rather than fabricated;
-   * checkAndDisplayFeeWarnings/isLate degrade to treating the viewed session as current in
-   * that case (see their comments), and the fee grid itself still loads either way. */
   private initCalendarState(): void {
-    this.academicCurrentMonth = this.feesCalc.getAcademicMonth(
-      this.currentMonth,
-    );
-    this.academicSessionService
-      .getCurrentSession()
-      .pipe(take(1), takeUntil(this.destroy$))
-      .subscribe({
-        next: (session) => {
-          this.currentAcademicYear = session.label;
-          this.fetchSessions();
-        },
-        error: (err) => {
-          this.logger.error('Failed to load current academic session', err);
-          this.currentAcademicYear = '';
-          this.fetchSessions();
-        },
-      });
+    this.academicSessionService.getAllSessions().pipe(take(1), takeUntil(this.destroy$)).subscribe({
+      next: sessions => {
+        this.sessions = sessions;
+        this.currentAcademicYear = sessions.find(s => s.current)?.label ?? '';
+        this.fetchSessions();
+      },
+      error: err => {
+        this.logger.error('Session dates unavailable', err);
+        this.fetchSessions();
+      },
+    });
   }
 
   ngOnDestroy(): void {
+    this.context$.next();
+    this.quoteRequest$.next();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -261,6 +284,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
       this.toast.error('Fee access unavailable', 'Please contact the school administrator.');
       return;
     }
+    if (this.isLoadingPayment) return;
     this.childRequest$.next();
     this.studentId = child.studentId;
     this.studentName = child.studentName;
@@ -276,14 +300,15 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
   }
 
   fetchSessions(): void {
+    this.resetContext();
     this.feesService
       .getDistinctYearsByStudentId(this.studentId)
-      .pipe(takeUntil(this.destroy$), takeUntil(this.childRequest$))
+      .pipe(takeUntil(this.context$), takeUntil(this.destroy$), takeUntil(this.childRequest$))
       .subscribe({
         next: (sessions) => {
           this.years = sessions;
           if (this.years.length > 0) {
-            this.session = this.years[this.years.length - 1];
+            this.session = this.years.includes(this.session) ? this.session : this.years.includes(this.currentAcademicYear) ? this.currentAcademicYear : this.years[0];
             this.selectedYear = parseInt(this.session.split('-')[0]);
             this.cdr.markForCheck();
             this.fetchFees();
@@ -304,8 +329,10 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
 
   onYearChange(event: Event): void {
     const select = event.target as HTMLSelectElement;
-    this.selectedYear = parseInt(select.value);
-    this.session = `${this.selectedYear}-${this.selectedYear + 1}`;
+    if (this.isLoadingPayment) return;
+    this.session = select.value;
+    this.selectedYear = parseInt(this.session.split('-')[0]);
+    this.resetContext();
     this.fetchFees();
   }
 
@@ -316,7 +343,12 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
       return;
     }
+    this.context$.next();
+    this.clearPaymentContext();
+    this.selectedMonthsByYear = {};
+    this.months = [];
     this.feesLoaded = false;
+    this.academicCurrentMonth = feeAcademicMonth(this.sessions.find(s => s.label === this.session)?.startDate);
     this.onPaymentProcessCompleted();
 
     forkJoin([
@@ -333,7 +365,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
         }),
       ),
     ])
-      .pipe(takeUntil(this.destroy$), takeUntil(this.childRequest$))
+      .pipe(takeUntil(this.context$), takeUntil(this.destroy$), takeUntil(this.childRequest$))
       .subscribe({
         next: ([fees, totalUnappliedLeaves, pending]) => {
           this.className = fees.length > 0 ? fees[0].className : '';
@@ -364,11 +396,14 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     return {
       ...fee,
       monthNumber: fee.month,
-      name: this.feesCalc.getMonthName(fee.month),
+      name: this.monthLabel(fee.month),
       selected: this.isMonthSelected(fee.month, this.selectedYear),
       fee: fee.baseAmountDue ?? 0,
       busFee: fee.busFeeDue ?? 0,
       amountUnavailable,
+      amountUnavailableReason: fee.amountUnavailableReason || (fee.snapshotStatus === 'NO_ACTIVE_RULE_THIS_MONTH'
+        ? 'No fee rule covers this billing month. Ask the school to review rule effective dates.'
+        : 'This historical month has no verified amount snapshot. School review is required.'),
       pendingConfirmation: this.pendingFor(fee.month),
     };
   }
@@ -380,7 +415,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
 
   /** Month names of a pending payment, for its notice. */
   pendingMonthNames(pending: PendingConfirmation): string {
-    return pending.months.map((m) => this.feesCalc.getMonthName(m)).join(', ');
+    return pending.months.map((m) => this.monthLabel(m)).join(', ');
   }
 
   /** A month that is being confirmed can never stay selected (e.g. selected before a reload). */
@@ -418,16 +453,14 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const currentAcademicMonth = this.feesCalc.getAcademicMonth(
-        new Date().getMonth() + 1,
-      );
+      const currentAcademicMonth = this.academicCurrentMonth;
       const currentMonthFee = this.months.find(
         (month) => month.monthNumber === currentAcademicMonth,
       );
 
       this.unpaidCurrentMonthName =
         currentMonthFee && !currentMonthFee.paid
-          ? this.feesCalc.getMonthName(currentMonthFee.monthNumber)
+          ? this.monthLabel(currentMonthFee.monthNumber)
           : '';
 
       // Any genuinely past unpaid month has a real, positive late fee under the backend's
@@ -437,7 +470,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
         .filter(
           (month) => !month.paid && month.monthNumber < currentAcademicMonth,
         )
-        .map((m) => this.feesCalc.getMonthName(m.monthNumber));
+        .map((m) => this.monthLabel(m.monthNumber));
     }
     this.cdr.markForCheck();
   }
@@ -451,7 +484,14 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
    * late fee, and platform fee are never computed client-side. Resets to zero when nothing
    * is selected. */
   private recalculateTotals(): void {
-    const selectedMonths = this.selectedMonthsByYear[this.selectedYear] || [];
+    const selectedMonths = [...(this.selectedMonthsByYear[this.selectedYear] || [])];
+    this.quoteRequest$.next();
+    const version = ++this.quoteVersion;
+    this.quoteValid = false;
+    this.quoteLoading = selectedMonths.length > 0;
+    this.totalAmountToPay = 0;
+    this.manualPaymentAmount = 0;
+    this.initPaymentData();
     if (selectedMonths.length === 0) {
       this.totalAmountToPay = 0;
       this.onlineConvenienceFeeAmount = 0;
@@ -467,10 +507,16 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     this.onlinePaymentPricingUnavailable = false;
     this.feesService
       .getCheckoutQuote(this.studentId, this.session, selectedMonths)
-      .pipe(takeUntil(this.destroy$), takeUntil(this.childRequest$))
+      .pipe(takeUntil(this.quoteRequest$), takeUntil(this.context$), takeUntil(this.destroy$), takeUntil(this.childRequest$))
       .subscribe({
-        next: (quote) => this.applyCheckoutQuote(quote, selectedMonths),
+        next: quote => {
+          if (version !== this.quoteVersion) return;
+          this.quoteLoading = false;
+          this.applyCheckoutQuote(quote, selectedMonths);
+        },
         error: (error) => {
+          this.quoteLoading = false;
+          this.cdr.markForCheck();
           this.logger.error('Error fetching checkout quote:', error);
           if (error?.status === 409 && this.role !== 'ADMIN') {
             // Backend-authoritative: no active payment_pricing_config version exists yet.
@@ -503,6 +549,8 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
         'Error',
         'The fee amount for one or more selected months could not be determined. Please contact the school office.',
       );
+      this.cdr.markForCheck();
+      return;
     }
 
     // Every money field on CheckoutQuote is paise-native and server-authoritative; the UI
@@ -522,8 +570,9 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
       this.onlinePaymentPricingUnavailable = true;
     }
 
+    this.quoteValid = true;
     this.totalAmountToPay = totalPayable;
-    if (this.role === 'ADMIN') this.manualPaymentAmount = totalPayable;
+    if (this.role === 'ADMIN') this.manualPaymentAmount = quote.schoolFeePaise / 100;
     this.onlineConvenienceFeeAmount = onlineConvenienceFee;
     this.lateFees = lateFee;
 
@@ -584,9 +633,10 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
       this.selectedMonthsByYear[year].push(month.month);
       this.cdr.markForCheck();
       this.lastSelectedMonth = month;
+      month.selected = true;
 
+      this.recalculateTotals();
       this.populateMonthDetails(month)
-        .then(() => this.recalculateTotals())
         .catch((error) => {
           this.logger.error('Error during populateMonthDetails:', error);
         });
@@ -601,9 +651,8 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
           const lastIndex = remaining[remaining.length - 1];
           const lastMonth = this.months.find((m) => m.month === lastIndex);
           if (lastMonth) {
-            this.populateMonthDetails(lastMonth).then(() => {
-              this.lastSelectedMonth = lastMonth;
-            });
+            this.lastSelectedMonth = lastMonth;
+            this.populateMonthDetails(lastMonth);
           } else {
             this.selectedMonthDetails = null;
             this.lastSelectedMonth = null;
@@ -614,7 +663,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
         }
       }
     }
-    month.selected = !month.selected;
+    month.selected = this.isMonthSelected(month.month, this.selectedYear);
   }
 
   /** Builds the receipt-panel line items from the backend's authoritative per-fee-head
@@ -655,6 +704,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
   }
 
   populateMonthDetails(month: MonthViewModel): Promise<void> {
+    const context = this.contextVersion;
     return new Promise((resolve) => {
       const student$ = this.role === 'PARENT'
         ? of({ name: this.studentName || this.studentId, className: this.className || '' })
@@ -670,10 +720,12 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
             }),
           ),
       })
-        .pipe(takeUntil(this.destroy$), takeUntil(this.childRequest$))
+        .pipe(takeUntil(this.context$), takeUntil(this.destroy$), takeUntil(this.childRequest$))
         .subscribe({
           next: ({ student, breakdown }) => {
+            if (context !== this.contextVersion || this.lastSelectedMonth !== month || !this.isMonthSelected(month.month, this.selectedYear)) { resolve(); return; }
             this.studentName = student.name;
+            if (this.quoteValid) this.paymentData = { ...this.paymentData, studentName: student.name };
             const { feeLineItems, breakdownUnavailable } =
               this.buildFeeLineItems(breakdown);
             this.selectedMonthDetails = {
@@ -702,7 +754,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
   }
 
   onPaymentProcessingStarted(): void {
-    this.ngZone.run(() => {});
+    this.ngZone.run(() => { this.isLoadingPayment = true; this.cdr.markForCheck(); });
   }
 
   onPaymentProcessCompleted(): void {
@@ -748,8 +800,6 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
 
   initPaymentData(): void {
     this.paymentData = this.feesCalc.createEmptyPaymentData();
-    this.totalUnappliedLeaves = 0;
-    this.totalUnappliedLeaveCharge = 0;
     this.onlineConvenienceFeeAmount = 0;
   }
 
@@ -757,12 +807,13 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
    * reference) — Spring Boot recomputes the authoritative amount owed from each selected
    * month's StudentFees snapshot and validates amountReceived against it. The frontend never
    * splits the amount across months or decides which months get marked paid itself; a
-   * rejection (unresolved month, amount short of the computed total, duplicate reference) is
-   * surfaced as-is from the backend. */
+   * partial receipt stays outstanding; unresolved months and duplicate references are rejected
+   * by the backend. */
   markAsManuallyPaid(): void {
     const selectedMonths = this.selectedMonthsByYear[this.selectedYear] || [];
     if (
       this.role !== 'ADMIN' ||
+      !this.quoteValid || this.quoteLoading ||
       !this.manualPaymentAmount ||
       !selectedMonths.length
     ) {
@@ -773,16 +824,18 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const context = this.contextVersion;
+    const quoteVersion = this.quoteVersion;
     this.toast
       .confirm({
         title: 'Confirm Manual Payment',
-        message: `Mark selected months as manually paid with a total amount of ₹${this.manualPaymentAmount}?`,
+        message: `Record a payment for selected months with an amount of ₹${this.manualPaymentAmount}?`,
         icon: 'warning',
-        confirmText: 'Yes, mark as paid!',
+        confirmText: 'Record payment',
         cancelText: 'Cancel',
       })
       .then((confirmed) => {
-        if (!confirmed) return;
+        if (!confirmed || context !== this.contextVersion || quoteVersion !== this.quoteVersion || !this.quoteValid) return;
 
         let monthSelectionString = '000000000000';
         selectedMonths.forEach((m) => {
@@ -816,8 +869,8 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
               this.manualPaymentReference = '';
               this.cdr.detectChanges();
               this.toast.success(
-                'Marked as Paid!',
-                'The selected months have been marked as paid.',
+                'Payment recorded',
+                'Balances have been updated from the recorded payment.',
               );
             },
             error: (err) => {
@@ -848,11 +901,10 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
     );
 
     if (selectedYear > currentYear) return false;
-    if (selectedYear < currentYear) return !month.paid && !month.manuallyPaid;
+    if (selectedYear < currentYear) return !month.paid;
 
     return (
       !month.paid &&
-      !month.manuallyPaid &&
       month.month <= this.academicCurrentMonth
     );
   }
@@ -914,7 +966,7 @@ export class PaymentTrackerComponent implements OnInit, OnDestroy {
    * Fixes a real display bug: the grid previously showed netAmountPaid (what was already
    * paid) on ANY month with amountPaid > 0, including a still-unpaid month sitting next to a
    * "Due"/"Overdue" chip — reading as "this is what's owed" when it was actually the opposite.
-   * netAmountPaid remains correct as-is for an actually paid/manuallyPaid month. */
+   * netAmountPaid is the display amount only for a fully fulfilled month. */
   remainingAmountDue(month: MonthViewModel): number {
     const gross = (month.fee ?? 0) + (month.busFee ?? 0);
     const paid = month.amountPaid ?? 0;

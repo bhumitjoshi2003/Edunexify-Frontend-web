@@ -1,3 +1,6 @@
+import { AcademicSessionService } from '../../services/academic-session.service';
+import { AcademicSession } from '../../interfaces/academic-session';
+import { feeMonthLabel } from '../../utils/fee-session.util';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, OnDestroy } from '@angular/core';
 import { LoggerService } from '../../services/logger.service';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -26,6 +29,8 @@ export interface ReceiptFeeLine {
 })
 export class PaymentDetailsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private request$ = new Subject<void>();
+  sessions: AcademicSession[] = [];
   paymentId: string = '';
   paymentDetails: PaymentHistoryDetails | null = null;
   loading: boolean = true;
@@ -53,6 +58,7 @@ export class PaymentDetailsComponent implements OnInit, OnDestroy {
     private toast: ToastService,
     private schoolService: SchoolService,
     private feesCalc: FeesCalculationService,
+    private sessionsApi: AcademicSessionService,
   ) {}
 
   ngOnDestroy(): void {
@@ -65,16 +71,9 @@ export class PaymentDetailsComponent implements OnInit, OnDestroy {
     this.canShare = this.useWebShare ||
       (typeof navigator !== 'undefined' && !!navigator.clipboard && typeof navigator.clipboard.writeText === 'function');
 
-    // Settings and payment details load independently — re-run getMonths() from both
-    // completions (it's a no-op if paymentDetails isn't loaded yet) so month names are
-    // correct regardless of which finishes first.
-    this.schoolService.getSettings().pipe(take(1), takeUntil(this.destroy$)).subscribe({
-      next: (settings) => {
-        this.feesCalc.setStartMonth(settings.academicYearStartMonth ?? 4);
-        this.getMonths();
-        this.cdr.markForCheck();
-      },
-      error: (e) => this.logger.error('Failed to load school settings; month names may default to an April-start school.', e),
+    this.sessionsApi.getAllSessions().pipe(take(1), takeUntil(this.destroy$)).subscribe({
+      next: sessions => { this.sessions = sessions; this.getMonths(); this.cdr.markForCheck(); },
+      error: e => this.logger.error('Session dates unavailable', e),
     });
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe(params => {
       this.paymentId = params['paymentId'];
@@ -83,10 +82,14 @@ export class PaymentDetailsComponent implements OnInit, OnDestroy {
   }
 
   fetchPaymentDetails(): void {
+    this.request$.next();
+    this.paymentDetails = null;
+    this.months = [];
+    this.feeLineItems = [];
     this.loading = true;
     this.error = '';
 
-    this.paymentHistoryService.getPaymentHistoryDetails(this.paymentId).pipe(takeUntil(this.destroy$)).subscribe({
+    this.paymentHistoryService.getPaymentHistoryDetails(this.paymentId).pipe(takeUntil(this.request$), takeUntil(this.destroy$)).subscribe({
       next: (data) => {
         this.paymentDetails = data;
         this.loading = false;
@@ -111,6 +114,7 @@ export class PaymentDetailsComponent implements OnInit, OnDestroy {
   private fetchFeeBreakdown(): void {
     this.paymentHistoryService.getPaymentReceiptBreakdown(this.paymentId)
       .pipe(
+        takeUntil(this.request$),
         takeUntil(this.destroy$),
         catchError((error) => {
           this.logger.error('Error fetching payment fee breakdown:', error);
@@ -139,16 +143,14 @@ export class PaymentDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** monthString bit position i corresponds to academic month i+1 (1 = the school's own
-   * start month) — resolved via FeesCalculationService.getMonthName using the school's real
-   * academicYearStartMonth, never a hardcoded April-first array. */
+  /** Bit i is academic ordinal i+1, labeled from the payment's own session dates. */
   getMonths(): void {
     if (this.paymentDetails && this.paymentDetails.month) {
       const monthString = this.paymentDetails.month;
       this.months = [];
       for (let i = 0; i < monthString.length; i++) {
         if (monthString[i] === '1') {
-          this.months.push(this.feesCalc.getMonthName(i + 1));
+          this.months.push(feeMonthLabel(this.sessions.find(s => s.label === this.paymentDetails?.session)?.startDate, i + 1));
         }
       }
     } else {

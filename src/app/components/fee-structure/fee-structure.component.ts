@@ -150,7 +150,10 @@ export class FeeStructureComponent implements OnInit, OnDestroy {
       });
   }
 
+  private loadedRules: FeeStructureRule[] = [];
+
   private buildGrid(rules: FeeStructureRule[]): void {
+    this.loadedRules = rules;
     this.feeGrid = {};
     for (const cls of this.classes) {
       this.feeGrid[cls] = {};
@@ -162,7 +165,7 @@ export class FeeStructureComponent implements OnInit, OnDestroy {
     // authoritative — a rule for a className with no matching configured class is a data
     // inconsistency, never a reason to fabricate a new grid row for it.
     const orphanClassNames = new Set<string>();
-    for (const rule of rules) {
+    for (const rule of rules.filter(r => !r.effectiveUntil)) {
       if (this.feeGrid[rule.className]) {
         this.feeGrid[rule.className][rule.feeHeadId] = rule.amount / 100;
       } else {
@@ -237,7 +240,10 @@ export class FeeStructureComponent implements OnInit, OnDestroy {
             academicSessionId: sessionId,
             className: cls,
             amount: Math.round((this.feeGrid[cls][fh.id!] || 0) * 100), // rupees → paise
-            effectiveFrom: today,
+            effectiveFrom: (() => {
+              const existing = this.loadedRules.find(r => r.className === cls && r.feeHeadId === fh.id && !r.effectiveUntil);
+              return existing ? (existing.amount === Math.round(this.feeGrid[cls][fh.id!] * 100) ? existing.effectiveFrom : today) : this.loadedRules.some(r => r.className === cls && r.feeHeadId === fh.id) ? today : this.currentSession!.startDate;
+            })(),
           }));
 
         // Issue #22: Validate no duplicate fee head IDs per class
