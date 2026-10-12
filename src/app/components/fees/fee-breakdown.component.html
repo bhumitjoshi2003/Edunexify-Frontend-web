@@ -1,13 +1,18 @@
-<div *ngIf="details" class="receipt-card">
+<div *ngIf="details || (multiMonth && quote)" class="receipt-card">
 
-  <!-- Header -->
+  <!-- Header: one month, or the whole multi-month selection -->
   <div class="receipt-header">
-    <div class="receipt-header__badge">Fee Receipt</div>
-    <div class="receipt-header__month">{{ details.monthName }}</div>
+    <div class="receipt-header__badge">{{ multiMonth ? 'Payment Summary' : 'Fee Receipt' }}</div>
+    <div class="receipt-header__month" data-testid="breakdown-title">
+      {{ multiMonth ? selectedMonthCount + ' months selected' : details?.monthName }}
+    </div>
+  </div>
+  <div class="receipt-months" *ngIf="multiMonth && quote" data-testid="breakdown-month-list">
+    {{ quote.monthNames.join(' · ') }}
   </div>
 
   <!-- Student info band -->
-  <div class="student-band">
+  <div class="student-band" *ngIf="details">
     <div class="student-band__item">
       <span class="student-band__label">Student Name</span>
       <span class="student-band__value">{{ details.studentName }}</span>
@@ -24,8 +29,56 @@
     </div>
   </div>
 
-  <!-- Fee table -->
-  <div class="fee-table">
+  <!-- Several months: the quote for the whole selection comes first, so one month's fee heads can
+       never be read as the total. -->
+  <ng-container *ngIf="multiMonth">
+    <div class="fee-table" *ngIf="quote" data-testid="selection-summary">
+      <div class="fee-table__header">
+        <span>All {{ selectedMonthCount }} selected months</span>
+        <span>Amount</span>
+      </div>
+      <div class="fee-table__row">
+        <span>School fee — {{ selectedMonthCount }} months</span>
+        <span>{{ quote.schoolFee | inr }}</span>
+      </div>
+      <div class="fee-table__row fee-table__row--penalty" *ngIf="quote.lateFee > 0">
+        <span>Late Fee <span class="penalty-tag">Overdue</span></span>
+        <span>{{ quote.lateFee | inr }}</span>
+      </div>
+      <div class="fee-table__row fee-table__row--penalty" *ngIf="quote.leaveCharges > 0">
+        <span>Unapplied Leave Charges <span class="penalty-tag">Deduction</span></span>
+        <span>{{ quote.leaveCharges | inr }}</span>
+      </div>
+      <div class="fee-table__row fee-table__row--platform" *ngIf="quote.convenienceFee > 0">
+        <span>Online Convenience Fee</span>
+        <span>{{ quote.convenienceFee | inr }}</span>
+      </div>
+      <div class="fee-table__row fee-table__row--total" data-testid="selection-total">
+        <span>Total payable — {{ selectedMonthCount }} months</span>
+        <span>{{ quote.total | inr }}</span>
+      </div>
+    </div>
+    <div class="fee-table__pending" *ngIf="!quote">Calculating the total for {{ selectedMonthCount }} months…</div>
+
+    <div class="fee-table fee-table--detail" *ngIf="details" data-testid="month-detail">
+      <div class="fee-table__header">
+        <span>Fee heads · {{ details.monthName }} only</span>
+        <span>Amount</span>
+      </div>
+      <p class="fee-table__caption">One of the {{ selectedMonthCount }} selected months, for reference. The total above covers all of them.</p>
+      <div class="fee-table__row" *ngFor="let item of details.feeLineItems">
+        <span>{{ item.name }}</span>
+        <span>{{ item.amount | inr }}</span>
+      </div>
+      <div class="fee-table__row fee-table__row--muted" *ngIf="details.breakdownUnavailable && details.feeLineItems.length === 0">
+        <span>Breakdown unavailable</span>
+        <span>—</span>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- One month -->
+  <div class="fee-table" *ngIf="!multiMonth && details">
     <div class="fee-table__header">
       <span>Description</span>
       <span>Amount</span>
@@ -33,7 +86,7 @@
 
     <div class="fee-table__row" *ngFor="let item of details.feeLineItems">
       <span>{{ item.name }}</span>
-      <span>₹{{ item.amount }}</span>
+      <span>{{ item.amount | inr }}</span>
     </div>
     <div class="fee-table__row fee-table__row--muted" *ngIf="details.breakdownUnavailable && details.feeLineItems.length === 0">
       <span>Breakdown unavailable</span>
@@ -41,16 +94,20 @@
     </div>
     <div class="fee-table__row fee-table__row--penalty" *ngIf="details.lateFee">
       <span>Late Fee <span class="penalty-tag">Overdue</span></span>
-      <span>₹{{ details.lateFee }}</span>
+      <span>{{ details.lateFee | inr }}</span>
     </div>
     <div class="fee-table__row fee-table__row--penalty" *ngIf="details.additionalCharges && selectedMonthCount === 1">
       <span>Unapplied Leave Charge <span class="penalty-tag">Deduction</span></span>
-      <span>₹{{ details.additionalCharges }}</span>
+      <span>{{ details.additionalCharges | inr }}</span>
     </div>
 
     <div class="fee-table__row fee-table__row--platform" *ngIf="convenienceFeeAmount > 0">
       <span>Online Convenience Fee</span>
-      <span>₹{{ convenienceFeeAmount }}</span>
+      <span>{{ convenienceFeeAmount | inr }}</span>
+    </div>
+    <div class="fee-table__row fee-table__row--total" *ngIf="quote" data-testid="selection-total">
+      <span>Total payable</span>
+      <span>{{ quote.total | inr }}</span>
     </div>
   </div>
 </div>

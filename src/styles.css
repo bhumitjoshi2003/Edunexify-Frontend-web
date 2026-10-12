@@ -153,3 +153,11 @@ body {
     height: auto !important;
   }
 }
+
+/* Sticky action bars (Pay / Record payment / Generate…) keep a right gutter for the floating
+   Copilot button — only on pages where that button is actually rendered, so it can never cover
+   an action, a total or a footer control at any width. */
+body:has(.cp-fab) .app-fab-safe { padding-right: 88px !important; }
+@media (max-width: 420px) {
+  body:has(.cp-fab) .app-fab-safe { padding-right: 76px !important; }
+}

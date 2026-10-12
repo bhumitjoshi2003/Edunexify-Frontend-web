@@ -474,6 +474,7 @@ describe('PaymentTrackerComponent', () => {
       paymentProvenance: 'MIXED',
     });
     component.months = [mixedMonth];
+    (component as any).cdr.markForCheck();   // OnPush: a direct property write needs an explicit check
     fixture.detectChanges();
 
     const amountText =
@@ -481,6 +482,59 @@ describe('PaymentTrackerComponent', () => {
         ?.textContent ?? '';
     expect(amountText).toContain('5,800');
     expect(amountText).not.toContain('3,000');
+  });
+
+  // ── Month-card status presentation (unavailable / partial / funding) ──────────
+
+  describe('month card status', () => {
+    const cardOf = () => (fixture.nativeElement as HTMLElement).querySelector('.pt-month') as HTMLElement;
+    const chips = () => Array.from(cardOf().querySelectorAll('.pt-month-chip')).map((c) => c.textContent!.trim());
+
+    it('an unknown amount leads with "Needs review", keeps the reason as a warning note, and still shows it is overdue', () => {
+      fixture.detectChanges();
+      spyOn(component, 'isLate').and.returnValue(true);
+      component.months = [fundedMonth({ amountUnavailable: true, baseAmountDue: 0, snapshotStatus: 'NO_ACTIVE_RULE_THIS_MONTH',
+        amountUnavailableReason: 'No fee rule covers this billing month. Ask the school to review rule effective dates.' } as any)];
+      (component as any).cdr.markForCheck();
+      fixture.detectChanges();
+
+      const card = cardOf();
+      expect(card.classList).toContain('pt-month--unavailable');
+      expect(card.classList).not.toContain('pt-month--late');
+      expect(card.querySelector('.pt-month-amount')!.textContent).toContain('Amount unavailable');
+      expect(card.querySelector('.pt-month-amount')!.textContent).not.toContain('₹0');
+      const note = card.querySelector('[data-testid="month-unavailable-reason"]')!;
+      expect(note.classList).toContain('pt-month-note--warn');
+      expect(note.textContent).toContain('No fee rule covers this billing month. Ask the school to review rule effective dates.');
+      expect(chips()).toEqual(['Needs review', 'Overdue']);
+    });
+
+    it('a partly paid month says Partial (never Paid), shows what was received, and keeps funding separate', () => {
+      fixture.detectChanges();
+      spyOn(component, 'isLate').and.returnValue(false);
+      component.months = [fundedMonth({ paid: false, manuallyPaid: true, amountPaid: 2000, paymentProvenance: 'CASH' })];
+      (component as any).cdr.markForCheck();
+      fixture.detectChanges();
+
+      const card = cardOf();
+      expect(card.classList).toContain('pt-month--partial');
+      expect(card.classList).not.toContain('pt-month--paid');
+      expect(chips()).toEqual(['Partial']);
+      expect(card.querySelector('[data-testid="month-partial-note"]')!.textContent).toContain('Partly paid · ₹2,000 received');
+      expect(card.querySelector('[data-testid="month-funding"]')!.textContent!.trim()).toBe('via Cash');
+      expect(card.querySelector('.pt-month-amount')!.textContent).toContain('₹3,800');      // balance still owed
+    });
+
+    it('a fully paid month says Paid with its funding, and no partial note', () => {
+      fixture.detectChanges();
+      component.months = [fundedMonth({ paid: true, amountPaid: 5800, paymentProvenance: 'RAZORPAY' })];
+      (component as any).cdr.markForCheck();
+      fixture.detectChanges();
+
+      expect(chips()).toEqual(['Paid']);
+      expect(cardOf().querySelector('[data-testid="month-partial-note"]')).toBeNull();
+      expect(cardOf().querySelector('[data-testid="month-funding"]')!.textContent!.trim()).toBe('via Razorpay');
+    });
   });
 
   // ── Online payments taken but not yet recorded (pending-confirmations, server state) ──

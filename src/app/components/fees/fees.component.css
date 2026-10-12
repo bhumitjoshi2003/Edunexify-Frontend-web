@@ -122,6 +122,36 @@
 .pt-month--unpaid   .pt-month-chip { background: #f1f5f9; color: #64748b; }
 .pt-month--selected .pt-month-chip { background: #dbeafe; color: #1d4ed8; }
 
+/* Amount unknown (no fee rule / no verified snapshot): a configuration issue, not payable. */
+.pt-month--unavailable {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7); border-color: #fcd34d; cursor: not-allowed;
+}
+.pt-month--unavailable:hover, .pt-month--unavailable:active { transform: none; box-shadow: none; }
+.pt-month--unavailable .pt-month-icon { background: #f59e0b; color: #fff; }
+.pt-month--unavailable .pt-month-name { color: #92400e; }
+.pt-month--unavailable .pt-month-amount { color: #b45309; }
+.pt-month--unavailable .pt-month-chip { background: #fef3c7; color: #92400e; }
+
+/* Partly paid: still payable; the balance is the amount shown. */
+.pt-month--partial { box-shadow: inset 3px 0 0 #6366f1, 0 2px 8px rgba(0,0,0,0.05); }
+
+.pt-month-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 2px; }
+.pt-month-chips .pt-month-chip { margin-top: 0; }
+.pt-month-chip--secondary,
+.pt-month--unavailable .pt-month-chip--secondary { background: #fee2e2 !important; color: #b91c1c !important; }
+
+/* Compact status lines under the amount: small, readable, never full body text. */
+.pt-month-note {
+  margin: 0; width: 100%; box-sizing: border-box;
+  font-size: 0.64rem; font-weight: 600; line-height: 1.35; text-align: center;
+  padding: 5px 7px; border-radius: 8px; overflow-wrap: anywhere;
+}
+.pt-month-note--warn    { background: rgba(255,255,255,0.7); border: 1px solid #fcd34d; color: #92400e; }
+.pt-month-note--partial { background: #eef2ff; border: 1px solid #c7d2fe; color: #3730a3; }
+.pt-month-funding {
+  font-size: 0.62rem; font-weight: 600; color: #64748b; letter-spacing: 0.2px;
+}
+
 /* An online payment for this month is being confirmed / needs review: not selectable. */
 .pt-month--confirming,
 .pt-month--confirming.pt-month--late {

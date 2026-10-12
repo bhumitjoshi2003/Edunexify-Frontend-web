@@ -87,7 +87,7 @@
     <div class="pt-summary" *ngIf="role !== 'ADMIN' && totalAmountToPay > 0">
       <span class="pt-summary-label">Selected Total</span>
       <span class="pt-summary-amount">{{
-        totalAmountToPay | currency: "INR" : "symbol" : "1.0-0"
+        totalAmountToPay | inr
       }}</span>
     </div>
 
@@ -99,9 +99,11 @@
         [ngClass]="{
           'pt-month--paid': month.paid,
           'pt-month--manual': month.paid && month.manuallyPaid,
-          'pt-month--late': isLate(month) && !month.paid,
+          'pt-month--late': isLate(month) && !month.paid && !month.amountUnavailable,
           'pt-month--unpaid':
-            !month.paid && !isLate(month),
+            !month.paid && !isLate(month) && !month.amountUnavailable,
+          'pt-month--unavailable': month.amountUnavailable && !month.paid,
+          'pt-month--partial': isPartial(month),
           'pt-month--selected': month.selected,
           'pt-month--confirming': !!month.pendingConfirmation && !month.paid,
         }"
@@ -118,12 +120,14 @@
         <div class="pt-month-icon">
           <span *ngIf="month.paid">✓</span>
           <span *ngIf="month.pendingConfirmation && !month.paid">⏳</span>
-          <span *ngIf="!month.pendingConfirmation && isLate(month) && !month.paid"
+          <span *ngIf="!month.pendingConfirmation && month.amountUnavailable && !month.paid">⚠</span>
+          <span *ngIf="!month.pendingConfirmation && !month.amountUnavailable && isLate(month) && !month.paid"
             >!</span
           >
           <span
             *ngIf="
               !month.pendingConfirmation &&
+              !month.amountUnavailable &&
               !month.paid &&
               !isLate(month) &&
               !month.selected
@@ -140,7 +144,7 @@
         <span class="pt-month-amount">
           <!-- Fulfillment uses paid; funding provenance never hides a remaining balance. -->
           <ng-container *ngIf="month.paid">{{
-            netAmountPaid(month) | currency: "INR" : "symbol" : "1.0-0"
+            netAmountPaid(month) | inr
           }}</ng-container>
           <ng-container
             *ngIf="
@@ -153,44 +157,46 @@
               !month.paid && !month.amountUnavailable
             "
             >{{
-              remainingAmountDue(month) | currency: "INR" : "symbol" : "1.0-0"
+              remainingAmountDue(month) | inr
             }}</ng-container
           >
         </span>
 
-        <span *ngIf="month.amountUnavailable && !month.paid">{{ month.amountUnavailableReason }}</span>
-        <span *ngIf="!month.paid && netAmountPaid(month) > 0">Partial — remaining balance shown</span>
-        <span *ngIf="netAmountPaid(month) > 0 && month.paymentProvenance">Funding: {{ paymentProvenanceLabel(month) }}</span>
-        <span class="pt-month-chip">
-          <!-- Truthful funding source from the allocation ledger (see paymentProvenanceLabel)
-               rather than the literal "Manual" — a manually-recorded payment shows its real
-               mode (Cash/Cheque/UPI/...), a gateway payment shows "Razorpay", and a row funded
-               by more than one source shows "Mixed" instead of picking one arbitrarily. -->
-          <ng-container *ngIf="month.paid">{{
-            'Paid'
-          }}</ng-container>
-          <ng-container
-            *ngIf="month.pendingConfirmation && !month.paid"
-            >{{ month.pendingConfirmation.status === 'NEEDS_REVIEW' ? 'Needs review' : 'Confirming' }}</ng-container
-          >
-          <ng-container
-            *ngIf="!month.pendingConfirmation && isLate(month) && !month.paid"
-            >Overdue</ng-container
-          >
-          <ng-container
-            *ngIf="
-              !month.pendingConfirmation &&
-              !month.paid &&
-              !isLate(month) &&
-              !month.selected
-            "
-            >Due</ng-container
-          >
-          <ng-container
-            *ngIf="month.selected && !month.paid"
-            >Selected</ng-container
-          >
-        </span>
+        <!-- Three distinct facts, each compact: why an amount is unknown (a warning), that a month is
+             only partly paid (fulfilment), and where received money came from (provenance). -->
+        <p
+          class="pt-month-note pt-month-note--warn"
+          *ngIf="month.amountUnavailable && !month.paid"
+          data-testid="month-unavailable-reason"
+        >{{ month.amountUnavailableReason || 'The amount for this month could not be confirmed. School review is required.' }}</p>
+        <p class="pt-month-note pt-month-note--partial" *ngIf="isPartial(month)" data-testid="month-partial-note">
+          Partly paid · {{ netAmountPaid(month) | inr }} received
+        </p>
+        <span
+          class="pt-month-funding"
+          *ngIf="netAmountPaid(month) > 0 && month.paymentProvenance"
+          data-testid="month-funding"
+        >via {{ paymentProvenanceLabel(month) }}</span>
+
+        <div class="pt-month-chips">
+          <span class="pt-month-chip">
+            <ng-container *ngIf="month.paid">Paid</ng-container>
+            <ng-container *ngIf="month.pendingConfirmation && !month.paid">{{
+              month.pendingConfirmation.status === 'NEEDS_REVIEW' ? 'Needs review' : 'Confirming'
+            }}</ng-container>
+            <!-- An unknown amount can't be paid: "Needs review" leads; overdue stays visible beside it. -->
+            <ng-container *ngIf="!month.pendingConfirmation && month.amountUnavailable && !month.paid">Needs review</ng-container>
+            <ng-container *ngIf="!month.pendingConfirmation && !month.amountUnavailable && !month.paid && month.selected">Selected</ng-container>
+            <ng-container *ngIf="!month.pendingConfirmation && !month.amountUnavailable && !month.paid && !month.selected">{{
+              isPartial(month) ? 'Partial' : isLate(month) ? 'Overdue' : 'Due'
+            }}</ng-container>
+          </span>
+          <span
+            class="pt-month-chip pt-month-chip--secondary"
+            *ngIf="!month.paid && isLate(month) && (month.amountUnavailable || isPartial(month)) && !month.pendingConfirmation"
+            data-testid="month-overdue-secondary"
+          >Overdue</span>
+        </div>
       </div>
     </div>
     <div
@@ -212,15 +218,16 @@
       [details]="selectedMonthDetails"
       [convenienceFeeAmount]="onlineConvenienceFeeAmount"
       [selectedMonthCount]="(selectedMonthsByYear[selectedYear] || []).length"
+      [quote]="quoteSummary"
     >
     </app-fee-breakdown>
 
     <!-- ── Sticky Footer ─────────────────────────────────────────────── -->
-    <div *ngIf="role !== 'ADMIN'; else adminPayment" class="pt-footer">
+    <div *ngIf="role !== 'ADMIN'; else adminPayment" class="pt-footer app-fab-safe">
       <div class="pt-footer-total">
         <span class="pt-footer-label">Total to Pay</span>
         <span class="pt-footer-amount">{{
-          totalAmountToPay | currency: "INR" : "symbol" : "1.0-0"
+          totalAmountToPay | inr
         }}</span>
       </div>
       <app-payment
@@ -239,11 +246,11 @@
     </div>
 
     <ng-template #adminPayment>
-      <div class="pt-footer">
+      <div class="pt-footer app-fab-safe">
         <div class="pt-footer-total">
           <span class="pt-footer-label">Total to Pay</span>
           <span class="pt-footer-amount">{{
-            totalAmountToPay | currency: "INR" : "symbol" : "1.0-0"
+            totalAmountToPay | inr
           }}</span>
         </div>
         <!-- No due month selected yet: an active-looking payment form next to a ₹0 total is
