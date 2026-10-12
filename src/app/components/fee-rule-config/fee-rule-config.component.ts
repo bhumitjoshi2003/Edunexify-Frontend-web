@@ -91,7 +91,7 @@ export class FeeRuleConfigComponent implements OnInit, OnDestroy {
         next: (rules) => {
           // Ensure one rule per fee head
           this.rules = this.feeHeads.map(fh => {
-            const existing = rules.find(r => r.feeHeadId === fh.id);
+            const existing = rules.find(r => r.feeHeadId === fh.id && !r.effectiveUntil);
             return existing ?? {
               feeHeadId: fh.id!,
               feeHeadName: fh.name,
@@ -99,7 +99,7 @@ export class FeeRuleConfigComponent implements OnInit, OnDestroy {
               academicSessionId: this.selectedSessionId!,
               className: this.selectedClass,
               amount: 0,
-              effectiveFrom: new Date().toISOString().split('T')[0],
+              effectiveFrom: rules.some(r => r.feeHeadId === fh.id) ? new Date().toISOString().split('T')[0] : this.sessions.find(s => s.id === this.selectedSessionId)!.startDate,
             };
           });
           this.rulesLoading = false;

@@ -101,15 +101,8 @@
       <div class="fa-conflict" *ngIf="conflictMonth() as month">
         <div>
           <strong>{{ monthLabel(month, true) }} starts before the selected effective date</strong>
-          <p>Choose how this month should be handled for this generation only.</p>
+          <p>School Settings policy: {{ schoolPolicy }}. Review the preview before generating.</p>
         </div>
-        <label>Handle {{ monthLabel(month) }}
-          <select [(ngModel)]="midMonthChoice">
-            <option value="FROM_EFFECTIVE_MONTH">Include the full month</option>
-            <option value="NEXT_MONTH">Exclude this month</option>
-            <option value="PRORATE_JOINING_MONTH">Include a partial fee</option>
-          </select>
-        </label>
       </div>
       <div class="fa-table-wrap">
         <table>

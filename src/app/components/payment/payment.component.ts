@@ -72,6 +72,9 @@ export class PaymentComponent implements OnDestroy {
   studentDetails: { name: string; email?: string; phoneNumber?: string } | null = null;
 
   async initiatePayment(): Promise<void> {
+    if (this.disabled) return;
+    const input = this.paymentData;
+    const paymentData = { ...input };
     if (!this.paymentData || !this.paymentData.studentId) {
       this.toast.warning('Payment Error', 'Payment data or student ID is missing.');
       this.paymentProcessCompleted.emit();
@@ -83,18 +86,18 @@ export class PaymentComponent implements OnDestroy {
         message: `You are about to pay ₹${this.paymentData.totalAmount.toLocaleString('en-IN')} for ${this.paymentData.studentName} (${this.paymentData.studentId}).`,
         confirmText: 'Continue to payment', cancelText: 'Cancel', danger: false, icon: 'info'
       });
-      if (!confirmed) return;
+      if (!confirmed || this.disabled || this.paymentData !== input) return;
     }
     this.paymentProcessingStarted.emit();
-    this.loadStudentDetails(this.paymentData.studentId);
+    this.loadStudentDetails(paymentData.studentId, paymentData);
   }
 
-  loadStudentDetails(studentId: string): void {
+  loadStudentDetails(studentId: string, paymentData: PaymentData = { ...this.paymentData }): void {
     this.studentService.getStudent(studentId).pipe(
       takeUntil(this.destroy$),
       switchMap((student) => {
         this.studentDetails = student;
-        if (!this.paymentData) {
+        if (!paymentData) {
           this.toast.warning('Payment Error', 'Payment data or student details are missing.');
           this.paymentProcessCompleted.emit();
           return EMPTY;
@@ -104,9 +107,9 @@ export class PaymentComponent implements OnDestroy {
         // are the only two fields the backend actually validates from this request, so both (and
         // only both) are converted to paise here, at the HTTP boundary.
         const orderData: PaymentData = {
-          ...this.paymentData,
-          totalAmount: this.paymentData.totalAmount * 100,
-          additionalCharges: this.paymentData.additionalCharges * 100
+          ...paymentData,
+          totalAmount: paymentData.totalAmount * 100,
+          additionalCharges: paymentData.additionalCharges * 100
         };
         return this.razorpayService.createOrder(orderData);
       })

@@ -1,13 +1,13 @@
+import { AcademicSessionService } from '../../services/academic-session.service';
+import { feeMonthLabel } from '../../utils/fee-session.util';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, take, takeUntil } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 import { FeeHeadService } from '../../services/fee-head.service';
 import { FeeHead } from '../../interfaces/fee-head';
 import { ToastService } from '../../services/toast.service';
 import { LoggerService } from '../../services/logger.service';
-import { SchoolService } from '../../services/school.service';
-import { FeesCalculationService } from '../../services/fees-calculation.service';
 
 @Component({
   selector: 'app-fee-head-management',
@@ -36,15 +36,17 @@ export class FeeHeadManagementComponent implements OnInit, OnDestroy {
     { value: 'ONE_TIME', label: 'One-Time' },
   ];
 
-  /** value = academic month number (1 = the school's own start month, per FeeHead.dueMonths'
-   * convention); label = the real calendar month name for that academic month. Starts with a
-   * generic Jan..Dec placeholder and is recomputed in ngOnInit once academicYearStartMonth
-   * is loaded from SchoolService. */
-  allMonths: { value: number; label: string }[] = Array.from({ length: 12 }, (_, i) => ({
-    value: i + 1,
-    label: ['January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'][i],
-  }));
+  allMonths = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `Academic month ${i + 1}` }));
+
+  get suspiciousSchedules(): FeeHead[] {
+    return this.feeHeads.filter(head => {
+      try {
+        const months = JSON.parse(head.dueMonths || '[]').sort((a: number, b: number) => a - b).join(',');
+        return ((head.frequency === 'ANNUAL' || head.frequency === 'ONE_TIME') && months === '4')
+          || (head.frequency === 'SEMI_ANNUAL' && months === '4,10');
+      } catch { return true; }
+    });
+  }
 
   selectedMonths: Set<number> = new Set();
 
@@ -53,21 +55,16 @@ export class FeeHeadManagementComponent implements OnInit, OnDestroy {
     private toast: ToastService,
     private logger: LoggerService,
     private cdr: ChangeDetectorRef,
-    private schoolService: SchoolService,
-    private feesCalc: FeesCalculationService,
+    private sessionsApi: AcademicSessionService,
   ) {}
 
   ngOnInit(): void {
-    this.schoolService.getSettings().pipe(take(1), takeUntil(this.destroy$)).subscribe({
-      next: (settings) => {
-        this.feesCalc.setStartMonth(settings.academicYearStartMonth ?? 4);
-        this.allMonths = Array.from({ length: 12 }, (_, i) => ({
-          value: i + 1,
-          label: this.feesCalc.getMonthName(i + 1),
-        }));
+    this.sessionsApi.getCurrentSession().pipe(takeUntil(this.destroy$)).subscribe({
+      next: session => {
+        this.allMonths = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: feeMonthLabel(session.startDate, i + 1) }));
         this.cdr.markForCheck();
       },
-      error: (e) => this.logger.error('Failed to load school settings; due-month labels will show academic month numbers only.', e),
+      error: e => this.logger.error('Session dates unavailable; showing academic ordinals', e),
     });
     this.loadFeeHeads();
   }
@@ -187,11 +184,6 @@ export class FeeHeadManagementComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  /** dueMonths values are academic-relative (1 = the school's own start month, whatever
-   * calendar month that is — see FeeHead.dueMonths' documented convention and
-   * FeeCalculationService.appliesThisAcademicMonth on the backend), never literal calendar
-   * months. Matches fee-structure.component.ts's dueMonthsForFrequency exactly, so both
-   * admin screens that write this field agree on what the numbers mean. */
   private defaultMonthsForFrequency(frequency: FeeHead['frequency']): Set<number> {
     switch (frequency) {
       case 'MONTHLY': return new Set([1,2,3,4,5,6,7,8,9,10,11,12]);

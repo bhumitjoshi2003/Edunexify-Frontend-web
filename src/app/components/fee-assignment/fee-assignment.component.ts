@@ -13,7 +13,6 @@ import {
   FeeGenerationBatchRow,
   FeeGenerationResult,
   FeeLifecycleHistory,
-  MidSessionFeePolicy,
   FeeReadinessReport,
   FeeReconciliationSummary,
   FeeStudentPreview,
@@ -40,6 +39,7 @@ export class FeeAssignmentComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private reload$ = new Subject<void>();
 
+  schoolPolicy = 'Loading school policy…';
   activeTab: FeeAssignmentTab = 'assign';
   private historyTabLoaded = false;
 
@@ -53,7 +53,6 @@ export class FeeAssignmentComponent implements OnInit, OnDestroy {
   selected = new Set<string>();
   months = Array.from({ length: 12 }, (_, i) => i + 1);
   selectedMonths = new Set<number>();
-  midMonthChoice: MidSessionFeePolicy = 'FROM_EFFECTIVE_MONTH';
   loading = true;
   working = false;
   previewRows: FeeStudentPreview[] = [];
@@ -124,6 +123,14 @@ export class FeeAssignmentComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.workflow.getSettings().pipe(takeUntil(this.destroy$)).subscribe({
+      next: settings => {
+        const labels = { FROM_EFFECTIVE_MONTH: 'Include the full effective month', NEXT_MONTH: 'Start next month', PRORATE_JOINING_MONTH: 'Prorate the effective month' };
+        this.schoolPolicy = labels[settings.midSessionPolicy];
+        this.cdr.markForCheck();
+      },
+      error: () => { this.schoolPolicy = 'School policy unavailable — review the generation preview'; this.cdr.markForCheck(); },
+    });
     this.setupProgressiveReload();
     this.schoolService.getClasses().pipe(takeUntil(this.destroy$)).subscribe({
       next: (classes) => {
@@ -299,7 +306,7 @@ export class FeeAssignmentComponent implements OnInit, OnDestroy {
       effectiveDate: this.assignForm.effectiveDate,
       months: [...this.selectedMonths].sort((a, b) => a - b),
       reason: this.assignForm.reason,
-      midSessionPolicy: this.conflictMonth() ? this.midMonthChoice : undefined,
+
     };
   }
 

@@ -14,7 +14,7 @@
         <label class="pt-hero-session-label">Session</label>
         <select
           class="pt-hero-session-select"
-          [disabled]="!!lastSelectedMonth"
+          [disabled]="isLoadingPayment"
           [(ngModel)]="session"
           (change)="onYearChange($event)"
         >
@@ -97,41 +97,40 @@
         *ngFor="let month of months; trackBy: trackByMonth"
         class="pt-month"
         [ngClass]="{
-          'pt-month--paid': month.paid && !month.manuallyPaid,
-          'pt-month--manual': month.manuallyPaid,
-          'pt-month--late': isLate(month) && !month.paid && !month.manuallyPaid,
+          'pt-month--paid': month.paid,
+          'pt-month--manual': month.paid && month.manuallyPaid,
+          'pt-month--late': isLate(month) && !month.paid,
           'pt-month--unpaid':
-            !month.paid && !month.manuallyPaid && !isLate(month),
+            !month.paid && !isLate(month),
           'pt-month--selected': month.selected,
-          'pt-month--confirming': !!month.pendingConfirmation && !month.paid && !month.manuallyPaid,
+          'pt-month--confirming': !!month.pendingConfirmation && !month.paid,
         }"
         [attr.data-pending]="month.pendingConfirmation?.status || null"
         (click)="
-          role !== 'ADMIN' && !month.paid && !month.manuallyPaid
+          role !== 'ADMIN' && !month.paid
             ? toggleMonthSelection(month)
-            : role === 'ADMIN' && !month.paid && !month.manuallyPaid
+            : role === 'ADMIN' && !month.paid
               ? toggleMonthSelection(month)
               : null
         "
       >
         <!-- status icon -->
         <div class="pt-month-icon">
-          <span *ngIf="month.paid || month.manuallyPaid">✓</span>
-          <span *ngIf="month.pendingConfirmation && !month.paid && !month.manuallyPaid">⏳</span>
-          <span *ngIf="!month.pendingConfirmation && isLate(month) && !month.paid && !month.manuallyPaid"
+          <span *ngIf="month.paid">✓</span>
+          <span *ngIf="month.pendingConfirmation && !month.paid">⏳</span>
+          <span *ngIf="!month.pendingConfirmation && isLate(month) && !month.paid"
             >!</span
           >
           <span
             *ngIf="
               !month.pendingConfirmation &&
               !month.paid &&
-              !month.manuallyPaid &&
               !isLate(month) &&
               !month.selected
             "
             >○</span
           >
-          <span *ngIf="month.selected && !month.paid && !month.manuallyPaid"
+          <span *ngIf="month.selected && !month.paid"
             >✓</span
           >
         </div>
@@ -139,24 +138,19 @@
         <span class="pt-month-name">{{ month.name }}</span>
 
         <span class="pt-month-amount">
-          <!-- A paid/manuallyPaid month shows the true ledger-net amount (netAmountPaid),
-               never manualPaymentReceived (which only reflects the manual-sourced portion and
-               would understate a MIXED row or hide a partial refund) — see netAmountPaid's own
-               doc comment. An UNPAID month — even one with a nonzero amountPaid from a partial/
-               since-refunded payment — must show what's still owed (remainingAmountDue), never
-               the already-paid amount sitting next to a "Due"/"Overdue" chip. -->
-          <ng-container *ngIf="month.paid || month.manuallyPaid">{{
+          <!-- Fulfillment uses paid; funding provenance never hides a remaining balance. -->
+          <ng-container *ngIf="month.paid">{{
             netAmountPaid(month) | currency: "INR" : "symbol" : "1.0-0"
           }}</ng-container>
           <ng-container
             *ngIf="
-              !month.paid && !month.manuallyPaid && month.amountUnavailable
+              !month.paid && month.amountUnavailable
             "
             >Amount unavailable</ng-container
           >
           <ng-container
             *ngIf="
-              !month.paid && !month.manuallyPaid && !month.amountUnavailable
+              !month.paid && !month.amountUnavailable
             "
             >{{
               remainingAmountDue(month) | currency: "INR" : "symbol" : "1.0-0"
@@ -164,34 +158,36 @@
           >
         </span>
 
+        <span *ngIf="month.amountUnavailable && !month.paid">{{ month.amountUnavailableReason }}</span>
+        <span *ngIf="!month.paid && netAmountPaid(month) > 0">Partial — remaining balance shown</span>
+        <span *ngIf="netAmountPaid(month) > 0 && month.paymentProvenance">Funding: {{ paymentProvenanceLabel(month) }}</span>
         <span class="pt-month-chip">
           <!-- Truthful funding source from the allocation ledger (see paymentProvenanceLabel)
                rather than the literal "Manual" — a manually-recorded payment shows its real
                mode (Cash/Cheque/UPI/...), a gateway payment shows "Razorpay", and a row funded
                by more than one source shows "Mixed" instead of picking one arbitrarily. -->
-          <ng-container *ngIf="month.paid || month.manuallyPaid">{{
-            paymentProvenanceLabel(month)
+          <ng-container *ngIf="month.paid">{{
+            'Paid'
           }}</ng-container>
           <ng-container
-            *ngIf="month.pendingConfirmation && !month.paid && !month.manuallyPaid"
+            *ngIf="month.pendingConfirmation && !month.paid"
             >{{ month.pendingConfirmation.status === 'NEEDS_REVIEW' ? 'Needs review' : 'Confirming' }}</ng-container
           >
           <ng-container
-            *ngIf="!month.pendingConfirmation && isLate(month) && !month.paid && !month.manuallyPaid"
+            *ngIf="!month.pendingConfirmation && isLate(month) && !month.paid"
             >Overdue</ng-container
           >
           <ng-container
             *ngIf="
               !month.pendingConfirmation &&
               !month.paid &&
-              !month.manuallyPaid &&
               !isLate(month) &&
               !month.selected
             "
             >Due</ng-container
           >
           <ng-container
-            *ngIf="month.selected && !month.paid && !month.manuallyPaid"
+            *ngIf="month.selected && !month.paid"
             >Selected</ng-container
           >
         </span>
@@ -232,9 +228,10 @@
         [paymentData]="paymentData"
         (paymentSuccess)="handleSuccessfulPayment()"
         (paymentProcessingStarted)="onPaymentProcessingStarted()"
+        (paymentProcessCompleted)="onPaymentProcessCompleted()"
         (paymentPending)="onPaymentPending()"
         (paymentConflict)="onPaymentConflict($event)"
-        [disabled]="isLoadingPayment || (role === 'PARENT' && !parentCanPay)"
+        [disabled]="!quoteValid || quoteLoading || isLoadingPayment || (role === 'PARENT' && !parentCanPay)"
       >
       </app-payment>
       <span class="pt-payment-note" *ngIf="onlinePaymentPricingUnavailable">Online payments are temporarily unavailable. Please contact the school office.</span>
@@ -295,8 +292,8 @@
               placeholder="Cheque / UTR number"
             />
           </div>
-          <button class="pt-mark-paid-btn" (click)="markAsManuallyPaid()">
-            ✓ Mark as Paid
+          <button [disabled]="!quoteValid || quoteLoading || isLoadingPayment" class="pt-mark-paid-btn" (click)="markAsManuallyPaid()">
+            Record payment
           </button>
         </div>
         <ng-template #selectMonthsHint>
