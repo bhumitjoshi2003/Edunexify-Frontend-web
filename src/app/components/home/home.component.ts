@@ -12,7 +12,7 @@ import { consumeIntendedRoute, clearIntendedRoute } from '../../auth/redirect-ur
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
-import { Subject, takeUntil, timeout, TimeoutError } from 'rxjs';
+import { finalize, Subject, takeUntil, timeout, TimeoutError } from 'rxjs';
 
 @Component({
   selector: 'app-home',
@@ -37,6 +37,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   forgotUserId  = '';
   forgotEmail   = '';
   sendingReset  = false;
+  sendingDemo   = false;
 
   // Plans
   plans: PlanDetail[] = [];
@@ -44,7 +45,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   billingCycle: 'monthly' | 'annual' = 'monthly';
   private _masterFeatureList: { featureKey: string; displayName: string }[] | null = null;
 
-  demo = {
+  demo: { schoolName: string; contactName: string; email: string; phone: string; students: string | number | null; city: string; message: string } = {
     schoolName:  '',
     contactName: '',
     email:       '',
@@ -348,6 +349,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   submitDemo() {
+    if (this.sendingDemo) return;
     const { schoolName, contactName, email, phone } = this.demo;
     if (!schoolName.trim() || !contactName.trim() || !email.trim() || !phone.trim()) {
       this.toast.warning('Required Fields', 'Please fill in School Name, Contact Name, Email and Phone.');
@@ -358,19 +360,30 @@ export class HomeComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.sendingDemo = true;
+    this.cdr.markForCheck();
+
     this.demoService.submitRequest({
       schoolName:       this.demo.schoolName.trim(),
       contactName:      this.demo.contactName.trim(),
       email:            this.demo.email.trim(),
       phone:            this.demo.phone.trim(),
-      numberOfStudents: this.demo.students.trim() || undefined,
+      numberOfStudents: String(this.demo.students ?? '').trim() || undefined,
       city:             this.demo.city.trim()     || undefined,
       message:          this.demo.message.trim()  || undefined
-    }).pipe(timeout(20000), takeUntil(this.destroy$)).subscribe({
-      next: () => {
+    }).pipe(
+      timeout(20000),
+      takeUntil(this.destroy$),
+      finalize(() => { this.sendingDemo = false; this.cdr.markForCheck(); })
+    ).subscribe({
+      next: (result) => {
         this.showDemoForm = false;
         this.demo = { schoolName: '', contactName: '', email: '', phone: '', students: '', city: '', message: '' };
         this.cdr.markForCheck();
+        if (result.notificationSent === false) {
+          this.toast.warning('Request Saved', 'Your demo request was saved, but our team could not be notified by email. Please contact support@edunexify.co.in. You do not need to submit again.');
+          return;
+        }
         this.toast.confirm({
           icon: 'success',
           title: 'Demo Request Received!',
@@ -384,7 +397,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.toast.error(
           isTimeout ? 'Request Timed Out' : 'Submission Failed',
           isTimeout
-            ? 'The server took too long to respond. Please check your connection and try again.'
+            ? 'We could not confirm whether your request was received. Please contact support@edunexify.co.in before submitting again.'
             : 'Could not send your request. Please try again or contact us directly.'
         );
       }
