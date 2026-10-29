@@ -1,3 +1,4 @@
+import { adminProfileError } from '../../utils/admin-validation.util';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -22,6 +23,9 @@ import {
   SchoolSubscription,
 } from '../../services/school.service';
 import { LoggerService } from '../../services/logger.service';
+import { activationDialog, activationResultMessage, schoolEditPayload, schoolOnboardPayload, schoolSlugFromName, onboardingResultDialog, setupLinkError, setupLinkFeedback } from '../../utils/school-admin.util';
+import { AdminService } from '../../services/admin.service';
+import { FeatureOverrideActions, featureOperationKey, featureOverrideActions, featureOverrideErrorMessage } from '../../utils/feature-override.util';
 
 interface OnboardForm {
   name: string;
@@ -37,7 +41,6 @@ interface OnboardForm {
   academicYearStartMonth: number;
   adminUserId: string;
   adminEmail: string;
-  adminPassword: string;
   adminName: string;
   adminPhone: string;
   adminDob: string;
@@ -61,7 +64,6 @@ interface EditForm {
   plan: string | null;
   maxStudents: number | null;
   expiryDate: string | null;
-  newAdminPassword: string;
 }
 
 @Component({
@@ -89,7 +91,8 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
   editingSchoolId: number | null = null;
   editForm: EditForm = this.emptyEditForm();
   saving = false;
-  showPasswordField = false;
+  /** Admin ID a setup link is being sent for (blocks a second click). */
+  sendingSetupLinkFor: string | null = null;
 
   readonly legacyPlans = ['TRIAL', 'FREE', 'BASIC', 'STANDARD', 'PREMIUM', 'ENTERPRISE'];
   readonly boardTypes = ['CBSE', 'ICSE', 'STATE', 'IB', 'IGCSE', 'OTHER'];
@@ -104,7 +107,8 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
     private schoolService: SchoolService,
     private logger: LoggerService,
     private cdr: ChangeDetectorRef,
-    private toast: ToastService
+    private toast: ToastService,
+    private adminService: AdminService,
   ) {}
 
   ngOnInit(): void {
@@ -142,6 +146,7 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   submitOnboard(): void {
+    if (this.onboarding) return;
     const error = this.validateOnboardForm();
     if (error) {
       this.toast.warning('Validation Error', error);
@@ -151,11 +156,10 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
     this.onboarding = true;
     this.cdr.markForCheck();
 
-    const payload = {
+    const payload = schoolOnboardPayload({
       ...this.onboardForm,
-      trialEndsAt: this.onboardForm.trialEndsAt || null,
       trialPlanId: this.onboardForm.trialPlanId || null,
-    };
+    });
 
     this.schoolService
       .onboardSchool(payload)
@@ -167,7 +171,7 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
           this.onboardForm = this.emptyOnboardForm();
           this.onboarding = false;
           this.cdr.markForCheck();
-          this.toast.success('School Onboarded', `${school.name} has been successfully onboarded.`);
+          this.toast.confirm(onboardingResultDialog(school, { userId: payload.adminUserId, email: payload.adminEmail }));
         },
         error: (err) => {
           this.logger.error('Onboard failed', err);
@@ -190,12 +194,6 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
                                                     return 'Slug must be lowercase letters, digits, and hyphens only.';
     if (f.email && !emailRx.test(f.email.trim()))   return 'School email is not valid.';
     if (f.phone && !phoneRx.test(f.phone.trim()))   return 'School phone must be exactly 10 digits.';
-    if (f.newAdminPassword && f.newAdminPassword.length < 8)
-                                                    return 'New admin password must be at least 8 characters.';
-    if (f.newAdminPassword && !/[A-Z]/.test(f.newAdminPassword))
-                                                    return 'New admin password must contain at least one uppercase letter.';
-    if (f.newAdminPassword && !/[0-9]/.test(f.newAdminPassword))
-                                                    return 'New admin password must contain at least one number.';
     return null;
   }
 
@@ -217,10 +215,10 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
     if (!f.adminPhone.trim())                         return 'Admin phone is required.';
     if (!phoneRx.test(f.adminPhone.trim()))           return 'Admin phone must be exactly 10 digits.';
     if (!f.adminDob)                                  return 'Admin date of birth is required.';
-    if (!f.adminPassword)                             return 'Admin password is required.';
-    if (f.adminPassword.length < 8)                   return 'Admin password must be at least 8 characters.';
-    if (!/[A-Z]/.test(f.adminPassword))               return 'Admin password must contain at least one uppercase letter.';
-    if (!/[0-9]/.test(f.adminPassword))               return 'Admin password must contain at least one number.';
+    if (!f.adminGender?.trim())                       return 'Admin gender is required.';
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(f.adminUserId.trim())) return 'Admin ID must contain 1–100 letters, digits, dots, underscores or hyphens.';
+    const profileError = adminProfileError({ name: f.adminName, email: f.adminEmail, phoneNumber: f.adminPhone, dob: f.adminDob, gender: f.adminGender });
+    if (profileError) return profileError;
     return null;
   }
 
@@ -241,10 +239,29 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
       plan: school.plan,
       maxStudents: school.maxStudents,
       expiryDate: school.expiryDate,
-      newAdminPassword: '',
     };
-    this.showPasswordField = false;
     this.cdr.markForCheck();
+  }
+
+  /** Emails the school's administrator a fresh one-hour setup link (never a password). */
+  sendSetupLink(adminUserId: string | null | undefined): void {
+    if (!adminUserId || this.sendingSetupLinkFor) return;
+    this.sendingSetupLinkFor = adminUserId;
+    this.cdr.markForCheck();
+    this.adminService.sendSetupLink(adminUserId).pipe(takeUntil(this.destroy$)).subscribe({
+      next: (result) => {
+        this.sendingSetupLinkFor = null;
+        const feedback = setupLinkFeedback(result);
+        feedback.level === 'success' ? this.toast.success(feedback.title, feedback.message) : this.toast.info(feedback.title, feedback.message);
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        this.logger.error('Setup link failed', err);
+        this.sendingSetupLinkFor = null;
+        this.toast.error('Setup link not sent', setupLinkError(err));
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   cancelEdit(): void {
@@ -265,7 +282,7 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
     this.saving = true;
     this.cdr.markForCheck();
 
-    const { newAdminPassword, ...payload } = this.editForm;
+    const payload = schoolEditPayload(this.editForm);
 
     this.schoolService
       .updateSchoolAll(this.editingSchoolId, payload)
@@ -276,51 +293,24 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
             s.id === updated.id ? updated : s
           );
 
-          if (newAdminPassword && this.editingSchoolId) {
-            this.schoolService
-              .resetAdminPassword(this.editingSchoolId, newAdminPassword)
-              .pipe(takeUntil(this.destroy$))
-              .subscribe({
-                next: () => {
-                  this.saving = false;
-                  this.editingSchoolId = null;
-                  this.cdr.markForCheck();
-                  this.toast.success('Saved', 'School updated and password reset.');
-                },
-                error: (err) => {
-                  this.logger.error('Password reset failed', err);
-                  this.saving = false;
-                  this.editingSchoolId = null;
-                  this.cdr.markForCheck();
-                  this.toast.warning('Partial Save', 'School updated, but password reset failed.');
-                },
-              });
-          } else {
-            this.saving = false;
-            this.editingSchoolId = null;
-            this.cdr.markForCheck();
-            this.toast.success('Saved');
-          }
+          this.saving = false;
+          this.editingSchoolId = null;
+          this.cdr.markForCheck();
+          this.toast.success('Saved');
         },
         error: (err) => {
           this.logger.error('Save failed', err);
           this.saving = false;
           this.cdr.markForCheck();
-          this.toast.error('Error', 'Failed to save school settings.');
+          const msg = err?.error?.message;
+          this.toast.error('Error', typeof msg === 'string' && msg.trim() ? msg : 'Failed to save school settings.');
         },
       });
   }
 
   confirmToggleActive(school: SchoolSettings): void {
     const action = school.active ? 'deactivate' : 'activate';
-    this.toast.confirm({
-      title: `${action.charAt(0).toUpperCase() + action.slice(1)} School?`,
-      message: `Are you sure you want to ${action} "${school.name}"?`,
-      icon: 'warning',
-      confirmText: `Yes, ${action}`,
-      cancelText: 'Cancel',
-      danger: school.active,
-    }).then((confirmed) => {
+    this.toast.confirm(activationDialog(school)).then((confirmed) => {
       if (!confirmed) return;
 
       this.schoolService
@@ -332,21 +322,19 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
               s.id === school.id ? { ...s, active: !s.active } : s
             );
             this.cdr.markForCheck();
-            this.toast.success(`School ${action}d`);
+            this.toast.success('Done', activationResultMessage(school, !school.active));
           },
           error: (err) => {
             this.logger.error('Toggle active failed', err);
             this.toast.error('Error', `Failed to ${action} school.`);
+            this.cdr.markForCheck();
           },
         });
     });
   }
 
   generateSlug(): void {
-    this.onboardForm.slug = this.onboardForm.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+    this.onboardForm.slug = schoolSlugFromName(this.onboardForm.name);
     this.cdr.markForCheck();
   }
 
@@ -781,7 +769,8 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
 
   schoolFeatures = new Map<number, SchoolFeature[]>();
   loadingFeaturesFor: number | null = null;
-  savingFeatureFor: string | null = null; // `${schoolId}:${featureKey}`
+  /** In-flight override saves, keyed by school + feature (see utils/feature-override.util.ts). */
+  readonly savingFeatureKeys = new Set<string>();
 
   loadSchoolFeatures(schoolId: number): void {
     this.loadingFeaturesFor = schoolId;
@@ -801,23 +790,33 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   setSchoolFeatureOverride(schoolId: number, featureKey: string, overrideState: string): void {
-    const key = `${schoolId}:${featureKey}`;
-    this.savingFeatureFor = key;
+    const key = featureOperationKey(schoolId, featureKey);
+    if (this.savingFeatureKeys.has(key)) return;
+    this.savingFeatureKeys.add(key);
     this.cdr.markForCheck();
     this.schoolService.setSuperAdminFeatureOverride(schoolId, featureKey, overrideState)
       .pipe(takeUntil(this.destroy$)).subscribe({
         next: () => {
-          this.savingFeatureFor = null;
-          this.loadSchoolFeatures(schoolId); // reload to reflect new state
+          this.savingFeatureKeys.delete(key);
+          this.loadSchoolFeatures(schoolId); // reload: the backend decides the effective state
+          this.toast.success('Saved', 'Feature override updated.');
         },
         error: (err) => {
-          this.savingFeatureFor = null;
+          this.savingFeatureKeys.delete(key);
           this.cdr.markForCheck();
-          const msg = err?.error ?? 'Failed to update feature.';
-          this.toast.error('Error', typeof msg === 'string' ? msg : 'Failed to update feature.');
+          this.toast.error('Error', featureOverrideErrorMessage(err));
         }
       });
   }
+
+  isSavingFeature(schoolId: number, featureKey: string): boolean {
+    return this.savingFeatureKeys.has(featureOperationKey(schoolId, featureKey));
+  }
+
+  featureActions(feature: SchoolFeature): FeatureOverrideActions {
+    return featureOverrideActions(feature);
+  }
+
 
   schoolFeaturesByCategory(features: SchoolFeature[]): { category: string; items: SchoolFeature[] }[] {
     const map = new Map<string, SchoolFeature[]>();
@@ -935,11 +934,10 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
       phone: '',
       email: '',
       website: '',
-      boardType: 'CBSE',
+      boardType: '',
       academicYearStartMonth: 4,
       adminUserId: '',
       adminEmail: '',
-      adminPassword: '',
       adminName: '',
       adminPhone: '',
       adminDob: '',
@@ -961,11 +959,10 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
       email: '',
       website: '',
       contactPersonName: '',
-      boardType: 'CBSE',
+      boardType: '',
       plan: 'BASIC',
       maxStudents: 500,
       expiryDate: '',
-      newAdminPassword: '',
     };
   }
 }

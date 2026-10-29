@@ -233,6 +233,7 @@
   font-size: 0.9rem; font-weight: 600; color: #1e293b;
   outline: none; font-family: inherit;
 }
+.pt-amount-hint { font-size: 0.7rem; color: #64748b; max-width: 180px; }
 .pt-amount-input::-webkit-outer-spin-button,
 .pt-amount-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
@@ -283,3 +284,12 @@
   .pt-admin-controls { flex-direction: column; }
   .pt-admin-controls mat-form-field { width: 100% !important; }
 }
+
+/* Ledger read state: Retry on a failed read; rows kept from an earlier read while it refreshes. */
+.pt-alert-action {
+  align-self: flex-start; margin-top: 6px; padding: 6px 14px; min-height: 32px;
+  border: 1px solid currentColor; border-radius: 8px; background: #fff;
+  color: #9f1239; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+}
+.pt-alert-action:disabled { opacity: 0.6; cursor: not-allowed; }
+.pt-month--stale { opacity: 0.7; cursor: default; }

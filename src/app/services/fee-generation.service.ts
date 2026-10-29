@@ -9,11 +9,14 @@ export type FeeGenerationEnrollmentStatus = 'PLANNED' | 'ACTIVE';
 
 export type FeeGenerationOutcome =
   | 'GENERATED' | 'PARTIALLY_GENERATED' | 'ALREADY_GENERATED'
-  | 'NO_RULE_CONFIGURED' | 'ENROLLMENT_CHANGED' | 'FAILED';
+  | 'NO_RULE_CONFIGURED' | 'ENROLLMENT_CHANGED' | 'NOT_ELIGIBLE' | 'FAILED';
 
+/** willGenerate: missing and chargeable now (the same eligibility Fee Assignment uses); a
+ *  month that is neither generated nor willGenerate is skipped and message says why. */
 export interface FeeGenerationMonthPreview {
   month: number;
   alreadyGenerated: boolean;
+  willGenerate: boolean;
   baseAmountDue: number;
   discountAmount: number;
   busFeeDue: number;
@@ -37,6 +40,8 @@ export interface FeeGenerationStudentPreviewRow {
   totalDue: number;
   months: FeeGenerationMonthPreview[];
   alreadyGeneratedMonths: number[];
+  /** The only months a generate request for this row would create. */
+  generatableMonths: number[];
   warnings: string[];
   blockingErrors: string[];
   eligible: boolean;

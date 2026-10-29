@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { FeeAssignmentComponent } from './fee-assignment.component';
 describe('Fee Assignment school policy authority', () => {
   it('does not send a per-request school-policy override', () => {
@@ -59,5 +60,46 @@ describe('Fee Assignment school policy authority', () => {
     expect(entries.length).toBe(1);
     expect(entries[0].row.studentName).toBe('arnav');
     expect(c.monthLabel(entries[0].month.month, true)).toBe('Oct 2026');
+  });
+
+  describe('fee-change outcome', () => {
+    function withToast() {
+      const toast = jasmine.createSpyObj('ToastService', ['success', 'info', 'warning', 'error']);
+      const c = new FeeAssignmentComponent({} as any, {} as any, {} as any, toast, { detectChanges: () => {} } as any, {} as any);
+      return { c, toast };
+    }
+    const run = (c: FeeAssignmentComponent, saved: boolean[], recalculated = 2, skipped = 0) =>
+      (c as any).runChange(() => of({
+        requestedStudents: saved.length, savedStudents: saved.filter(Boolean).length,
+        recalculatedMonths: recalculated, skippedMonths: skipped,
+        students: saved.map((ok, i) => ({ studentId: `S${i}`, changeSaved: ok, months: [], message: ok ? undefined : 'Rejected' })),
+      }), 'Discount saved.');
+
+    it('all saved: Completed', () => {
+      const { c, toast } = withToast();
+      run(c, [true, true]);
+      expect(toast.success).toHaveBeenCalledWith('Completed', jasmine.stringMatching(/^Discount saved\. 2 month\(s\) updated/));
+    });
+
+    it('partly saved: a warning with the count, never Completed', () => {
+      const { c, toast } = withToast();
+      run(c, [true, false]);
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.warning).toHaveBeenCalledWith('Partly saved', jasmine.stringMatching(/1 of 2 student\(s\) updated/));
+    });
+
+    it('nothing saved: an error, never Completed', () => {
+      const { c, toast } = withToast();
+      run(c, [false, false]);
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith('Nothing was saved', 'Rejected');
+    });
+
+    it('saved but every month protected: says nothing was recalculated', () => {
+      const { c, toast } = withToast();
+      run(c, [true], 0, 3);
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(toast.info).toHaveBeenCalledWith('Saved — no months recalculated', jasmine.any(String));
+    });
   });
 });

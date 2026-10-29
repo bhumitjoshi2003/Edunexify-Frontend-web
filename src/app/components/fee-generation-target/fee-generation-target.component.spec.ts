@@ -49,9 +49,10 @@ describe('FeeGenerationTargetComponent', () => {
       repeatingSameClass: null,
       totalDue: 12000,
       months: Array.from({ length: 12 }, (_, i) => ({
-        month: i + 1, alreadyGenerated: false, baseAmountDue: 1000, discountAmount: 0, busFeeDue: 0, total: 1000, message: null
+        month: i + 1, alreadyGenerated: false, willGenerate: true, baseAmountDue: 1000, discountAmount: 0, busFeeDue: 0, total: 1000, message: null
       })),
       alreadyGeneratedMonths: [],
+      generatableMonths: Array.from({ length: 12 }, (_, i) => i + 1),
       warnings: [],
       blockingErrors: [],
       eligible: true,
@@ -139,7 +140,7 @@ describe('FeeGenerationTargetComponent', () => {
 
   // ─── Preview loading ─────────────────────────────────────────────────────
 
-  it('loads the preview and seeds selection with every eligible, not-fully-generated row', () => {
+  it('loads the preview and selects nobody by default, even eligible rows', () => {
     feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row(), row({ studentId: 'S2', eligible: false, blockingErrors: ['No fee rule configured'] })]));
     fixture.detectChanges();
 
@@ -147,17 +148,22 @@ describe('FeeGenerationTargetComponent', () => {
 
     expect(feeGenerationServiceSpy.getTargetPreview).toHaveBeenCalledWith(TARGET.id, null, null);
     expect(component.preview.length).toBe(2);
-    expect(component.isSelected('S1')).toBeTrue();
-    expect(component.isSelected('S2')).toBeFalse();
+    expect(component.selected.size).toBe(0);
+    expect(component.canGenerate).toBeFalse();
+    expect(component.canSelect(component.preview[0])).toBeTrue();
+    expect(component.canSelect(component.preview[1])).toBeFalse();
   });
 
-  it('does not preselect a row that is already fully generated', () => {
-    feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row({ alreadyGeneratedMonths: Array.from({ length: 12 }, (_, i) => i + 1) })]));
+  it('a row with nothing to generate cannot be selected, even by select-all', () => {
+    feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row({
+      alreadyGeneratedMonths: Array.from({ length: 12 }, (_, i) => i + 1), generatableMonths: [] })]));
     fixture.detectChanges();
     component.loadPreview();
 
+    component.selectAllGeneratable();
+    component.toggleSelected(component.preview[0]);
     expect(component.isSelected('S1')).toBeFalse();
-    expect(component.fullyGeneratedCount).toBe(1);
+    expect(component.nothingToGenerateCount).toBe(1);
   });
 
   it('shows a toast and stops loading on a preview error', () => {
@@ -204,6 +210,8 @@ describe('FeeGenerationTargetComponent', () => {
     component.loadPreview();
 
     component.toggleSelected(component.preview[0]);
+    expect(component.isSelected('S1')).toBeTrue();
+    component.toggleSelected(component.preview[0]);
     expect(component.isSelected('S1')).toBeFalse();
 
     component.toggleSelected(blocked);
@@ -221,7 +229,10 @@ describe('FeeGenerationTargetComponent', () => {
 
     expect(component.eligibleCount).toBe(2);
     expect(component.blockedCount).toBe(1);
+    expect(component.selectedRows.length).toBe(0);
+    component.selectAllGeneratable();
     expect(component.selectedRows.length).toBe(2);
+    expect(component.selectedMonthCount).toBe(24);
   });
 
   // ─── Warnings / PLANNED messaging ────────────────────────────────────────
@@ -238,7 +249,7 @@ describe('FeeGenerationTargetComponent', () => {
 
     expect(component.preview[0].eligible).toBeTrue();
     expect(component.preview[0].warnings.length).toBe(2);
-    expect(component.isSelected('S1')).toBeTrue();
+    expect(component.canSelect(component.preview[0])).toBeTrue();
   });
 
   // ─── Confirmation + generate ─────────────────────────────────────────────
@@ -247,6 +258,7 @@ describe('FeeGenerationTargetComponent', () => {
     feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row()]));
     fixture.detectChanges();
     component.loadPreview();
+    component.selectAllGeneratable();
     toastSpy.confirm.and.returnValue(Promise.resolve(false));
 
     await component.confirmAndGenerate();
@@ -258,6 +270,7 @@ describe('FeeGenerationTargetComponent', () => {
     feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row({ targetEnrollmentId: 777, targetClassId: 42 })]));
     fixture.detectChanges();
     component.loadPreview();
+    component.selectAllGeneratable();
     toastSpy.confirm.and.returnValue(Promise.resolve(true));
     feeGenerationServiceSpy.generateTargetFees.and.returnValue(of([
       { studentId: 'S1', outcome: 'GENERATED', generatedMonths: 12, skippedMonths: 0, message: 'Generation completed.' }
@@ -275,6 +288,7 @@ describe('FeeGenerationTargetComponent', () => {
     feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row()]));
     fixture.detectChanges();
     component.loadPreview();
+    component.selectAllGeneratable();
     toastSpy.confirm.and.returnValue(Promise.resolve(true));
     feeGenerationServiceSpy.generateTargetFees.and.returnValue(of([
       { studentId: 'S1', outcome: 'GENERATED', generatedMonths: 12, skippedMonths: 0, message: 'Generation completed.' }
@@ -290,6 +304,7 @@ describe('FeeGenerationTargetComponent', () => {
     feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row()]));
     fixture.detectChanges();
     component.loadPreview();
+    component.selectAllGeneratable();
     toastSpy.confirm.and.returnValue(Promise.resolve(true));
     feeGenerationServiceSpy.generateTargetFees.and.returnValue(throwError(() => new Error('boom')));
 
@@ -306,6 +321,7 @@ describe('FeeGenerationTargetComponent', () => {
     feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row()]));
     fixture.detectChanges();
     component.loadPreview();
+    component.selectAllGeneratable();
     toastSpy.confirm.and.returnValue(Promise.resolve(true));
     feeGenerationServiceSpy.generateTargetFees.and.returnValue(of([]));
 
@@ -391,5 +407,145 @@ describe('FeeGenerationTargetComponent', () => {
     expect(component.driftLoading).toBeFalse();
     expect(toastSpy.error).toHaveBeenCalledWith('Error', 'Failed to load fee and enrollment mismatches.');
     expect(feeGenerationServiceSpy.generateTargetFees).not.toHaveBeenCalled();
+  });
+
+  // ─── Shared by the web and Android clients — keep the two copies identical. ───
+
+  it('classifies every drift status: no target enrollment is informational, mismatches need action', () => {
+    expect(component.driftLevel('CLEAN')).toBe('clean');
+    expect(component.driftLevel('NO_TARGET_ENROLLMENT')).toBe('informational');
+    expect(component.driftLevel('CLASS_MISMATCH')).toBe('action-needed');
+    expect(component.driftLevel('PARTIAL_GENERATION')).toBe('action-needed');
+    expect(component.driftLevel('CANCELLED_TARGET_WITH_FEES')).toBe('action-needed');
+    expect(component.driftLabel('NO_TARGET_ENROLLMENT')).toBe('No Target Enrollment');
+  });
+
+  it('failed and unconfigured outcomes are neither success nor info, and are counted per code', () => {
+    component.results = [
+      { studentId: 'S1', outcome: 'PARTIALLY_GENERATED', generatedMonths: 6, skippedMonths: 6, message: 'Some months already existed.' },
+      { studentId: 'S2', outcome: 'FAILED', generatedMonths: 0, skippedMonths: 0, message: 'Unexpected error.' },
+      { studentId: 'S3', outcome: 'NO_RULE_CONFIGURED', generatedMonths: 0, skippedMonths: 0, message: 'No fee rule.' },
+    ] as FeeGenerationStudentResult[];
+    expect(component.isSuccessOutcome('FAILED')).toBeFalse();
+    expect(component.isInfoOutcome('FAILED')).toBeFalse();
+    expect(component.isSuccessOutcome('NO_RULE_CONFIGURED')).toBeFalse();
+    const summary = component.summaryEntries();
+    expect(summary).toContain({ code: 'PARTIALLY_GENERATED', count: 1 });
+    expect(summary).toContain({ code: 'FAILED', count: 1 });
+    expect(summary).toContain({ code: 'NO_RULE_CONFIGURED', count: 1 });
+  });
+
+  it('a row with some months already generated stays selectable, and those months are not counted again', () => {
+    const partial = row({ alreadyGeneratedMonths: [1, 2, 3], totalDue: 9000 });
+    feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([partial]));
+    fixture.detectChanges();
+    component.loadPreview();
+    expect(component.canSelect(component.preview[0])).toBeTrue();
+    expect(component.nothingToGenerateCount).toBe(0);
+  });
+
+  // ─── FA-2: only eligible periods, explicit scope, single confirmation ────
+
+  function currentSessionRow(): FeeGenerationStudentPreviewRow {
+    // Seven months into the session: Apr–Oct skipped, Nov already generated, Dec–Mar will generate.
+    return row({
+      studentId: 'S2', studentName: 'Isha Verma', totalDue: 5200,
+      months: Array.from({ length: 12 }, (_, i) => ({
+        month: i + 1, alreadyGenerated: i === 7, willGenerate: i > 7,
+        baseAmountDue: i >= 7 ? 1000 : 0, discountAmount: 0, busFeeDue: i >= 7 ? 300 : 0, total: i >= 7 ? 1300 : 0,
+        message: i < 7 ? "Before this class's fee rules take effect." : i === 7 ? 'Already generated' : null,
+      })),
+      alreadyGeneratedMonths: [8], generatableMonths: [9, 10, 11, 12],
+    });
+  }
+
+  it('renders skipped months without amounts, with their reason, and the exact scope that will be generated', () => {
+    feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([currentSessionRow()]));
+    fixture.detectChanges();
+    component.loadPreview();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const cells = Array.from(el.querySelectorAll('.fg-month-cell'));
+    expect(cells.filter(c => c.classList.contains('fg-month-skipped')).length).toBe(7);
+    expect(cells.slice(0, 7).every(c => c.querySelector('.fg-month-amount')!.textContent!.trim() === '—')).toBeTrue();
+    expect(el.querySelector('.fg-skip-list')!.textContent).toContain("Skipped M1, M2, M3, M4, M5, M6, M7: Before this class's fee rules take effect.");
+    expect(el.querySelector('[data-testid=generatable-scope]')!.textContent).toContain('December 2026 – March 2027 (4 months)');
+    expect((el.querySelector('.fg-checkbox-wrap input') as HTMLInputElement).checked).toBeFalse();
+  });
+
+  it('the confirmation states the month count and per-student scope, and the request carries only the student decision', async () => {
+    feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([currentSessionRow()]));
+    fixture.detectChanges();
+    component.loadPreview();
+    component.toggleSelected(component.preview[0]);
+    toastSpy.confirm.and.returnValue(Promise.resolve(true));
+    feeGenerationServiceSpy.generateTargetFees.and.returnValue(of([
+      { studentId: 'S2', outcome: 'PARTIALLY_GENERATED', generatedMonths: 4, skippedMonths: 8, message: 'Generation completed.' }
+    ]));
+
+    await component.confirmAndGenerate();
+
+    const html = (toastSpy.confirm.calls.mostRecent().args[0] as { html: string }).html;
+    expect(html).toContain('<strong>4</strong> month(s)');
+    expect(html).toContain('Isha Verma: December 2026 – March 2027 (4 months)');
+    expect(feeGenerationServiceSpy.generateTargetFees).toHaveBeenCalledOnceWith({
+      targetSessionId: TARGET.id,
+      decisions: [{ studentId: 'S2', expectedTargetEnrollmentId: 500, expectedTargetClassId: 10 }],
+    });
+  });
+
+  it('lists every month when the generatable months are not contiguous', () => {
+    feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row({ generatableMonths: [7, 10, 11, 12] })]));
+    fixture.detectChanges();
+    component.loadPreview();
+    expect(component.generatableScope(component.preview[0]))
+      .toBe('October 2026, January 2027, February 2027, March 2027 (4 months)');
+  });
+
+  it('a second click while the confirmation is open never opens another dialog or submits twice', async () => {
+    feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row()]));
+    fixture.detectChanges();
+    component.loadPreview();
+    component.selectAllGeneratable();
+    let resolve!: (v: boolean) => void;
+    toastSpy.confirm.and.returnValue(new Promise<boolean>(r => resolve = r));
+    feeGenerationServiceSpy.generateTargetFees.and.returnValue(of([]));
+
+    const first = component.confirmAndGenerate();
+    await component.confirmAndGenerate();
+    resolve(true);
+    await first;
+
+    expect(toastSpy.confirm).toHaveBeenCalledTimes(1);
+    expect(feeGenerationServiceSpy.generateTargetFees).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the in-flight spinner and disables selection while generating', () => {
+    feeGenerationServiceSpy.getTargetPreview.and.returnValue(of([row()]));
+    fixture.detectChanges();
+    component.loadPreview();
+    component.selectAllGeneratable();
+    component.executing = true;
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.fg-execute-btn .fg-btn-spinner')).not.toBeNull();
+    expect((el.querySelector('.fg-execute-btn') as HTMLButtonElement).disabled).toBeTrue();
+    expect((el.querySelector('.fg-checkbox-wrap input') as HTMLInputElement).disabled).toBeTrue();
+  });
+
+  it('summarises created and skipped months across the run', () => {
+    component.results = [
+      { studentId: 'S1', outcome: 'ALREADY_GENERATED', generatedMonths: 0, skippedMonths: 12, message: 'Nothing to generate.' },
+      { studentId: 'S2', outcome: 'PARTIALLY_GENERATED', generatedMonths: 4, skippedMonths: 8, message: 'Generation completed.' },
+      { studentId: 'S3', outcome: 'NOT_ELIGIBLE', generatedMonths: 0, skippedMonths: 12, message: 'Excluded from fees.' },
+    ] as FeeGenerationStudentResult[];
+    fixture.detectChanges();
+
+    expect(component.resultTotals).toEqual({ created: 4, skipped: 32 });
+    expect(component.isInfoOutcome('NOT_ELIGIBLE')).toBeTrue();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid=result-totals]')!.textContent)
+      .toContain('4 months created');
   });
 });

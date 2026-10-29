@@ -7,7 +7,9 @@ import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { ToastService } from '../../services/toast.service';
 import { Admin } from '../../interfaces/admin';
+import { ListDisplay, ListLoadState, adminDeleteDialog, listDisplay } from '../../utils/list-state.util';
 
+/** Shared by the web and Android clients — keep the TypeScript identical (templates/styles per platform). */
 @Component({
   selector: 'app-admin-list',
   standalone: true,
@@ -18,6 +20,8 @@ import { Admin } from '../../interfaces/admin';
 })
 export class AdminListComponent implements OnInit, OnDestroy {
   admins: Admin[] = [];
+  /** See utils/list-state.util.ts: a failed load shows an error with Retry, never "No administrators". */
+  loadState: ListLoadState = 'loading';
   loggedInUserRole: string = '';
   currentUserId: string = '';
   private ngUnsubscribe = new Subject<void>();
@@ -57,11 +61,21 @@ export class AdminListComponent implements OnInit, OnDestroy {
   }
 
   loadAdmins(): void {
+    this.loadState = 'loading';
+    this.cdr.markForCheck();
     this.adminService.getAllAdmins()
       .pipe(takeUntil(this.ngUnsubscribe))
       .subscribe({
-        next: (data) => { this.admins = data; this.cdr.markForCheck(); },
-        error: (err) => this.logger.error('Error fetching admins:', err)
+        next: (data) => {
+          this.admins = data ?? [];
+          this.loadState = 'ready';
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.logger.error('Error fetching admins:', err);
+          this.loadState = 'failed';
+          this.cdr.markForCheck();
+        }
       });
   }
 
@@ -77,14 +91,7 @@ export class AdminListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.toast.confirm({
-      title: 'Are you sure?',
-      message: 'This admin will be permanently removed!',
-      icon: 'warning',
-      danger: true,
-      confirmText: 'Yes, delete it!',
-      cancelText: 'Cancel',
-    }).then((confirmed) => {
+    this.toast.confirm(adminDeleteDialog()).then((confirmed) => {
       if (confirmed) {
         this.adminService.deleteAdmin(adminId).pipe(takeUntil(this.ngUnsubscribe)).subscribe({
           next: () => {
@@ -97,6 +104,8 @@ export class AdminListComponent implements OnInit, OnDestroy {
       }
     });
   }
+
+  get display(): ListDisplay { return listDisplay(this.loadState, this.admins.length); }
 
   trackByAdminId(index: number, admin: Admin): string { return admin.adminId; }
 

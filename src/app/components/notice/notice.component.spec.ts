@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { NoticeComponent } from './notice.component';
+import { baselineTestProviders } from '../../../testing/baseline-test-providers';
 
 describe('NoticeComponent', () => {
   let component: NoticeComponent;
@@ -8,6 +9,7 @@ describe('NoticeComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
+      providers: [...baselineTestProviders()],
       imports: [NoticeComponent]
     })
     .compileComponents();

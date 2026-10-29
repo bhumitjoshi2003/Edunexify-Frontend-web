@@ -553,7 +553,7 @@
       <div class="topbar-spacer"></div>
 
       <!-- Notification bell -->
-      <button class="hdr-bell" (click)="navigateToNoticeBoard()" title="Notice Board"
+      <button class="hdr-bell" *ngIf="Role !== 'SUPER_ADMIN'" (click)="navigateToNotifications()" title="Notifications" aria-label="Notifications"
         [matBadge]="unreadNotificationCount"
         [matBadgeHidden]="unreadNotificationCount === 0"
         matBadgeColor="warn" matBadgeSize="small">

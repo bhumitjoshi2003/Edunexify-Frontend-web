@@ -54,11 +54,16 @@
           Other Active Sessions
           <span class="as-count-badge" *ngIf="otherSessions.length">{{ otherSessions.length }}</span>
         </h2>
-        <button type="button" class="as-btn as-btn-danger-ghost as-btn-sm" *ngIf="otherSessions.length"
-                [disabled]="revokingOthers" (click)="revokeOthers()">
+        <button type="button" class="as-btn as-btn-danger-ghost as-btn-sm" *ngIf="canRevokeOthers"
+                [disabled]="revokingOthers" (click)="revokeOthers()" data-testid="revoke-others">
           {{ revokingOthers ? 'Logging out others…' : 'Log out all others' }}
         </button>
       </div>
+
+      <p class="as-note" *ngIf="!currentKnown && otherSessions.length" data-testid="current-unknown">
+        This device couldn't be identified in the list, so "Log out all others" isn't available — it would sign
+        this device out too. Log out individual sessions below, or use "Log out everywhere".
+      </p>
 
       <div class="as-empty-card" *ngIf="otherSessions.length === 0">
         <div class="as-empty-icon"><mat-icon>verified_user</mat-icon></div>
@@ -82,6 +87,16 @@
           </button>
         </div>
       </div>
+    </section>
+
+    <!-- ── Everywhere ────────────────────────────────────────────────── -->
+    <section class="as-section as-everywhere" data-testid="logout-everywhere-section">
+      <h2 class="as-section-label">Log out everywhere</h2>
+      <p class="as-note">Signs out every session on your account, including this one.</p>
+      <button type="button" class="as-btn as-btn-danger-ghost as-btn-sm" [disabled]="signingOutEverywhere"
+              (click)="logOutEverywhere()" data-testid="logout-everywhere">
+        {{ signingOutEverywhere ? 'Logging out…' : 'Log out everywhere' }}
+      </button>
     </section>
 
   </ng-container>

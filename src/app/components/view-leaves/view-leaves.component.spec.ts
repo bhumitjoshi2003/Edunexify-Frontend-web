@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ViewLeavesComponent } from './view-leaves.component';
+import { baselineTestProviders } from '../../../testing/baseline-test-providers';
 
 describe('ViewLeavesComponent', () => {
   let component: ViewLeavesComponent;
@@ -8,6 +9,7 @@ describe('ViewLeavesComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
+      providers: [...baselineTestProviders()],
       imports: [ViewLeavesComponent]
     })
     .compileComponents();

@@ -20,7 +20,7 @@ import { AttendanceService } from '../../services/attendance.service';
 import { LeaveService, LeaveApplication } from '../../services/leave.service';
 import { LoggerService } from '../../services/logger.service';
 import { ToastService } from '../../services/toast.service';
-import { NotificationService } from '../../services/notification.service';
+import { NotificationStateService } from '../../services/notification-state.service';
 import { TeacherCheckinService } from '../../services/teacher-checkin.service';
 import { TeacherAttendanceRecord, TeacherAttendanceSummary } from '../../interfaces/teacher-checkin';
 import { TeacherLeaveService } from '../../services/teacher-leave.service';
@@ -40,6 +40,8 @@ import { isShowTimesEnabled } from '../../utils/timetable-preferences.util';
 import { EventService } from '../../services/event.service';
 import { CalendarEvent } from '../../interfaces/event-calendar.component';
 import { pickNearestUpcomingEvent } from '../../utils/upcoming-event.util';
+import { formatTeacherAttendanceTime } from '../../utils/teacher-attendance.util';
+import { serverTotal } from '../../utils/page-count.util';
 
 const EMPTY_TODAY_VIEW: TeacherTodayClassesView = {
   current: null,
@@ -122,7 +124,7 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
     private teacherLeaveService: TeacherLeaveService,
     private timetableService: TimetableService,
     private substitutionService: TeacherSubstitutionService,
-    private notificationService: NotificationService,
+    private notificationState: NotificationStateService,
     private eventService: EventService
   ) {}
 
@@ -213,7 +215,7 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
    *  Isolated from every other dashboard section on purpose — a failure here must never
    *  block or blank out check-in status, Today's Classes, or leave data. */
   private subscribeToUnreadCount(): void {
-    this.notificationService.unreadCountState$
+    this.notificationState.unreadState$
       .pipe(takeUntil(this.destroy$))
       .subscribe(state => {
         this.unreadCountLoading = state.status === 'loading';
@@ -405,11 +407,7 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
   }
 
   private formatClockTime(value: string): string {
-    const match = /^(\d{1,2}):(\d{2})/.exec(value);
-    if (!match) return value;
-    const hour = Number(match[1]);
-    const suffix = hour >= 12 ? 'PM' : 'AM';
-    return `${hour % 12 || 12}:${match[2]} ${suffix}`;
+    return formatTeacherAttendanceTime(value);
   }
 
   private timetableErrorMessage(error: any): string {
@@ -439,7 +437,8 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
         this.logger.error('Failed to load today\'s attendance', err);
         return of(null);
       })),
-      leaves: this.leaveService.getLeavesPaginated(0, 50, this.className),
+      // Server-filtered to PENDING so totalElements is the real count, not what one page held.
+      leaves: this.leaveService.getLeavesPaginated(0, 10, this.className, undefined, undefined, 'PENDING'),
       summary: this.attendanceService.getClassSummary(this.className, { year, month }),
     })
       .pipe(takeUntil(this.destroy$))
@@ -452,7 +451,7 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
           this.todayPresent = todayRows.filter(s => s.status === 'PRESENT').length;
 
           const pending = leaves.content.filter((l) => l.status === 'PENDING');
-          this.pendingLeavesCount = pending.length;
+          this.pendingLeavesCount = serverTotal(leaves).count;
           this.recentLeaves = pending.slice(0, 10);
 
           // Class rate = all present days / all submitted days (the same formula as each student's %).
@@ -578,11 +577,7 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
   }
 
   formatAttendanceTime(value: string | null): string {
-    if (!value) return '—';
-    const time = value.includes('T') ? value.split('T')[1] : value;
-    const [hour = '', minute = ''] = time.split(':');
-    if (!hour || !minute) return value;
-    return `${Number(hour)}:${minute}`;
+    return formatTeacherAttendanceTime(value);
   }
 
   /**
@@ -605,13 +600,6 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
     if (pendingCount > 0) return `${pendingCount} request${pendingCount === 1 ? '' : 's'} pending`;
 
     return 'No pending requests';
-  }
-
-  get absentCardState(): 'marked' | 'not-marked' | 'weekend' {
-    const day = new Date().getDay();
-    if (day === 0 || day === 6) return 'weekend';
-    if (!this.attendanceTaken) return 'not-marked';
-    return 'marked';
   }
 
   hasFeature(featureKey: string): boolean {

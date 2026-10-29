@@ -1,26 +1,16 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { Subject } from 'rxjs';
-
-import { NotificationService, UnreadCountState } from './notification.service';
-import { AuthStateService, AuthStatus } from '../auth/auth-state.service';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from '../../environments/environment';
+
+import { NotificationService } from './notification.service';
 
 describe('NotificationService', () => {
   let service: NotificationService;
   let http: HttpTestingController;
-  let status$$: Subject<AuthStatus>;
-
-  const unreadUrl = `${environment.apiUrl}/notification/user/unread/count`;
 
   beforeEach(() => {
-    status$$ = new Subject<AuthStatus>();
-    TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [
-        { provide: AuthStateService, useValue: { status$: status$$.asObservable() } },
-      ],
-    });
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
     service = TestBed.inject(NotificationService);
     http = TestBed.inject(HttpTestingController);
   });
@@ -31,86 +21,44 @@ describe('NotificationService', () => {
     expect(service).toBeTruthy();
   });
 
-  // ─── Shared unread-count state — the single source every dashboard/shell reads from ───
-
-  it('starts in a loading/unknown state before any refresh has resolved', () => {
-    let latest: UnreadCountState | undefined;
-    service.unreadCountState$.subscribe(state => (latest = state));
-    expect(latest).toEqual({ status: 'loading', count: 0 });
+  it('loads only the requested recent page', () => {
+    service.getUserNotifications(0, 5).subscribe();
+    const request = http.expectOne(req => req.url === `${environment.apiUrl}/notification/user`);
+    expect(request.request.params.get('page')).toBe('0');
+    expect(request.request.params.get('size')).toBe('5');
+    request.flush({ content: [], totalElements: 0, totalPages: 0, last: true, first: true, numberOfElements: 0, pageable: { pageNumber: 0, pageSize: 5 } });
   });
 
-  it('refreshUnreadCount() issues exactly one GET and publishes a success state to every subscriber', () => {
-    const states: UnreadCountState[] = [];
-    service.unreadCountState$.subscribe(s => states.push(s));
-
-    service.refreshUnreadCount();
-    http.expectOne(unreadUrl).flush(5);
-
-    expect(states[states.length - 1]).toEqual({ status: 'success', count: 5 });
+  it('sends read-state and category filters with pagination', () => {
+    service.getUserNotifications(3, 20, false, 'ATTENDANCE').subscribe();
+    const request = http.expectOne(req => req.url === `${environment.apiUrl}/notification/user`);
+    expect(request.request.params.get('page')).toBe('3');
+    expect(request.request.params.get('size')).toBe('20');
+    expect(request.request.params.get('isRead')).toBe('false');
+    expect(request.request.params.get('category')).toBe('ATTENDANCE');
+    request.flush({ content: [], totalElements: 0, totalPages: 0, last: true, first: false, numberOfElements: 0, pageable: { pageNumber: 3, pageSize: 20 } });
   });
 
-  it('publishes a genuine zero as a success state, not the initial loading state', () => {
-    const states: UnreadCountState[] = [];
-    service.unreadCountState$.subscribe(s => states.push(s));
-
-    service.refreshUnreadCount();
-    http.expectOne(unreadUrl).flush(0);
-
-    expect(states[states.length - 1]).toEqual({ status: 'success', count: 0 });
+  it('omits optional inbox filters for the all view', () => {
+    service.getUserNotifications(0, 20).subscribe();
+    const request = http.expectOne(req => req.url === `${environment.apiUrl}/notification/user`);
+    expect(request.request.params.has('isRead')).toBeFalse();
+    expect(request.request.params.has('category')).toBeFalse();
+    request.flush({ content: [], totalElements: 0, totalPages: 0, last: true, first: true, numberOfElements: 0, pageable: { pageNumber: 0, pageSize: 20 } });
   });
 
-  it('a fetch failure publishes an error state — never collapsed into a false zero', () => {
-    const states: UnreadCountState[] = [];
-    service.unreadCountState$.subscribe(s => states.push(s));
-
-    service.refreshUnreadCount();
-    http.expectOne(unreadUrl).flush('boom', { status: 500, statusText: 'Server Error' });
-
-    expect(states[states.length - 1].status).toBe('error');
+  it('marks the authenticated inbox row read without a user id', () => {
+    service.markNotificationAsRead(42).subscribe();
+    const request = http.expectOne(`${environment.apiUrl}/notification/user/42/read`);
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({});
+    request.flush(null);
   });
 
-  it('a later successful refresh recovers from a previous failure', () => {
-    service.refreshUnreadCount();
-    http.expectOne(unreadUrl).flush('boom', { status: 500, statusText: 'Server Error' });
-
-    service.refreshUnreadCount();
-    http.expectOne(unreadUrl).flush(2);
-
-    let latest: UnreadCountState | undefined;
-    service.unreadCountState$.subscribe(state => (latest = state));
-    expect(latest).toEqual({ status: 'success', count: 2 });
-  });
-
-  it('every subscriber immediately receives the latest known state, including late subscribers', () => {
-    service.refreshUnreadCount();
-    http.expectOne(unreadUrl).flush(9);
-
-    let latest: UnreadCountState | undefined;
-    service.unreadCountState$.subscribe(state => (latest = state));
-    expect(latest).toEqual({ status: 'success', count: 9 });
-  });
-
-  // ─── Logout / session reset safety ───
-
-  it('resets to loading/unknown when the session becomes UNAUTHENTICATED (logout)', () => {
-    service.refreshUnreadCount();
-    http.expectOne(unreadUrl).flush(7);
-
-    status$$.next('UNAUTHENTICATED');
-
-    let latest: UnreadCountState | undefined;
-    service.unreadCountState$.subscribe(state => (latest = state));
-    expect(latest).toEqual({ status: 'loading', count: 0 });
-  });
-
-  it('does not reset on other auth status transitions (e.g. a routine re-verify)', () => {
-    service.refreshUnreadCount();
-    http.expectOne(unreadUrl).flush(4);
-
-    status$$.next('AUTHENTICATED');
-
-    let latest: UnreadCountState | undefined;
-    service.unreadCountState$.subscribe(state => (latest = state));
-    expect(latest).toEqual({ status: 'success', count: 4 });
+  it('marks all authenticated notifications read', () => {
+    service.markAllNotificationsAsRead().subscribe();
+    const request = http.expectOne(`${environment.apiUrl}/notification/user/read-all`);
+    expect(request.request.method).toBe('PUT');
+    request.flush(null);
   });
 });

@@ -103,7 +103,16 @@ export class TimetableComponent implements OnInit, OnDestroy {
 
   isLoading = false;
   error: string | null = null;
+  /** ACTIVE teachers only — the only ones a period or access grant may be assigned to (the
+   *  backend refuses any other). Also feeds the Teaching Configuration panel. */
   teachers: Teacher[] = [];
+
+  /** Configured subjects for the modal's class (canonical names, from the backend). A period's
+   *  subject is always picked from these — never typed. */
+  subjectOptions: string[] = [];
+  subjectsLoaded = false;
+  subjectsError: string | null = null;
+  private subjectsFor$ = new Subject<number | null>();
 
   showModal = false;
   isEditMode = false;
@@ -143,7 +152,31 @@ export class TimetableComponent implements OnInit, OnDestroy {
     ).subscribe(data => {
       this.entries = data; this.isLoading = false; this.cdr.markForCheck();
     });
+    this.subjectsFor$.pipe(
+      switchMap(classId => classId == null ? EMPTY : this.timetableService.getPermittedSubjects(classId).pipe(catchError(err => {
+        this.subjectsError = apiMessage(err); this.subjectsLoaded = true; this.cdr.markForCheck();
+        return EMPTY;
+      }))),
+      takeUntil(this.destroy$)
+    ).subscribe(subjects => {
+      this.subjectOptions = subjects;
+      this.subjectsLoaded = true;
+      // Keep the form's subject only when it is (case-insensitively) configured, in canonical spelling.
+      const current = (this.modalForm.subjectName ?? '').trim().toLowerCase();
+      this.modalForm.subjectName = subjects.find(s => s.toLowerCase() === current) ?? '';
+      this.cdr.markForCheck();
+    });
   }
+
+  /** Loads the configured subjects for the class the modal is editing. */
+  private loadSubjectsFor(classId: number | null | undefined): void {
+    this.subjectOptions = []; this.subjectsLoaded = false; this.subjectsError = null;
+    this.subjectsFor$.next(classId ?? null);
+    if (classId == null) { this.subjectsLoaded = true; this.subjectsError = 'Unable to determine the class for this period.'; }
+    this.cdr.markForCheck();
+  }
+
+  get hasSubjectOptions(): boolean { return this.subjectsLoaded && this.subjectOptions.length > 0; }
 
   ngOnInit(): void {
     const user = this.authStateService.getUser();
@@ -223,6 +256,7 @@ export class TimetableComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroyed = true;
     this.selectionChanged$.next(); this.selectionChanged$.complete();
+    this.subjectsFor$.complete();
     this.classRead$.next(null); this.classRead$.complete();
     this.destroy$.next();
     this.destroy$.complete();
@@ -425,7 +459,7 @@ export class TimetableComponent implements OnInit, OnDestroy {
   private loadTeachers(): void {
     this.teacherService.getAllTeachers()
       .pipe(takeUntil(this.destroy$)).subscribe({
-        next: (list) => { this.teachers = list; this.cdr.markForCheck(); },
+        next: (list) => { this.teachers = list.filter(t => t.status === 'ACTIVE'); this.cdr.markForCheck(); },
         error: (err) => this.logger.error('Failed to load teachers:', err)
       });
   }
@@ -455,7 +489,7 @@ export class TimetableComponent implements OnInit, OnDestroy {
     this.modalForm.day = this.selectedDay;
     this.modalError = null;
     this.showModal = true;
-    this.cdr.markForCheck();
+    this.loadSubjectsFor(this.modalForm.classId);
   }
 
   /** TEACHER self-service: opens a fresh Add Period form scoped to a class/section the teacher
@@ -477,7 +511,7 @@ export class TimetableComponent implements OnInit, OnDestroy {
     this.modalForm.sectionName = first.sectionName;
     this.modalError = null;
     this.showModal = true;
-    this.cdr.markForCheck();
+    this.loadSubjectsFor(this.modalForm.classId);
   }
 
   myClassKey(c: { className: string; sectionId: number | null }): string {
@@ -495,6 +529,7 @@ export class TimetableComponent implements OnInit, OnDestroy {
     this.modalForm.className = match.className;
     this.modalForm.sectionId = match.sectionId;
     this.modalForm.sectionName = match.sectionName;
+    this.loadSubjectsFor(match.classId);
   }
 
   openEdit(entry: TimetableEntry): void {
@@ -511,7 +546,7 @@ export class TimetableComponent implements OnInit, OnDestroy {
     }
     this.modalError = null;
     this.showModal = true;
-    this.cdr.markForCheck();
+    this.loadSubjectsFor(this.modalForm.classId ?? this.managedClasses.find(c => c.name === entry.className)?.id);
   }
 
   closeModal(): void {
@@ -591,8 +626,11 @@ export class TimetableComponent implements OnInit, OnDestroy {
     if (this.canManage() && (!this.sectionsLoaded || (this.sections.length ? !this.sections.some(s => s.id === this.modalForm.sectionId) : this.modalForm.sectionId != null))) {
       this.modalError = 'Select a valid section for this class.'; return;
     }
-    if (!this.modalForm.subjectName?.trim()) {
-      this.modalError = 'Subject name is required.'; return;
+    if (!this.hasSubjectOptions) {
+      this.modalError = this.subjectsError ?? 'No subjects are configured for this class yet. Add them in Subject Configuration first.'; return;
+    }
+    if (!this.subjectOptions.includes(this.modalForm.subjectName)) {
+      this.modalError = 'Select a subject configured for this class.'; return;
     }
     if (!this.modalForm.teacherId) {
       this.modalError = 'Please select a teacher.'; return;

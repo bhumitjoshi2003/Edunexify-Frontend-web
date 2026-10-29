@@ -181,7 +181,7 @@ describe('StaffAdoptionComponent', () => {
       expect(toast.confirm).toHaveBeenCalled();
       const dialogData = toast.confirm.calls.mostRecent().args[0];
       expect(dialogData.title).toContain('2 teachers');
-      expect(dialogData.html).toContain('Tarun Bisht');
+      expect(dialogData.message).toContain('Tarun Bisht');
     });
 
     it('requires confirmation before sending — declining sends nothing', () => {

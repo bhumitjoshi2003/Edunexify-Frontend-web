@@ -32,7 +32,7 @@
 
     <div class="sc-add-row">
       <input [(ngModel)]="newSubjectName" placeholder="Subject name" (keyup.enter)="addClassSubject()" aria-label="New subject name" />
-      <button class="btn-add" (click)="addClassSubject()">+ Add</button>
+      <button class="btn-add" (click)="addClassSubject()" [disabled]="!hasConfiguredClass">+ Add</button>
     </div>
     <div class="sc-optional-row">
       <label class="sc-optional-label">
@@ -52,7 +52,8 @@
         </span>
         <button class="btn-delete" (click)="deleteClassSubject(s.id)" [attr.aria-label]="'Delete subject ' + s.subjectName">&#x2715;</button>
       </li>
-      <li *ngIf="classSubjects.length === 0" class="sc-empty">No subjects defined for Class {{ selectedClass }}.</li>
+      <li *ngIf="classSubjects.length === 0 && hasConfiguredClass" class="sc-empty">No subjects defined for Class {{ selectedClass }}.</li>
+      <li *ngIf="!hasConfiguredClass" class="sc-empty">Add classes in Class Management to configure subjects.</li>
     </ul>
   </div>
 

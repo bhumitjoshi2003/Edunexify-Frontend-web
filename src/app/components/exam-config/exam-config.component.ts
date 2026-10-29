@@ -3,21 +3,21 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, forkJoin } from 'rxjs';
 import { ToastService } from '../../services/toast.service';
-import { ExamConfigService, ExamConfig, ExamSubjectEntry } from '../../services/exam-config.service';
-import { SubjectConfigService, ClassSubject } from '../../services/subject-config.service';
+import { ExamConfigService, ExamConfig, ExamSubjectEntry, ExamSubjectOption } from '../../services/exam-config.service';
 import { LoggerService } from '../../services/logger.service';
 import { AcademicSessionService } from '../../services/academic-session.service';
 import { SchoolService } from '../../services/school.service';
 
-/** One row in the subject checklist (class subject or extra). */
+/** One row in the subject checklist (an academic subject of the class, or a legacy extra). */
 interface SubjectRow {
   subjectName: string;
   checked: boolean;
   maxMarks: number | null;
   examDate: string;
   isElective: boolean;
+  isStream?: boolean;        // a stream core / optional subject (stream students of that stream only)
   optionalGroup: string | null;
-  isExtra: boolean;          // true = user-added, not from class config
+  isExtra: boolean;          // true = saved earlier but no longer configured for the class
   existingEntryId?: number;  // set if this subject was already saved for this exam
 }
 
@@ -50,11 +50,10 @@ export class ExamConfigComponent implements OnInit, OnDestroy {
   newExamName = '';
 
   // Cached class subjects to avoid re-fetching on every toggle
-  private classSubjectsCache: Record<string, ClassSubject[]> = {};
+  private classSubjectsCache: Record<string, ExamSubjectOption[]> = {};
 
   constructor(
     private examService: ExamConfigService,
-    private subjectConfigService: SubjectConfigService,
     private academicSessionService: AcademicSessionService,
     private cdr: ChangeDetectorRef,
     private logger: LoggerService,
@@ -132,10 +131,6 @@ export class ExamConfigComponent implements OnInit, OnDestroy {
     this.loadingSubjects[exam.id] = true;
     this.cdr.markForCheck();
 
-    const classSubjects$ = this.classSubjectsCache[exam.className]
-      ? new Subject<ClassSubject[]>() as any // will be replaced below
-      : this.subjectConfigService.getClassSubjects(exam.className);
-
     // If cached, just use the cache
     if (this.classSubjectsCache[exam.className]) {
       this.mergeSubjectSetup(exam, this.classSubjectsCache[exam.className]);
@@ -143,7 +138,7 @@ export class ExamConfigComponent implements OnInit, OnDestroy {
     }
 
     forkJoin([
-      this.subjectConfigService.getClassSubjects(exam.className),
+      this.examService.getSubjectOptions(exam.className),
       this.examService.getExamSubjects(exam.id)
     ]).pipe(takeUntil(this.destroy$)).subscribe({
       next: ([classSubjects, examEntries]) => {
@@ -159,7 +154,7 @@ export class ExamConfigComponent implements OnInit, OnDestroy {
     });
   }
 
-  private mergeSubjectSetup(exam: ExamConfig, classSubjects: ClassSubject[], examEntries?: ExamSubjectEntry[]): void {
+  private mergeSubjectSetup(exam: ExamConfig, classSubjects: ExamSubjectOption[], examEntries?: ExamSubjectEntry[]): void {
     // If examEntries not provided, fetch them
     if (!examEntries) {
       this.examService.getExamSubjects(exam.id).pipe(takeUntil(this.destroy$)).subscribe({
@@ -191,6 +186,7 @@ export class ExamConfigComponent implements OnInit, OnDestroy {
         maxMarks: existing?.maxMarks ?? null,
         examDate: existing?.examDate ?? '',
         isElective: cs.optional,
+        isStream: cs.kind === 'STREAM',
         optionalGroup: cs.optionalGroup,
         isExtra: false,
         existingEntryId: existing?.id,
@@ -289,22 +285,6 @@ export class ExamConfigComponent implements OnInit, OnDestroy {
     for (const row of this.subjectRows[examId] ?? []) {
       if (!row.isExtra) row.checked = checked;
     }
-    this.cdr.markForCheck();
-  }
-
-  /** Add an empty extra subject row. */
-  addExtraSubject(examId: number): void {
-    const rows = this.subjectRows[examId];
-    if (!rows) return;
-    rows.push({
-      subjectName: '',
-      checked: true,
-      maxMarks: this.defaultMaxMarks[examId] ?? null,
-      examDate: '',
-      isElective: false,
-      optionalGroup: null,
-      isExtra: true,
-    });
     this.cdr.markForCheck();
   }
 

@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { AuthStateService } from '../../auth/auth-state.service';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
+import { ListDisplay, ListLoadState, listDisplay } from '../../utils/list-state.util';
 
 interface Teacher {
   teacherId: string;
@@ -16,6 +17,7 @@ interface Teacher {
   leavingDate?: string | null;
 }
 
+/** Shared by the web and Android clients — keep the TypeScript identical (templates/styles per platform). */
 @Component({
   selector: 'app-teacher-list',
   imports: [CommonModule],
@@ -25,6 +27,8 @@ interface Teacher {
 })
 export class TeacherListComponent implements OnInit, OnDestroy {
   teachers: Teacher[] = [];
+  /** See utils/list-state.util.ts: a failed load shows an error with Retry, never "No teachers". */
+  loadState: ListLoadState = 'loading';
   loggedInUserRole: string = '';
   private ngUnsubscribe = new Subject<void>();
 
@@ -63,16 +67,23 @@ export class TeacherListComponent implements OnInit, OnDestroy {
   }
 
   loadAllTeachers(): void {
+    this.loadState = 'loading';
+    this.cdr.markForCheck();
     this.teacherService.getAllTeachers().pipe(takeUntil(this.ngUnsubscribe)).subscribe({
       next: (teachers) => {
-        this.teachers = teachers;
+        this.teachers = teachers ?? [];
+        this.loadState = 'ready';
         this.cdr.markForCheck();
       },
       error: (error) => {
         this.logger.error('Error fetching all teachers:', error);
+        this.loadState = 'failed';
+        this.cdr.markForCheck();
       }
     });
   }
+
+  get display(): ListDisplay { return listDisplay(this.loadState, this.teachers.length); }
 
   trackByTeacherId(index: number, teacher: Teacher): string { return teacher.teacherId; }
 

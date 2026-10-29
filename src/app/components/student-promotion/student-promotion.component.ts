@@ -258,16 +258,18 @@ export class StudentPromotionComponent implements OnInit, OnDestroy {
   }
 
   /** Pre-selects the backend's recommended decision as a convenience default for every
-   *  candidate that's actually ready for one — never for a row with a blocking error or one
-   *  that's already applied. The admin can still explicitly clear any preselection to "No
+   *  candidate that's actually ready for one — never for a row with a blocking error, one that's
+   *  already applied, or a recommended Pass Out. The admin can still explicitly clear any preselection to "No
    *  decision" before executing. */
   private seedDefaultDecisions(preview: PromotionPreviewDTO): void {
     this.decisions.clear();
     this.targetSections.clear();
     this.exitReasons.clear();
     for (const c of preview.candidates) {
-      // A Fail / Incomplete result is never pre-decided: the admin must choose explicitly.
-      if (c.errors.length > 0 || c.appliedDecisionState !== 'NOT_APPLIED' || this.resultNeedsAttention(c)) {
+      // A Fail / Incomplete result is never pre-decided: the admin must choose explicitly. Nor is
+      // Pass Out: graduating a student (and ending parent access) must always be an explicit click.
+      if (c.errors.length > 0 || c.appliedDecisionState !== 'NOT_APPLIED' || this.resultNeedsAttention(c)
+          || c.recommendedDecision === 'PASS_OUT') {
         this.decisions.set(c.studentId, 'NONE');
         continue;
       }

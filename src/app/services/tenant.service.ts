@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { STARTUP_HTTP_TIMEOUT_MS } from '../core/startup.constants';
+import { setIntendedRouteSchoolResolver } from '../auth/redirect-url.util';
 
 export interface PublicSchoolInfo {
   name: string;
@@ -25,12 +26,17 @@ export interface PublicSchoolInfo {
  */
 @Injectable({ providedIn: 'root' })
 export class TenantService {
-  private readonly BASE_DOMAIN = 'edunexify.co.in';
+  private readonly BASE_DOMAIN = environment.baseDomain;
   private _school: PublicSchoolInfo | null = null;
   private _slug: string | null = null;
 
   private http = inject(HttpClient);
   private platformId = inject(PLATFORM_ID);
+
+  constructor() {
+    // A saved post-login destination belongs to the school (subdomain) it was saved under.
+    setIntendedRouteSchoolResolver(() => this._slug);
+  }
 
   get isBranded(): boolean {
     return this._school !== null;

@@ -8,6 +8,7 @@ import { Section } from '../../interfaces/section';
 import { AuthStateService } from '../../auth/auth-state.service';
 import { LoggerService } from '../../services/logger.service';
 import { ToastService } from '../../services/toast.service';
+import { sectionRemovalDialog, sectionRemovalResult } from '../../utils/list-state.util';
 
 @Component({
   selector: 'app-class-management',
@@ -237,20 +238,14 @@ export class ClassManagementComponent implements OnInit, OnDestroy {
   }
 
   removeSection(classId: number, section: Section): void {
-    this.toast.confirm({
-      title: `Remove "${section.name}"?`,
-      message: 'This will remove the section from this class.',
-      icon: 'warning',
-      danger: true,
-      confirmText: 'Yes, remove',
-      cancelText: 'Cancel',
-    }).then((confirmed) => {
+    this.toast.confirm(sectionRemovalDialog(section.name)).then((confirmed) => {
       if (!confirmed || !section.id) return;
       this.sectionService.deleteSection(section.id).pipe(takeUntil(this.destroy$)).subscribe({
-        next: () => {
+        next: (response) => {
           const current = this.classSections.get(classId) ?? [];
           this.classSections.set(classId, current.filter(s => s.id !== section.id));
-          this.toast.success('Removed', `Section "${section.name}" removed.`);
+          const result = sectionRemovalResult(section.name, response?.affected);
+          this.toast[result.level](result.title, result.message);
           this.cdr.markForCheck();
         },
         error: (e) => {

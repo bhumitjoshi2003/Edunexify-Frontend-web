@@ -18,7 +18,12 @@ export class StartupService {
     return Promise.all([
       this.tenantService.init(),
       this.authStateService.loadCurrentUser(),
-    ]).then(() => undefined);
+    ]).then(async () => {
+      const user = this.authStateService.getUser();
+      if (user?.schoolSlug && !this.tenantService.slug) {
+        await this.tenantService.loadSchoolBySlug(user.schoolSlug);
+      }
+    });
   }
 
   /** Re-runs startup initialization after a SERVICE_UNAVAILABLE/OFFLINE recovery attempt.

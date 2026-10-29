@@ -29,7 +29,8 @@ export class SubjectConfigComponent implements OnInit, OnDestroy {
   classOptions: string[] = [];
 
   // Class subjects tab
-  selectedClass = '1';
+  /** Always one of classOptions (the school's configured classes), or '' before they load. */
+  selectedClass = '';
   classSubjects: ClassSubject[] = [];
   newSubjectName = '';
   newSubjectOptional = false;
@@ -58,7 +59,7 @@ export class SubjectConfigComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.schoolService.getClasses().pipe(takeUntil(this.destroy$)).subscribe(classes => {
       this.classOptions = classes;
-      if (!this.selectedClass && classes.length > 0) this.selectedClass = classes[0];
+      if (!this.hasConfiguredClass) this.selectedClass = classes[0] ?? '';
       this.cdr.markForCheck();
       this.loadClassSubjects();
     });
@@ -77,7 +78,17 @@ export class SubjectConfigComponent implements OnInit, OnDestroy {
 
   // ── Class Subjects ────────────────────────────────────────────────────────
 
+  /** True when the selected class is one of the school's configured classes. */
+  get hasConfiguredClass(): boolean {
+    return !!this.selectedClass && this.classOptions.includes(this.selectedClass);
+  }
+
   loadClassSubjects(): void {
+    if (!this.hasConfiguredClass) {
+      this.classSubjects = [];
+      this.cdr.markForCheck();
+      return;
+    }
     this.service.getClassSubjects(this.selectedClass).pipe(takeUntil(this.destroy$)).subscribe({
       next: (data) => { this.classSubjects = data; this.cdr.markForCheck(); },
       error: (e) => { this.logger.error('Error loading class subjects:', e); this.toast.error('Error', 'Failed to load subjects.'); },
@@ -93,7 +104,7 @@ export class SubjectConfigComponent implements OnInit, OnDestroy {
 
   addClassSubject(): void {
     const name = this.newSubjectName.trim();
-    if (!name) return;
+    if (!name || !this.hasConfiguredClass) return;
     if (this.newSubjectOptional && !this.newSubjectGroup.trim()) {
       this.toast.error('Validation', 'Group name is required for optional subjects.');
       return;

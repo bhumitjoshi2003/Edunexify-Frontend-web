@@ -127,7 +127,7 @@ describe('StartupRecoveryComponent', () => {
   }));
 
   it('a successful retry (now AUTHENTICATED) navigates to the saved intended route', fakeAsync(() => {
-    localStorage.setItem('redirectUrl', '/dashboard/teacher-attendance');
+    localStorage.setItem('redirectUrl', JSON.stringify({ url: '/dashboard/teacher-attendance', school: null }));
     startupService.retry.and.callFake(async () => { authState.setUser(userInfo); });
     const fixture = create('unavailable');
 

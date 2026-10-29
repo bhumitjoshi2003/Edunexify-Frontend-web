@@ -41,6 +41,10 @@ export class TeacherCheckinService {
     return this.http.get<MarkableTeacher[]>(`${this.baseUrl}/date/${date}/markable-teachers`);
   }
 
+  getCalendarConfig(): Observable<{ workingDays: string; timezone: string }> {
+    return this.http.get<{ workingDays: string; timezone: string }>(`${environment.apiUrl}/attendance/calendar-config`);
+  }
+
   getMyAttendance(month: number, year: number): Observable<TeacherAttendanceSummary> {
     const params = new HttpParams().set('month', month).set('year', year);
     return this.http.get<TeacherAttendanceSummary>(`${this.baseUrl}/my-attendance`, { params });

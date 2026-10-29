@@ -181,7 +181,7 @@
         <strong><mat-icon>event</mat-icon>Tomorrow's cover</strong>
         <ul>
           <li *ngFor="let c of tomorrowCovers">
-            <span>P{{ c.periodNumber }} ({{ c.startTime }}–{{ c.endTime }}) · {{ coverClassLabel(c) }} · {{ c.subjectName }}</span>
+            <span>P{{ c.periodNumber }} ({{ formatAttendanceTime(c.startTime) }}–{{ formatAttendanceTime(c.endTime) }}) · {{ coverClassLabel(c) }} · {{ c.subjectName }}</span>
             <small>Replacing {{ c.originalTeacherName }}<ng-container *ngIf="c.note"> · {{ c.note }}</ng-container></small>
           </li>
         </ul>

@@ -101,4 +101,46 @@ describe('SchoolSetupComponent', () => {
     fixture.detectChanges();
     expect(button.disabled).toBeFalse();
   });
+
+  // ─── Shared by the web and Android clients — keep the two copies identical. ───
+  const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+  it('setup not started: shows the server status and 0%', () => {
+    response$.next({ completionPercentage: 0, completedRequired: 0, totalRequired: 5, status: 'NOT_STARTED',
+      items: [{ key: 'TEACHERS', title: 'Teachers', description: 'Add teachers', status: 'INCOMPLETE', importance: 'REQUIRED' }] });
+    fixture.detectChanges();
+    expect(text()).toContain('0%');
+    expect(text()).toContain('0 of 5 required items complete');
+    expect(text()).toContain('Add teachers');
+  });
+
+  it('all required steps complete: READY wording, no required CTA, recommended steps still offered', () => {
+    response$.next({ completionPercentage: 100, completedRequired: 2, totalRequired: 2, status: 'READY', items: [
+      { key: 'SCHOOL_PROFILE', title: 'School profile', description: 'Done', status: 'COMPLETED', importance: 'REQUIRED' },
+      { key: 'TEACHERS', title: 'Teachers', description: 'Done', status: 'COMPLETED', importance: 'REQUIRED' },
+      { key: 'SCHOOL_LOGO', title: 'School logo', description: 'Upload logo', status: 'INCOMPLETE', importance: 'RECOMMENDED' },
+    ] });
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    expect(text()).toContain('Your essential school setup is ready.');
+    expect(component.items('REQUIRED').every(item => component.actionFor(item) === null)).toBeTrue();
+    expect(component.actionFor(component.items('RECOMMENDED')[0])?.label).toBe('Upload logo');
+  });
+
+  it('progress comes from the server as-is (no client-side score)', () => {
+    response$.next({ ...health, completionPercentage: 37 });
+    fixture.detectChanges();
+    expect(text()).toContain('37%');
+  });
+
+  it('a failed request can be retried and then shows the checklist', () => {
+    schoolService.getSetupHealth.and.returnValue(throwError(() => new Error('offline')));
+    fixture.detectChanges();
+    expect(text()).toContain('Setup status could not be loaded');
+    schoolService.getSetupHealth.and.returnValue(response$);
+    (Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b => b.textContent?.includes('Retry')) as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.error).toBeFalse();
+    expect(text()).toContain('60%');
+  });
 });

@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { PaymentHistoryComponent } from './payment-history.component';
+import { baselineTestProviders } from '../../../testing/baseline-test-providers';
 
 describe('PaymentHistoryComponent', () => {
   let component: PaymentHistoryComponent;
@@ -8,6 +9,7 @@ describe('PaymentHistoryComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
+      providers: [...baselineTestProviders()],
       imports: [PaymentHistoryComponent]
     })
     .compileComponents();

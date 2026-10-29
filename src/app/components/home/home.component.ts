@@ -7,7 +7,7 @@ import { DemoService } from '../../services/demo.service';
 import { ToastService } from '../../services/toast.service';
 import { TenantService } from '../../services/tenant.service';
 import { SchoolService, PlanDetail } from '../../services/school.service';
-import { consumeIntendedRoute, clearIntendedRoute } from '../../auth/redirect-url.util';
+import { clearIntendedRoute, postLoginDestination } from '../../auth/redirect-url.util';
 
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -38,6 +38,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   forgotEmail   = '';
   sendingReset  = false;
   sendingDemo   = false;
+  /** One Sign In at a time: blocks repeated clicks / Enter while the login request is in flight. */
+  signingIn     = false;
 
   // Plans
   plans: PlanDetail[] = [];
@@ -76,7 +78,9 @@ export class HomeComponent implements OnInit, OnDestroy {
     // session was fine all along — returns to the page they were using, not always /dashboard.
     if (this.authStateService.isLoggedIn()) {
       this.authenticated = true;
-      this.router.navigateByUrl(consumeIntendedRoute());
+      this.router.navigateByUrl(postLoginDestination({
+        mustChangePassword: this.authStateService.mustChangePassword(), school: this.tenantService.slug,
+      }));
     }
     this.loadPlans();
   }
@@ -193,13 +197,21 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   submitLogin() {
+    if (this.signingIn) return;
     if (!this.userId.trim() || !this.password.trim()) {
       this.toast.warning('Missing Information', 'Please enter your User ID and Password.');
       return;
     }
 
     const brandedSlug = this.tenantService.slug;
-    this.authService.login(this.userId, this.password, brandedSlug).pipe(takeUntil(this.destroy$)).subscribe({
+    this.signingIn = true;
+    this.cdr.markForCheck();
+    // A cross-subdomain redirect is a full page load: keep Sign In locked until the page unloads.
+    let leavingPage = false;
+    this.authService.login(this.userId, this.password, brandedSlug).pipe(
+      takeUntil(this.destroy$),
+      finalize(() => { if (!leavingPage) { this.signingIn = false; this.cdr.markForCheck(); } })
+    ).subscribe({
       next: (response) => {
         // Safety net: user is on a branded school page but logged in with a different school's credentials.
         if (brandedSlug && response.schoolSlug && response.schoolSlug !== brandedSlug) {
@@ -217,15 +229,20 @@ export class HomeComponent implements OnInit, OnDestroy {
         // School user → ensure they're on their school subdomain.
         // SUPER_ADMIN has no schoolSlug and stays on the root domain.
         if (response.schoolSlug) {
-          clearIntendedRoute();
           if (response.schoolSlug === this.tenantService.slug || this.tenantService.isLocalDev) {
-            // Already on the correct subdomain — navigate locally, no reload needed.
+            // Already on the correct subdomain — navigate locally, no reload needed. A page saved
+            // before sign-in on this school's subdomain is honoured (shared rule, see redirect-url.util).
             this.authenticated = true;
             this.showLoginForm = false;
             this.cdr.markForCheck();
-            this.router.navigateByUrl(targetPath);
+            this.router.navigateByUrl(postLoginDestination({
+              mustChangePassword: !!response.mustChangePassword, school: this.tenantService.slug,
+            }));
           } else {
-            // On root domain — redirect to their school subdomain.
+            // On root domain — redirect to their school subdomain. A page saved on another origin
+            // never applies to this school.
+            clearIntendedRoute();
+            leavingPage = true;
             window.location.href = this.tenantService.buildSchoolUrl(response.schoolSlug, targetPath);
           }
           return;
@@ -235,12 +252,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.showLoginForm = false;
         this.cdr.markForCheck();
 
-        if (response.mustChangePassword) {
-          this.router.navigateByUrl(targetPath);
-          return;
-        }
-
-        this.router.navigateByUrl(consumeIntendedRoute());
+        this.router.navigateByUrl(postLoginDestination({ mustChangePassword: !!response.mustChangePassword, school: null }));
       },
       error: (error) => {
         let text: string;
@@ -250,6 +262,10 @@ export class HomeComponent implements OnInit, OnDestroy {
           text = typeof error.error === 'string' && error.error.length < 200
             ? error.error
             : 'Access denied. Please contact support.';
+        } else if (error.status === 429) {
+          text = typeof error.error === 'string' && error.error.length < 200
+            ? error.error
+            : 'Too many login attempts. Please try again in a few minutes.';
         } else {
           text = 'Incorrect User ID or Password.';
         }

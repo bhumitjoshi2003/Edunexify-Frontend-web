@@ -182,3 +182,6 @@ input[type="number"]::-webkit-inner-spin-button {
   }
   .bf-input { width: 70px; }
 }
+
+/* Keep this editor usable with long labels and narrow amount/date controls. */
+.bf-input { max-width: 100%; box-sizing: border-box; }

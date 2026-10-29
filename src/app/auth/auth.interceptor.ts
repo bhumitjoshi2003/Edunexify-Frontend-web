@@ -23,6 +23,10 @@ import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { catchError, filter, finalize, switchMap, take, tap, timeout } from 'rxjs/operators';
 import { STARTUP_HTTP_TIMEOUT_MS } from '../core/startup.constants';
 
+/** Shown when the server has ended this session (revoked, expired or signed out elsewhere). */
+export const SIGNED_OUT_TITLE = 'Signed out';
+export const SIGNED_OUT_MESSAGE = "You've been signed out. Please sign in again.";
+
 @Injectable({ providedIn: 'root' })
 export class AuthInterceptor implements HttpInterceptor {
 
@@ -174,6 +178,7 @@ export class AuthInterceptor implements HttpInterceptor {
           if (classifyAuthFailure(refreshError) === 'AUTHORITATIVE') {
             // The server actually looked at the refresh token and rejected it (401/403) —
             // this session is really over.
+            const wasSignedIn = this.authStateService.isLoggedIn();
             this.authStateService.clearUser();
             // Only hijack navigation away from a protected route — an anonymous visitor
             // legitimately on a public route (e.g. reset-password) has no session to lose.
@@ -183,6 +188,9 @@ export class AuthInterceptor implements HttpInterceptor {
               // Angular-initiated navigation cannot rely on the router's own state.
               saveIntendedRoute(typeof window !== 'undefined' ? window.location.pathname + window.location.search : null);
               this.router.navigate(['/home']);
+              // Say why, once: only for a user who was signed in (not an anonymous visitor) and
+              // only here — a transient failure (offline, timeout, 5xx) never reaches this branch.
+              if (wasSignedIn) this.injector.get(ToastService).warning(SIGNED_OUT_TITLE, SIGNED_OUT_MESSAGE);
             }
           }
           // TRANSIENT (network down, timeout, 502/503/504, etc.): the server was never

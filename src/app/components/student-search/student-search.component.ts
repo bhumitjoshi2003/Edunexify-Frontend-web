@@ -1,3 +1,4 @@
+import { studentStatusLabel, studentStatusTone } from '../../utils/student-status.util';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -13,6 +14,8 @@ import {
   debounceTime,
   distinctUntilChanged,
   of,
+  catchError,
+  timer,
   switchMap,
   takeUntil,
 } from 'rxjs';
@@ -45,38 +48,28 @@ export class StudentSearchComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.search$
-      .pipe(
-        debounceTime(350),
-        distinctUntilChanged(),
-        switchMap((q) => {
-          if (q.trim().length < 2) {
-            this.isLoading = false;
-            this.hasSearched = false;
-            this.cdr.markForCheck();
-            return of([]);
-          }
-          this.isLoading = true;
-          this.error = null;
-          this.cdr.markForCheck();
-          return this.studentService.searchStudents(q.trim());
-        }),
-        takeUntil(this.destroy$)
-      )
-      .subscribe({
-        next: (students) => {
-          this.results = students;
-          this.isLoading = false;
-          this.hasSearched = this.query.trim().length >= 2;
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
+    this.search$.pipe(
+      switchMap(query => {
+        const q = query.trim();
+        this.results = [];
+        this.error = null;
+        this.isLoading = q.length >= 2;
+        this.hasSearched = false;
+        this.cdr.markForCheck();
+        if (q.length < 2) return of([]);
+        // Debounce inside switchMap so every change immediately cancels the former request.
+        return timer(350).pipe(switchMap(() => this.studentService.searchStudents(q).pipe(catchError(() => {
           this.error = 'Search failed. Please try again.';
-          this.isLoading = false;
-          this.hasSearched = true;
-          this.cdr.markForCheck();
-        },
-      });
+          return of([]);
+        }))));
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe(results => {
+      this.results = results;
+      this.isLoading = false;
+      this.hasSearched = this.query.trim().length >= 2;
+      this.cdr.markForCheck();
+    });
   }
 
   ngOnDestroy(): void {
@@ -93,6 +86,7 @@ export class StudentSearchComponent implements OnInit, OnDestroy {
     this.results = [];
     this.hasSearched = false;
     this.error = null;
+    this.search$.next('');
     this.cdr.markForCheck();
   }
 
@@ -100,23 +94,8 @@ export class StudentSearchComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dashboard/student-details', studentId]);
   }
 
-  getStatusClass(status: string | undefined): string {
-    switch (status?.toUpperCase()) {
-      case 'ACTIVE':
-        return 'status-active';
-      case 'INACTIVE':
-        return 'status-inactive';
-      case 'NEW':
-        return 'status-new';
-      default:
-        return 'status-unknown';
-    }
-  }
-
-  getStatusLabel(status: string | undefined): string {
-    if (!status) return 'Unknown';
-    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-  }
+  getStatusClass(status: string | undefined): string { return 'status-' + studentStatusTone(status); }
+  getStatusLabel(status: string | undefined): string { return studentStatusLabel(status); }
 
   getInitial(name: string): string {
     return name ? name.charAt(0).toUpperCase() : '?';

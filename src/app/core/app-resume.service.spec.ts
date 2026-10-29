@@ -7,11 +7,12 @@ import { AuthInterceptor } from '../auth/auth.interceptor';
 import { AuthStateService, UserInfo } from '../auth/auth-state.service';
 import { STARTUP_HTTP_TIMEOUT_MS } from './startup.constants';
 import { environment } from '../../environments/environment';
+import { consumeIntendedRoute } from '../auth/redirect-url.util';
 
 /**
  * Returning to a long-idle tab, end to end through the real AuthStateService and AuthInterceptor
  * against a mocked backend: browser lifecycle events are dispatched on document/window exactly
- * as a (mobile) browser fires them.
+ * as a (mobile) browser fires them. Shared by the web and Android clients — keep the two copies identical.
  */
 describe('AppResumeService — returning to a long-idle tab', () => {
   const ME = `${environment.apiUrl}/auth/me`;
@@ -117,7 +118,7 @@ describe('AppResumeService — returning to a long-idle tab', () => {
 
     expect(authState.isUnauthenticated()).toBeTrue();
     expect(router.navigateByUrl).toHaveBeenCalledWith('/home');
-    expect(localStorage.getItem('redirectUrl')).toBe('/dashboard/teacher-attendance');
+    expect(consumeIntendedRoute()).toBe('/dashboard/teacher-attendance');
     expect(resumedCount).toBe(0);
   });
 
@@ -198,5 +199,57 @@ describe('AppResumeService — returning to a long-idle tab', () => {
     window.dispatchEvent(new Event('online'));
 
     http.expectNone(ME);
+  });
+
+  // ─── Native lifecycle (Android app-state events) shares the same decisions ───
+
+  it('native background → foreground after a long idle re-verifies once, even when the WebView also fires visibility events', async () => {
+    resume.backgrounded();
+    setVisibility('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    clock += RESUME_REVALIDATE_AFTER_MS + 1;
+    resume.foregrounded();
+    setVisibility('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    http.expectOne(ME).flush(user);
+    await resume.revalidate();
+    expect(resumedCount).toBe(1);
+  });
+
+  it('a brief native background makes no request', () => {
+    resume.backgrounded();
+    clock += 10_000;
+    resume.foregrounded();
+    http.expectNone(ME);
+  });
+
+  it('an online event immediately after the visibility resume joins the same check', async () => {
+    hideFor(RESUME_REVALIDATE_AFTER_MS);
+    window.dispatchEvent(new Event('online'));
+    http.expectOne(ME).flush(user);
+    await resume.revalidate();
+    expect(resumedCount).toBe(1);
+  });
+
+  it('native resume after the session was revoked: signed out and sent to login', async () => {
+    resume.backgrounded();
+    clock += RESUME_REVALIDATE_AFTER_MS;
+    resume.foregrounded();
+    http.expectOne(ME).flush('revoked', unauthorized);
+    http.expectOne(REFRESH).flush('revoked', unauthorized);
+    await resume.revalidate();
+    expect(authState.isUnauthenticated()).toBeTrue();
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/home');
+  });
+
+  it('native resume during a temporary outage keeps the session', async () => {
+    resume.backgrounded();
+    clock += RESUME_REVALIDATE_AFTER_MS;
+    resume.foregrounded();
+    http.expectOne(ME).flush('down', { status: 503, statusText: 'Unavailable' });
+    await resume.revalidate();
+    expect(authState.isAuthenticated()).toBeTrue();
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
   });
 });

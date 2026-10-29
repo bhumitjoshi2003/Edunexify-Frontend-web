@@ -331,3 +331,6 @@
   .as-section-header { flex-direction: column; align-items: flex-start; }
   .as-btn-sm { width: 100%; }
 }
+
+.as-note { margin: 4px 0 12px; font-size: 0.8rem; color: #64748b; line-height: 1.45; }
+.as-everywhere { margin-top: 8px; }

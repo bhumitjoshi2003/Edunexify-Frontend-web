@@ -307,3 +307,9 @@ input[type="number"]::-webkit-inner-spin-button {
   }
   .fs-input { width: 80px; }
 }
+
+/* Keep this editor usable with long labels and narrow amount/date controls. */
+.fs-effective { margin: 12px 0; overflow-wrap: anywhere; }
+.fs-effective input { max-width: 100%; min-width: 0; box-sizing: border-box; }
+
+.fs-th-content { max-width: 240px; white-space: normal; overflow-wrap: anywhere; }

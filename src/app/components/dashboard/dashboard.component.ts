@@ -22,7 +22,7 @@ import { CommonModule } from '@angular/common';
 import { StudentService } from '../../services/student.service';
 import { TeacherService } from '../../services/teacher.service';
 import { AdminService } from '../../services/admin.service';
-import { NotificationService } from '../../services/notification.service';
+import { NotificationStateService } from '../../services/notification-state.service';
 import { SchoolService } from '../../services/school.service';
 import { WhatsNewService } from '../../services/whats-new.service';
 import { TenantService } from '../../services/tenant.service';
@@ -34,6 +34,7 @@ import { ParentPortalService } from '../../services/parent-portal.service';
 import { ParentChildContextService } from '../../services/parent-child-context.service';
 import { ChildAccess } from '../../interfaces/parent-portal';
 import { AppResumeService } from '../../core/app-resume.service';
+import { SignOutService } from '../../services/sign-out.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -70,12 +71,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
+    private signOutService: SignOutService,
     private authService: AuthService,
     private authStateService: AuthStateService,
     private studentService: StudentService,
     private teacherService: TeacherService,
     private adminService: AdminService,
-    private notificationService: NotificationService,
+    private notificationState: NotificationStateService,
     private schoolService: SchoolService,
     public tenantService: TenantService,
     private parentPortalService: ParentPortalService,
@@ -91,7 +93,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.whatsNewService.checkOnStartup();
     this.loadAuthenticatedSchoolBranding();
     this.handleInitialNavigation();
-    this.notificationService.unreadCountState$
+    this.notificationState.unreadState$
       .pipe(takeUntil(this.ngUnsubscribe))
       .subscribe(state => {
         // 'loading'/'error' intentionally leave the last known badge count on screen — a
@@ -326,21 +328,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  logout() {
-    this.schoolService.invalidateClasses();
-    this.authService.logout().subscribe({
-      next: () => this.router.navigate(['/home']),
-      error: () => this.router.navigate(['/home']),
-    });
+  /** Cached classes and the server session (see SignOutService); the unread count clears itself
+   *  when the session ends (NotificationStateService follows AuthStateService). */
+  logout(): Promise<void> {
+    return this.signOutService.signOut();
   }
 
   fetchUnreadCount(): void {
     if (this.Role === 'SUPER_ADMIN') return;
-    this.notificationService.refreshUnreadCount();
+    this.notificationState.refreshUnread();
   }
 
-  navigateToNoticeBoard(): void {
-    this.router.navigate(['/dashboard/notice']);
+  /** The bell opens the personal notification inbox (read state, filters, actions) — not the
+   *  school Notice Board, which stays in the sidebar. */
+  navigateToNotifications(): void {
+    this.router.navigate(['/dashboard/notifications']);
   }
 
   getProfileInitials(): string {

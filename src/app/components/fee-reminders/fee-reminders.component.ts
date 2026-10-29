@@ -11,11 +11,12 @@ import { ToastService } from '../../services/toast.service';
 import { Capacitor } from '@capacitor/core';
 import { SchoolService } from '../../services/school.service';
 import { AcademicSessionService } from '../../services/academic-session.service';
+import { InrPipe } from '../../pipes/inr.pipe';
 
 @Component({
   selector: 'app-fee-reminders',
   standalone: true,
-  imports: [CommonModule, FormsModule, ComingSoonComponent],
+  imports: [CommonModule, FormsModule, ComingSoonComponent, InrPipe],
   templateUrl: './fee-reminders.component.html',
   styleUrl: './fee-reminders.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -119,6 +120,11 @@ export class FeeRemindersComponent implements OnInit, OnDestroy {
 
   get amountUnknownCount(): number {
     return this.filteredStudents.filter(s => s.totalDue === null).length;
+  }
+
+  /** Every listed student's amount is unknown: there is no known subtotal to show (never ₹0). */
+  get allAmountsUnknown(): boolean {
+    return this.filteredStudents.length > 0 && this.amountUnknownCount === this.filteredStudents.length;
   }
 
   get criticalCount(): number {

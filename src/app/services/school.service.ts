@@ -241,7 +241,6 @@ export interface OnboardSchoolRequest {
   adminDob: string;
   adminGender: string;
   adminEmail: string;
-  adminPassword: string;
 }
 
 export interface SuperAdminStats {
@@ -372,7 +371,7 @@ export class SchoolService {
     return this.http.post<SchoolSettings>(`${this.superAdminUrl}/schools`, data);
   }
 
-  updateSchoolAll(schoolId: number, data: Partial<SchoolSettings> & { newAdminPassword?: string }): Observable<SchoolSettings> {
+  updateSchoolAll(schoolId: number, data: Partial<SchoolSettings>): Observable<SchoolSettings> {
     return this.http.put<SchoolSettings>(`${this.superAdminUrl}/schools/${schoolId}`, data);
   }
 
@@ -385,9 +384,6 @@ export class SchoolService {
     return this.http.patch<SchoolSettings>(`${this.superAdminUrl}/schools/${schoolId}/subscription`, null, { params });
   }
 
-  resetAdminPassword(schoolId: number, newPassword: string): Observable<void> {
-    return this.http.patch<void>(`${this.superAdminUrl}/schools/${schoolId}/admin-password`, { newPassword });
-  }
 
   deleteSchool(schoolId: number): Observable<void> {
     return this.http.delete<void>(`${this.superAdminUrl}/schools/${schoolId}`);

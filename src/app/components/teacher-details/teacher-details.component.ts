@@ -24,6 +24,8 @@ import { SectionService } from '../../services/section.service';
 import { Section } from '../../interfaces/section';
 import { MatIconModule } from '@angular/material/icon';
 import { TeacherExitRequest, TeacherOverview } from '../../interfaces/teacher';
+import { passwordPolicyViolation } from '../../utils/password-policy.util';
+import { schoolDateKey } from '../../utils/school-date.util';
 
 interface TeacherDetails {
   teacherId?: string;
@@ -94,7 +96,7 @@ export class TeacherDetailsComponent implements OnInit, OnDestroy {
   ];
   scheduleType: 'SCHOOL' | 'CUSTOM' = 'SCHOOL';
   selectedScheduleDays: string[] = [];
-  scheduleEffectiveFrom = new Date().toISOString().slice(0, 10);
+  scheduleEffectiveFrom = schoolDateKey(new Date());
   scheduleHistory: TeacherAttendanceSchedule[] = [];
   schoolWorkingDays: string[] = [];
   scheduleSaving = false;
@@ -102,7 +104,7 @@ export class TeacherDetailsComponent implements OnInit, OnDestroy {
   exitLoading = false;
   exitRequest: TeacherExitRequest = {
     reasonForLeaving: '',
-    leavingDate: new Date().toISOString().slice(0, 10),
+    leavingDate: schoolDateKey(new Date()),
     exitRemarks: '',
   };
   /** Admin-only lifecycle/responsibility overview (status, dates, timetable, grants, login). */
@@ -613,8 +615,10 @@ export class TeacherDetailsComponent implements OnInit, OnDestroy {
       this.toast.error('Error', 'New password and confirmation are required');
       return;
     }
-    if (this.cpNewPw.length < 6) {
-      this.toast.error('Error', 'New password must be at least 6 characters');
+    // The backend's password rule (utils/password-policy.util.ts); the value is sent exactly as typed.
+    const passwordError = passwordPolicyViolation(this.cpNewPw, 'New password');
+    if (passwordError) {
+      this.toast.error('Error', passwordError);
       return;
     }
     if (this.cpNewPw !== this.cpConfirmPw) {
@@ -642,7 +646,7 @@ export class TeacherDetailsComponent implements OnInit, OnDestroy {
   }
 
   get todayStr(): string {
-    return new Date().toISOString().slice(0, 10);
+    return schoolDateKey(new Date());
   }
 
   openExitModal(): void {

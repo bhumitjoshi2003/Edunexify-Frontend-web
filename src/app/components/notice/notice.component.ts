@@ -9,6 +9,7 @@ import { Notification } from '../../interfaces/notification';
 import { UserNotification } from '../../interfaces/user-notification';
 import { LoggerService } from '../../services/logger.service';
 import { ToastService } from '../../services/toast.service';
+import { NotificationStateService } from '../../services/notification-state.service';
 import { SchoolService } from '../../services/school.service';
 import { TruncationCheckDirective } from '../../directives/truncation-check.directive';
 import { NoticeDetailDialogComponent } from '../notice-detail-dialog/notice-detail-dialog.component';
@@ -69,7 +70,8 @@ export class NoticeComponent implements OnInit, OnDestroy {
     private logger: LoggerService,
     private toast: ToastService,
     private schoolService: SchoolService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private notificationState: NotificationStateService
   ) { }
 
   ngOnInit(): void {
@@ -314,6 +316,7 @@ export class NoticeComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.userNotifications = this.userNotifications.map(n => ({ ...n, isRead: true }));
+          this.notificationState.allRead();
           this.cdr.markForCheck();
         },
         error: (e) => {

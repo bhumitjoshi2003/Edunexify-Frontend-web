@@ -7,7 +7,7 @@ import { AuthStateService } from '../../auth/auth-state.service';
 import { StudentService } from '../../services/student.service';
 import { TeacherService } from '../../services/teacher.service';
 import { AdminService } from '../../services/admin.service';
-import { NotificationService } from '../../services/notification.service';
+import { NotificationStateService } from '../../services/notification-state.service';
 import { SchoolService } from '../../services/school.service';
 import { TenantService } from '../../services/tenant.service';
 import { ParentPortalService } from '../../services/parent-portal.service';
@@ -46,7 +46,7 @@ describe('DashboardComponent — Help & Support nav entries', () => {
         { provide: StudentService, useValue: {} },
         { provide: TeacherService, useValue: {} },
         { provide: AdminService, useValue: {} },
-        { provide: NotificationService, useValue: { unreadCountState$: of({ status: 'success', count: 0 }), refreshUnreadCount: () => {} } },
+        { provide: NotificationStateService, useValue: { unreadState$: of({ status: 'success', count: 0 }), refreshUnread: () => {}, allRead: () => {} } },
         { provide: SchoolService, useValue: {} },
         { provide: TenantService, useValue: { school: null } },
         { provide: ParentPortalService, useValue: { getMyProfile: () => of(null) } },

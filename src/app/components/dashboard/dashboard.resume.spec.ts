@@ -7,7 +7,7 @@ import { AuthStateService } from '../../auth/auth-state.service';
 import { StudentService } from '../../services/student.service';
 import { TeacherService } from '../../services/teacher.service';
 import { AdminService } from '../../services/admin.service';
-import { NotificationService } from '../../services/notification.service';
+import { NotificationStateService } from '../../services/notification-state.service';
 import { SchoolService } from '../../services/school.service';
 import { TenantService } from '../../services/tenant.service';
 import { ParentPortalService } from '../../services/parent-portal.service';
@@ -25,7 +25,7 @@ describe('DashboardComponent — after the app resumes', () => {
   let fixture: ComponentFixture<DashboardComponent>;
   let authState: jasmine.SpyObj<AuthStateService>;
   let resumed: Subject<void>;
-  let notifications: { unreadCountState$: unknown; refreshUnreadCount: jasmine.Spy };
+  let notifications: { unreadState$: unknown; refreshUnread: jasmine.Spy };
 
   beforeEach(async () => {
     authState = jasmine.createSpyObj('AuthStateService', [
@@ -40,7 +40,7 @@ describe('DashboardComponent — after the app resumes', () => {
     authState.hasFeature.and.returnValue(false);
     authState.isSubscriptionWarning.and.returnValue(false);
     resumed = new Subject<void>();
-    notifications = { unreadCountState$: of({ status: 'success', count: 0 }), refreshUnreadCount: jasmine.createSpy('refreshUnreadCount') };
+    notifications = { unreadState$: of({ status: 'success', count: 0 }), refreshUnread: jasmine.createSpy('refreshUnread') };
 
     await TestBed.configureTestingModule({
       imports: [DashboardComponent, RouterTestingModule],
@@ -51,7 +51,7 @@ describe('DashboardComponent — after the app resumes', () => {
         { provide: StudentService, useValue: {} },
         { provide: TeacherService, useValue: { getTeacher: () => of({ name: 'Ms Rao', classTeacher: null }) } },
         { provide: AdminService, useValue: {} },
-        { provide: NotificationService, useValue: notifications },
+        { provide: NotificationStateService, useValue: notifications },
         { provide: SchoolService, useValue: {} },
         { provide: TenantService, useValue: { school: null } },
         { provide: ParentPortalService, useValue: {} },
@@ -68,13 +68,13 @@ describe('DashboardComponent — after the app resumes', () => {
   afterEach(() => fixture.destroy());
 
   it('reloads the shell\'s own data (user details, unread badge) after a confirmed resume', () => {
-    notifications.refreshUnreadCount.calls.reset();
+    notifications.refreshUnread.calls.reset();
     const details = spyOn(fixture.componentInstance, 'getDetails').and.callThrough();
 
     resumed.next();
 
     expect(details).toHaveBeenCalledTimes(1);
-    expect(notifications.refreshUnreadCount).toHaveBeenCalledTimes(1);
+    expect(notifications.refreshUnread).toHaveBeenCalledTimes(1);
   });
 
   it('keeps no tab/online listeners of its own — AppResumeService owns the session re-check', () => {
@@ -88,10 +88,10 @@ describe('DashboardComponent — after the app resumes', () => {
 
   it('stops reacting once destroyed', () => {
     fixture.destroy();
-    notifications.refreshUnreadCount.calls.reset();
+    notifications.refreshUnread.calls.reset();
 
     resumed.next();
 
-    expect(notifications.refreshUnreadCount).not.toHaveBeenCalled();
+    expect(notifications.refreshUnread).not.toHaveBeenCalled();
   });
 });

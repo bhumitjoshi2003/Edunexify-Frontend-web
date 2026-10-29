@@ -496,6 +496,13 @@ export const routes: Routes = [
 
       // ── Open to all authenticated users ──────────────────────────────
       {
+        // Personal notification inbox (read state, categories, safe action links) — same
+        // business behavior as Android. The school Notice Board below is a separate feature.
+        path: 'notifications',
+        loadComponent: () => import('./components/notification-center/notification-center.component').then(m => m.NotificationCenterComponent),
+        canActivate: [roleGuard], data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'] }
+      },
+      {
         path: 'notice',
         loadComponent: () => import('./components/notice/notice.component').then(m => m.NoticeComponent),
         canActivate: [roleGuard], data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'] }

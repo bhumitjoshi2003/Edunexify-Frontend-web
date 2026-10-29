@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 
 import { StaffAttendanceComponent } from './staff-attendance.component';
 import { TeacherCheckinService } from '../../services/teacher-checkin.service';
@@ -82,4 +82,16 @@ describe('StaffAttendanceComponent — teachers offered for marking', () => {
 
     expect(component.availableTeachers.map(t => t.teacherId)).toEqual(['T1', 'T2', 'T3']);
   });
+  it('ignores stale date options and cannot submit while fresh options load', async () => {
+    const old = new Subject<any[]>(); const fresh = new Subject<any[]>();
+    checkin.getMarkableTeachers.and.returnValues(old, fresh);
+    component.openMarkDialog(); component.markForm.teacherId = 'T1';
+    component.markForm.date = '2026-10-06'; component.onMarkDateChange();
+    old.next([{ teacherId: 'T1', name: 'Old' }]);
+    expect(component.availableTeachers).toEqual([]);
+    await component.submitAdminMark(); expect(checkin.adminMark).not.toHaveBeenCalled();
+    fresh.next([{ teacherId: 'T2', name: 'Fresh' }]);
+    expect(component.availableTeachers.map(t => t.teacherId)).toEqual(['T2']);
+  });
+
 });

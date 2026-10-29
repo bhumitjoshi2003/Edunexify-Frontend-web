@@ -1,27 +1,31 @@
 /**
- * Backend-authoritative checkout quote — mirrors CheckoutQuoteDto on the Spring Boot side.
- * All money fields are paise-native and server-computed; Angular must only format them for
- * display, never recompute. Internal gateway/Edunexify component fields are never exposed
- * here (schoolFeePaise + onlineConvenienceFeePaise is the parent-facing breakdown; the
- * component split behind onlineConvenienceFeePaise stays server-side). A non-empty
- * unresolvedMonths means the quote is partial (one or more selected months' fee couldn't be
- * confidently determined) — the caller must not treat totalPayablePaise as covering those
- * months.
+ * Backend-authoritative checkout quote — mirrors CheckoutQuoteDto on the Spring Boot side. Shared
+ * by the web and Android clients — keep the two copies identical.
+ *
+ * Every monetary value is integer PAISE computed server-side; the clients only display or copy
+ * them, never recompute. A non-empty unresolvedMonths means the quote is partial (one or more
+ * selected months' fee couldn't be confidently determined) — totalPayablePaise must not be treated
+ * as covering those months, and nothing may be paid against it.
+ *
+ * schoolFeePaise is the parent-facing school aggregate: school fee due + leave charges
+ * (additionalChargesPaise) + late fee (lateFeePaise). totalPayablePaise = schoolFeePaise +
+ * onlineConvenienceFeePaise. On a school's own Razorpay gateway the convenience fee is 0.
  */
 export interface CheckoutQuote {
   studentId: string;
   session: string;
   months: number[];
   schoolFeePaise: number;
+  /** Leave-related charges included in schoolFeePaise. */
+  additionalChargesPaise: number;
+  /** Late fee included in schoolFeePaise. */
+  lateFeePaise: number;
   onlineConvenienceFeePaise: number;
   totalPayablePaise: number;
-  currency: string;
-  /** Itemized breakdown lines (paise) — legitimate to show a parent, unlike the gateway/
-   * Edunexify component split inside onlineConvenienceFeePaise, which is never exposed. */
-  additionalChargesPaise: number;
-  lateFeePaise: number;
+  currency: 'INR' | string;
   unresolvedMonths: number[];
-  /** false = the school has no ACTIVE own payment gateway and no platform fallback, so online
-   * payment can't be taken (fees are shown but only payable offline). Absent/null for ADMIN quotes. */
+  /** false = no online payment route for this school (no connected Razorpay account and no
+   * temporary Edunexify fallback): fees are shown but can only be paid offline. Absent/null for
+   * ADMIN quotes. */
   onlinePaymentAvailable?: boolean | null;
 }

@@ -42,8 +42,9 @@ describe('TEACHER edit flow (rendered template)', () => {
 
   async function setup(entries: any[] = [mathEntry]) {
     api = jasmine.createSpyObj('TimetableService', [
-      'getTeacherTimetable', 'updateEntry', 'deleteEntry', 'createEntry', 'getClassTimetable'
+      'getTeacherTimetable', 'updateEntry', 'deleteEntry', 'createEntry', 'getClassTimetable', 'getPermittedSubjects'
     ]);
+    api.getPermittedSubjects.and.returnValue(of(['Mathematics', 'Physics', 'Maths', 'Biology', 'Accountancy']));
     api.getTeacherTimetable.and.returnValue(of(entries));
     api.updateEntry.and.returnValue(of({}));
     api.createEntry.and.returnValue(of({}));
@@ -95,7 +96,9 @@ describe('TEACHER edit flow (rendered template)', () => {
   it('2. populates the existing subject exactly (not the section/stream name)', async () => {
     await setup();
     await clickEdit('Mathematics');
-    const subjectInput: HTMLInputElement = fixture.nativeElement.querySelector('#modal-subject');
+    const subjectInput: HTMLSelectElement = fixture.nativeElement.querySelector('#modal-subject');
+    expect(subjectInput.tagName).toBe('SELECT');   // B4-2: picked from configuration, never typed
+    expect(Array.from(subjectInput.options).map(o => o.value)).toEqual(['', 'Mathematics', 'Physics', 'Maths', 'Biology', 'Accountancy']);
     expect(subjectInput.value).toBe('Mathematics');
     expect(c.modalForm.subjectName).toBe('Mathematics');
   });

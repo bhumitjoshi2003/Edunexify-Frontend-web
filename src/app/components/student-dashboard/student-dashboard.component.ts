@@ -23,6 +23,7 @@ import { ClassUpdateService } from '../../services/class-update.service';
 import { ClassUpdate } from '../../interfaces/class-update';
 import { AssessmentService } from '../../services/assessment.service';
 import { Assessment, countdownLabel, countdownTone, dateParts } from '../../interfaces/assessment';
+import { countLabel, countOnPage } from '../../utils/page-count.util';
 
 @Component({
   selector: 'app-student-dashboard',
@@ -48,6 +49,8 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   lowAttendance = false;
   lowAttendanceThreshold = 75;
   pendingLeavesCount = 0;
+  /** "3", or "3+" when the student has more leave requests than the 10 most recent checked. */
+  pendingLeavesLabel = '0';
   recentLeaves: LeaveApplication[] = [];
 
   /** Isolated from the main dashboard load: a homework outage never blocks the rest. */
@@ -201,9 +204,11 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
               new Date(b.leaveDate).getTime() - new Date(a.leaveDate).getTime()
           );
           this.recentLeaves = sorted.slice(0, 5);
-          this.pendingLeavesCount = leaves.content.filter(
-            (l) => l.status === 'PENDING'
-          ).length;
+          // The student leave endpoint has no status filter: count within the latest page and say
+          // "N+" when older requests exist, rather than presenting a partial count as the total.
+          const pending = countOnPage(leaves, (l) => l.status === 'PENDING');
+          this.pendingLeavesCount = pending.count;
+          this.pendingLeavesLabel = countLabel(pending);
 
           this.isLoading = false;
           this.cdr.markForCheck();
