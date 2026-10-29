@@ -127,6 +127,19 @@
              routerLinkActive="active" (click)="closeSidebarOnMobile()" title="Timetable">
             <mat-icon>schedule</mat-icon><span>Timetable</span>
           </a>
+          <!-- Read-only class content for the selected child (backend checks the parent link). -->
+          <a class="nav-item" routerLink="/dashboard/homework" [queryParams]="{ studentId: selectedChild.studentId }"
+             routerLinkActive="active" (click)="closeSidebarOnMobile()" title="Homework &amp; Classwork">
+            <mat-icon>menu_book</mat-icon><span>Homework &amp; Classwork</span>
+          </a>
+          <a class="nav-item" routerLink="/dashboard/class-updates" [queryParams]="{ studentId: selectedChild.studentId }"
+             routerLinkActive="active" (click)="closeSidebarOnMobile()" title="Class Updates">
+            <mat-icon>campaign</mat-icon><span>Class Updates</span>
+          </a>
+          <a class="nav-item" routerLink="/dashboard/assessments" [queryParams]="{ studentId: selectedChild.studentId }"
+             routerLinkActive="active" (click)="closeSidebarOnMobile()" title="Assessments">
+            <mat-icon>quiz</mat-icon><span>Assessments</span>
+          </a>
           <a class="nav-item" *ngIf="childCan('canViewResults')" routerLink="/dashboard/my-results"
              [queryParams]="{ studentId: selectedChild.studentId }"
              routerLinkActive="active" (click)="closeSidebarOnMobile()" title="Results">

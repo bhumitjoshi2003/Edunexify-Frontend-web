@@ -1,11 +1,21 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { AuthStateService } from '../../auth/auth-state.service';
+import { ParentPortalService } from '../../services/parent-portal.service';
 import { StudentClassUpdatesComponent } from './student-class-updates.component';
 import { ClassUpdateService } from '../../services/class-update.service';
 import { LoggerService } from '../../services/logger.service';
 import { ClassUpdate } from '../../interfaces/class-update';
 
 describe('StudentClassUpdatesComponent', () => {
+  let role = 'STUDENT';
+  let query: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  const child = (studentId: string, studentName: string): any => ({
+    relationshipId: 1, studentId, studentName, className: '9', sectionName: 'A', relationshipType: 'FATHER', primaryGuardian: true,
+    canViewAttendance: true, canViewFees: true, canPayFees: true, canViewResults: true, canViewTimetable: true, canManageLeave: true,
+    effectiveFrom: '2026-04-01', effectiveUntil: null,
+  });
   let fixture: ComponentFixture<StudentClassUpdatesComponent>;
   let component: StudentClassUpdatesComponent;
   let service: jasmine.SpyObj<ClassUpdateService>;
@@ -18,11 +28,17 @@ describe('StudentClassUpdatesComponent', () => {
   });
 
   beforeEach(() => {
+    role = 'STUDENT';
+    query = new BehaviorSubject(convertToParamMap({}));
     service = jasmine.createSpyObj('ClassUpdateService', ['studentActive']);
     TestBed.configureTestingModule({
       imports: [StudentClassUpdatesComponent],
       providers: [
         { provide: ClassUpdateService, useValue: service },
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { get queryParamMap() { return query; } } },
+        { provide: AuthStateService, useValue: { getUserRole: () => role, getUserId: () => 'U1' } },
+        { provide: ParentPortalService, useValue: { getMyProfile: () => of({ children: [child('S1', 'Aarav'), child('S3', 'Kabir')] }) } },
         { provide: LoggerService, useValue: jasmine.createSpyObj('LoggerService', ['error']) },
       ],
     });
@@ -34,7 +50,7 @@ describe('StudentClassUpdatesComponent', () => {
     service.studentActive.and.returnValue(of([item({ expiresAt: new Date(Date.now() + 2 * 24 * 3600_000 + 60_000).toISOString() })]));
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    expect(service.studentActive).toHaveBeenCalledOnceWith();
+    expect(service.studentActive).toHaveBeenCalledOnceWith(undefined, null);
     expect(text).toContain('Unit test Friday');
     expect(text).toContain('Ms Rao');
     expect(fixture.nativeElement.querySelector('.scu-chip.is-subject').textContent).toContain('Science');
@@ -88,5 +104,41 @@ describe('StudentClassUpdatesComponent', () => {
     component.load();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('temporarily unavailable');
+  });
+  it('a parent reads the linked child named in the URL, switches child, and sees no posting controls', () => {
+    service.studentActive.and.returnValue(of([item()]));
+    role = 'PARENT';
+    query.next(convertToParamMap({ studentId: 'S3' }));
+    const parentFixture = TestBed.createComponent(StudentClassUpdatesComponent);
+    parentFixture.detectChanges();
+    expect(service.studentActive).toHaveBeenCalledWith(undefined, 'S3');
+    const el = parentFixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.child-tab').length).toBe(2);
+    expect(el.textContent).toContain("Updates from your child's teachers");
+    expect(el.textContent).not.toMatch(/Post |Edit|Delete|Publish/);
+
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    el.querySelectorAll<HTMLButtonElement>('.child-tab')[0].click();
+    expect(navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { studentId: 'S1' } }));
+    query.next(convertToParamMap({ studentId: 'S1' }));
+    expect(service.studentActive).toHaveBeenCalledWith(undefined, 'S1');
+  });
+
+  it('a parent refused for a child (unlinked or ended link) sees only the switcher, not an error page', () => {
+    service.studentActive.and.returnValue(throwError(() => ({ status: 403 })));
+    role = 'PARENT';
+    query.next(convertToParamMap({ studentId: 'S2' }));
+    const parentFixture = TestBed.createComponent(StudentClassUpdatesComponent);
+    parentFixture.detectChanges();
+    const el = parentFixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('You no longer have access to this student.');
+    expect(el.querySelector('.scu-hero')).toBeNull();
+    expect(el.textContent).not.toContain('temporarily unavailable');
+  });
+
+  it('a student never sends a student id', () => {
+    service.studentActive.and.returnValue(of([]));
+    fixture.detectChanges();
+    expect(service.studentActive).toHaveBeenCalledWith(undefined, null);
   });
 });

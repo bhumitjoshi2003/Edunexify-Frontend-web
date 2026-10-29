@@ -18,6 +18,7 @@ import { LoggerService } from '../../services/logger.service';
 import { WhatsNewService } from '../../services/whats-new.service';
 
 describe('Homework & Classwork — role access', () => {
+  let selectedChild: any = null;
   let fixture: ComponentFixture<DashboardComponent>;
   let authState: jasmine.SpyObj<AuthStateService>;
 
@@ -46,7 +47,7 @@ describe('Homework & Classwork — role access', () => {
         { provide: SchoolService, useValue: {} },
         { provide: TenantService, useValue: { school: null } },
         { provide: ParentPortalService, useValue: { getMyProfile: () => of(null) } },
-        { provide: ParentChildContextService, useValue: { selectedChild$: of(null), reconcile: () => {} } },
+        { provide: ParentChildContextService, useValue: { selectedChild$: of(selectedChild), reconcile: () => {} } },
         { provide: LoggerService, useValue: { error: () => {} } },
         { provide: WhatsNewService, useValue: { checkOnStartup: () => {}, openManually: () => {} } },
       ],
@@ -56,7 +57,7 @@ describe('Homework & Classwork — role access', () => {
     fixture.detectChanges();
   }
 
-  afterEach(() => fixture?.destroy());
+  afterEach(() => { fixture?.destroy(); selectedChild = null; });
 
   const link = (href: string) => fixture.nativeElement.querySelector(`a[routerLink="${href}"]`);
 
@@ -80,13 +81,21 @@ describe('Homework & Classwork — role access', () => {
     });
   }
 
-  it('routes are guarded: posting is TEACHER-only and reading is STUDENT-only', () => {
+  it('PARENT with a selected child gets the read-only page for that child', () => {
+    selectedChild = { studentId: 'stu_3', studentName: 'Kabir', className: '10', sectionName: 'A' };
+    build('PARENT');
+    const a = link('/dashboard/homework');
+    expect(a).toBeTruthy();
+    expect(a.getAttribute('href')).toContain('studentId=stu_3');
+  });
+
+  it('routes are guarded: posting is TEACHER-only and reading is STUDENT + PARENT (read-only)', () => {
     const dashboard = routes.find(r => r.path === 'dashboard')!;
     const teacher = dashboard.children!.find(r => r.path === 'homework-classwork')!;
     const student = dashboard.children!.find(r => r.path === 'homework')!;
     expect(teacher.canActivate).toContain(roleGuard);
     expect(teacher.data!['roles']).toEqual(['TEACHER']);
     expect(student.canActivate).toContain(roleGuard);
-    expect(student.data!['roles']).toEqual(['STUDENT']);
+    expect(student.data!['roles']).toEqual(['STUDENT', 'PARENT']);
   });
 });

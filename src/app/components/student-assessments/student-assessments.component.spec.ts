@@ -1,5 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { AuthStateService } from '../../auth/auth-state.service';
+import { ParentPortalService } from '../../services/parent-portal.service';
 import { StudentAssessmentsComponent } from './student-assessments.component';
 import { AssessmentService } from '../../services/assessment.service';
 import { LoggerService } from '../../services/logger.service';
@@ -13,6 +16,13 @@ import {
 } from '../../interfaces/assessment';
 
 describe('StudentAssessmentsComponent', () => {
+  let role = 'STUDENT';
+  let query: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  const child = (studentId: string, studentName: string): any => ({
+    relationshipId: 1, studentId, studentName, className: '9', sectionName: 'A', relationshipType: 'FATHER', primaryGuardian: true,
+    canViewAttendance: true, canViewFees: true, canPayFees: true, canViewResults: true, canViewTimetable: true, canManageLeave: true,
+    effectiveFrom: '2026-04-01', effectiveUntil: null,
+  });
   let fixture: ComponentFixture<StudentAssessmentsComponent>;
   let component: StudentAssessmentsComponent;
   let service: jasmine.SpyObj<AssessmentService>;
@@ -28,6 +38,8 @@ describe('StudentAssessmentsComponent', () => {
   });
 
   beforeEach(() => {
+    role = 'STUDENT';
+    query = new BehaviorSubject(convertToParamMap({}));
     service = jasmine.createSpyObj('AssessmentService', ['studentUpcoming', 'studentMonth', 'studentPast']);
     service.studentUpcoming.and.returnValue(of([item(), item({ id: 2, title: 'Maths unit test', subjectName: 'Maths', assessmentDate: inDays(4) })]));
     service.studentMonth.and.returnValue(of([]));
@@ -36,6 +48,10 @@ describe('StudentAssessmentsComponent', () => {
       imports: [StudentAssessmentsComponent],
       providers: [
         { provide: AssessmentService, useValue: service },
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { get queryParamMap() { return query; } } },
+        { provide: AuthStateService, useValue: { getUserRole: () => role, getUserId: () => 'U1' } },
+        { provide: ParentPortalService, useValue: { getMyProfile: () => of({ children: [child('S1', 'Aarav'), child('S3', 'Kabir')] }) } },
         { provide: LoggerService, useValue: jasmine.createSpyObj('LoggerService', ['error']) },
       ],
     });
@@ -118,5 +134,27 @@ describe('StudentAssessmentsComponent', () => {
     expect(formatAssessmentTime('13:30')).toBe('1:30 PM');
     expect(assessmentTimeRange('09:00', '10:15:00')).toBe('9:00 AM – 10:15 AM');
     expect(assessmentTimeRange(null, null)).toBeNull();
+  });
+  it('a parent reads the linked child named in the URL, switches child, and sees no posting controls', () => {
+    role = 'PARENT';
+    query.next(convertToParamMap({ studentId: 'S3' }));
+    const parentFixture = TestBed.createComponent(StudentAssessmentsComponent);
+    parentFixture.detectChanges();
+    expect(service.studentUpcoming).toHaveBeenCalledWith(undefined, 'S3');
+    const el = parentFixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.child-tab').length).toBe(2);
+    expect(el.textContent).toContain("Your child's upcoming tests and exams");
+    expect(el.textContent).not.toMatch(/Add assessment|Edit|Delete|Publish/);
+
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    el.querySelectorAll<HTMLButtonElement>('.child-tab')[0].click();
+    expect(navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { studentId: 'S1' } }));
+    query.next(convertToParamMap({ studentId: 'S1' }));
+    expect(service.studentUpcoming).toHaveBeenCalledWith(undefined, 'S1');
+  });
+
+  it('a student never sends a student id', () => {
+    fixture.detectChanges();
+    expect(service.studentUpcoming).toHaveBeenCalledWith(undefined, null);
   });
 });
