@@ -1,14 +1,25 @@
 <div class="kb-page">
 
   <div class="kb-header">
-    <h2>Knowledge Base</h2>
-    <p class="kb-subtitle">
-      Upload school policies and handbooks — the AI Copilot answers questions from these documents, with citations, for Students, Teachers, and Admins.
-    </p>
+    <div class="kb-header-icon" aria-hidden="true"><mat-icon>auto_stories</mat-icon></div>
+    <div class="kb-header-text">
+      <h2>Knowledge Base</h2>
+      <p class="kb-subtitle">
+        Upload school policies and handbooks — the AI Copilot answers questions from these documents, with citations, for Students, Teachers, and Admins.
+      </p>
+    </div>
+    <div class="kb-header-stat" *ngIf="!loading">
+      <strong>{{ documents.length }}</strong>
+      <span>{{ documents.length === 1 ? 'Document' : 'Documents' }}</span>
+    </div>
   </div>
 
   <!-- ─── Upload form ─────────────────────────────────────────────────── -->
   <div class="kb-upload-card">
+    <div class="kb-card-head">
+      <h3>Add a document</h3>
+      <p>Choose a file, give it a clear title and pick a category.</p>
+    </div>
     <div
       class="kb-dropzone"
       [class.kb-dropzone-active]="dragOver"
@@ -20,7 +31,7 @@
       <input #fileInput type="file" hidden accept=".pdf,.docx,.txt,.md" (change)="onFileSelected($event)" />
 
       <ng-container *ngIf="!selectedFile">
-        <mat-icon class="kb-dropzone-icon">upload_file</mat-icon>
+        <span class="kb-dropzone-badge" aria-hidden="true"><mat-icon class="kb-dropzone-icon">upload_file</mat-icon></span>
         <p class="kb-dropzone-text">Click to browse or drag a file here</p>
         <p class="kb-dropzone-hint">PDF, DOCX, TXT, or MD — up to 20 MB</p>
       </ng-container>
@@ -55,14 +66,16 @@
   <!-- ─── Document list ───────────────────────────────────────────────── -->
   <div class="kb-list-card">
     <div class="kb-list-header">
-      <h3>Uploaded Documents</h3>
+      <h3>Uploaded Documents <span class="kb-count" *ngIf="!loading && documents.length > 0">{{ documents.length }}</span></h3>
       <button class="kb-refresh-btn" (click)="refreshStatus()" [disabled]="loading" title="Refresh">
         <mat-icon>refresh</mat-icon>
       </button>
     </div>
 
     <div class="kb-empty" *ngIf="!loading && documents.length === 0">
-      No documents uploaded yet.
+      <span class="kb-empty-icon" aria-hidden="true"><mat-icon>folder_open</mat-icon></span>
+      <p class="kb-empty-title">No documents uploaded yet.</p>
+      <p class="kb-empty-sub">Upload a policy or handbook above and the Copilot can start answering from it.</p>
     </div>
 
     <div class="kb-loading" *ngIf="loading">Loading…</div>
