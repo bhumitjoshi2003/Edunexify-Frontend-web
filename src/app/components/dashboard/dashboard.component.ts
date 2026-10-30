@@ -30,6 +30,7 @@ import { Subject, takeUntil, interval, Subscription } from 'rxjs';
 import { NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { AiCopilotComponent } from '../ai-copilot/ai-copilot.component';
+import { RouteBackBarComponent } from '../page-back/route-back-bar.component';
 import { ParentPortalService } from '../../services/parent-portal.service';
 import { ParentChildContextService } from '../../services/parent-child-context.service';
 import { ChildAccess } from '../../interfaces/parent-portal';
@@ -50,6 +51,7 @@ import { FeatureKey } from '../../auth/feature-keys';
     CommonModule,
     MatBadgeModule,
     AiCopilotComponent,
+    RouteBackBarComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],

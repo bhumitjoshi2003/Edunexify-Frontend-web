@@ -28,27 +28,13 @@
 
 .pd-hero-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 20px;
   position: relative;
   z-index: 1;
 }
 
-.pd-back-btn {
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 10px;
-  padding: 8px;
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.pd-back-btn:hover { background: rgba(255,255,255,0.24); }
-.pd-back-btn:active { background: rgba(255,255,255,0.28); }
 
 .pd-hero-actions {
   display: flex;

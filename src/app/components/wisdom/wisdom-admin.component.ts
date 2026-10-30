@@ -1,12 +1,11 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { Observable, Subject, catchError, forkJoin, of, startWith, switchMap, takeUntil, tap } from 'rxjs';
 import { WisdomService } from '../../services/wisdom.service';
 import { ToastService } from '../../services/toast.service';
 import { Thought, ThoughtOverride, WisdomPage, WisdomStatus } from '../../interfaces/wisdom';
-@Component({ standalone: true, imports: [CommonModule, ReactiveFormsModule, RouterLink], templateUrl: './wisdom-admin.component.html', styleUrl: './wisdom.css', changeDetection: ChangeDetectionStrategy.OnPush })
+@Component({ standalone: true, imports: [CommonModule, ReactiveFormsModule], templateUrl: './wisdom-admin.component.html', styleUrl: './wisdom.css', changeDetection: ChangeDetectionStrategy.OnPush })
 export class WisdomAdminComponent implements OnInit, OnDestroy {
  private fb=inject(FormBuilder);
  private destroy$=new Subject<void>(); private reload$=new Subject<void>();

@@ -8,7 +8,6 @@ import {
 } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 
 import {
@@ -56,7 +55,6 @@ interface GroupForm {
 export class AssessmentGroupConfigComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
-  private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
   constructor(
@@ -352,10 +350,5 @@ export class AssessmentGroupConfigComponent implements OnInit, OnDestroy {
         },
         error: () => this.toast.error('Failed to delete group')
       });
-  }
-
-  // ── Navigation ─────────────────────────────────────────────────────
-  goBack(): void {
-    this.router.navigate(['/dashboard/admin-dashboard']);
   }
 }

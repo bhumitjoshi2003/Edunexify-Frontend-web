@@ -8,7 +8,6 @@ import { AuthService } from '../../auth/auth.service';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../services/toast.service';
 import { Subject, takeUntil } from 'rxjs';
-import { Location } from '@angular/common';
 import { environment } from '../../../environments/environment';
 import { SchoolService, SchoolClass } from '../../services/school.service';
 import { SectionService } from '../../services/section.service';
@@ -139,7 +138,6 @@ export class StudentDetailsComponent implements OnInit, OnDestroy {
     public router: Router,
     private studentService: StudentService,
     private authService: AuthService,
-    private location: Location,
     private logger: LoggerService,
     private cdr: ChangeDetectorRef,
     private schoolService: SchoolService,
@@ -838,9 +836,5 @@ export class StudentDetailsComponent implements OnInit, OnDestroy {
       },
       error: () => { /* optional follow-up; readmission itself already succeeded */ }
     });
-  }
-
-  goBack(): void {
-    this.location.back();
   }
 }

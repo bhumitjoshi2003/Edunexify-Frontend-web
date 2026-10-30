@@ -9,11 +9,6 @@
   border-radius: 18px; padding: 16px 18px; margin-bottom: 14px; color: #fff;
 }
 .tbi-hero-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
-.tbi-back-btn {
-  width: 34px; height: 34px; flex: none; border: 0; border-radius: 10px; background: rgba(255,255,255,0.2);
-  color: #fff; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-}
-.tbi-back-btn:hover { background: rgba(255,255,255,0.3); }
 .tbi-hero-title { margin: 0; font-size: 1.1rem; font-weight: 800; letter-spacing: -0.3px; line-height: 1.2; }
 .tbi-hero-sub { margin: 3px 0 0; font-size: 0.75rem; color: rgba(255,255,255,0.82); }
 .tbi-template-btn {

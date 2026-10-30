@@ -40,12 +40,6 @@
 .rc-hero-sub   { font-size: 0.75rem; color: rgba(255,255,255,0.82); margin: 0; }
 .rc-hero-actions { display: flex; gap: 8px; position: relative; z-index: 1; flex-wrap: wrap; }
 
-.rc-btn-back {
-  background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.35);
-  color: #fff; border-radius: 8px; padding: 7px 16px; font-weight: 600;
-  cursor: pointer; font-size: 0.86rem; font-family: inherit; transition: background 0.15s;
-}
-.rc-btn-back:hover { background: rgba(255,255,255,0.25); }
 
 .rc-btn-print {
   background: rgba(255,255,255,0.95); color: #1565c0; border: none;
@@ -782,7 +776,6 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
   }
   /* Secondary — Back and Preview & Print share the row beneath it. */
-  .rc-btn-back  { order: 2; flex: 1 1 0; min-height: 42px; font-size: 0.85rem; }
   .rc-btn-print { order: 3; flex: 1 1 0; min-height: 42px; font-size: 0.85rem; }
 
   /* ── Status states ─────────────────────────────────────────────────── */

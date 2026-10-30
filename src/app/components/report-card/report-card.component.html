@@ -17,7 +17,6 @@
       </div>
     </div>
     <div class="rc-hero-actions">
-      <button class="rc-btn-back" (click)="goBack()" aria-label="Go back">&#8592; Back</button>
       <button *ngIf="canUsePdf" class="rc-btn-print" (click)="print()" [disabled]="previewingPdf"
               aria-label="Preview and print report card" [attr.aria-busy]="previewingPdf"
               title="Opens the report card PDF to preview and print.">

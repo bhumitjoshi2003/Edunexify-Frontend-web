@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import {
   SUPPORT_TICKET_CATEGORIES,
@@ -21,7 +20,7 @@ import { LoggerService } from '../../services/logger.service';
 @Component({
   selector: 'app-super-admin-support-queue',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, RouterLink],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './super-admin-support-queue.component.html',
   styleUrl: './super-admin-support-queue.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

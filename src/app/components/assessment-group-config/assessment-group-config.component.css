@@ -38,18 +38,6 @@
   flex: 1;
   min-width: 0;
 }
-.ag-back-btn {
-  background: rgba(255,255,255,0.18);
-  border: 1.5px solid rgba(255,255,255,0.35);
-  color: #fff;
-  border-radius: 10px;
-  width: 36px; height: 36px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-.ag-back-btn:hover { background: rgba(255,255,255,0.28); }
 
 .ag-hero-icon {
   font-size: 1.8rem;

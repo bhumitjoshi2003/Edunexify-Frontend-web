@@ -40,21 +40,6 @@
   flex-wrap: wrap;
 }
 
-.rcd-back-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.18);
-  border: 1.5px solid rgba(255,255,255,0.35);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-.rcd-back-btn:hover { background: rgba(255,255,255,0.30); }
 
 .rcd-hero-icon {
   width: 48px;

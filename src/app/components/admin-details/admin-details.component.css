@@ -288,22 +288,6 @@
 }
 
 /* ── Back button ─────────────────────────────────────────────────── */
-.back-button {
-  align-self: flex-start;
-  padding: 10px 22px;
-  border: 1.5px solid #d0dfe8;
-  border-radius: 10px;
-  background: #fff;
-  color: #1e3a5f;
-  font-weight: 700;
-  font-size: 0.88rem;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  box-shadow: none;
-  text-transform: none;
-  letter-spacing: normal;
-}
-.back-button:hover { background: #eef4ff; border-color: #4fbdbd; transform: none; box-shadow: none; }
 
 /* ── Change Password Modal ───────────────────────────────────────── */
 .cp-overlay {
@@ -409,5 +393,4 @@
     width: 100% !important; text-align: left;
   }
 
-  .back-button { width: 100%; text-align: center; }
 }

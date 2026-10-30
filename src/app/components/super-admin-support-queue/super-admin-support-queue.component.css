@@ -1,9 +1,6 @@
 :host { display: block; }
 .saq-page { padding-bottom: 16px; color: #1e293b; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
 
-.saq-back { display: inline-flex; align-items: center; gap: 6px; color: #526075; text-decoration: none; margin-bottom: 18px; font-size: 0.85rem; }
-.saq-back mat-icon { font-size: 19px; width: 19px; height: 19px; }
-.saq-back:hover { color: #1e293b; }
 
 .saq-hero {
   display: flex; align-items: center; gap: 14px;
