@@ -71,7 +71,5 @@ export class ReportCardDemoComponent {
     });
   }
 
-  goBack(): void { this.router.navigate(['/dashboard']); }
-
   trackByName(_: number, s: DemoStyle): string { return s.name; }
 }

@@ -265,26 +265,6 @@
     grid-column: 2;
   }
 }
-.td-back-link {
-  display: inline-flex;
-  margin: 0 0 12px;
-  padding: 0;
-  align-items: center;
-  gap: 5px;
-  border: 0;
-  color: #64748b;
-  background: transparent;
-  font: 700 0.75rem inherit;
-  cursor: pointer;
-}
-.td-back-link:hover {
-  color: #0f766e;
-}
-.td-back-link mat-icon {
-  width: 17px;
-  height: 17px;
-  font-size: 17px;
-}
 .td-hero {
   position: relative;
   display: grid;
@@ -811,9 +791,6 @@
 @media (max-width: 600px) {
   .td-page {
     padding-bottom: 18px;
-  }
-  .td-back-link {
-    margin-bottom: 9px;
   }
   .td-hero {
     display: grid;

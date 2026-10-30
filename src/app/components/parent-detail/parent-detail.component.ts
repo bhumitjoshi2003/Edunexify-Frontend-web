@@ -1,4 +1,4 @@
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,7 +19,6 @@ import { ParentAccessEditorComponent } from '../parent-access-editor/parent-acce
 })
 export class ParentDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
-  private readonly location = inject(Location);
   private readonly parentService = inject(ParentPortalService);
   private readonly toast = inject(ToastService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -57,8 +56,6 @@ export class ParentDetailComponent implements OnInit, OnDestroy {
       },
     });
   }
-
-  goBack(): void { this.location.back(); }
 
   startLinking(): void {
     if (this.profile && !this.profile.parent.active) {

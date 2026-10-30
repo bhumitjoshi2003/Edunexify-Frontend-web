@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import {
   FreeSubstituteTeacher,
@@ -29,7 +28,7 @@ export interface SubstitutionGroup {
 @Component({
   selector: 'app-teacher-substitution',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, RouterLink],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './teacher-substitution.component.html',
   styleUrl: './teacher-substitution.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

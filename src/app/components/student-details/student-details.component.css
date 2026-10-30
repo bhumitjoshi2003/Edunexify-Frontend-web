@@ -575,29 +575,16 @@
 .sd-blob-1 { width: 90px; height: 90px; background: rgba(255,255,255,0.07); top: -34px; right: -18px; }
 .sd-blob-2 { display: none; }
 
-/* Hero bar (top row: back button + action buttons) */
+/* Hero bar (top row: action buttons) */
 .sd-hero-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   width: 100%;
   position: relative;
   z-index: 1;
 }
 
-.sd-back-icon {
-  background: rgba(255,255,255,0.12);
-  border: 1.5px solid rgba(255,255,255,0.2);
-  border-radius: 10px;
-  padding: 7px;
-  cursor: pointer;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-}
-.sd-back-icon:hover { background: rgba(255,255,255,0.22); }
 
 .sd-hero-btns {
   display: flex;

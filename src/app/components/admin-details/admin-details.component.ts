@@ -320,8 +320,4 @@ export class AdminDetailsComponent implements OnInit, OnDestroy {
       }
     });
   }
-
-  goBack(): void {
-    this.router.navigate(['/dashboard/admin-list']);
-  }
 }

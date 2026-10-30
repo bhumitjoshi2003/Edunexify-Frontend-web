@@ -1,15 +1,8 @@
 .sa-page { padding: 0 0 24px; }
 
-.sa-back {
-  display: inline-flex; align-items: center; gap: 6px;
-  color: #64748b; font-size: .85rem; font-weight: 700; text-decoration: none; margin-bottom: 16px;
-  transition: color .15s ease;
-}
 
 .sa-readiness-value { display: block; font-weight: 650; color: #243047; }
 .sa-readiness-note { display: block; margin-top: 3px; color: #64748b; font-size: .75rem; }
-.sa-back:hover { color: #1e293b; }
-.sa-back mat-icon { width: 18px; height: 18px; font-size: 18px; }
 
 .sa-loading {
   display: flex; align-items: center; justify-content: center; gap: 10px;

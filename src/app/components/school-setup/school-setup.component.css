@@ -1,7 +1,4 @@
 .setup-page { padding: 0 0 24px; color: #1e293b; }
-.setup-back { display: inline-flex; gap: 6px; align-items: center; margin-bottom: 16px; color: #64748b; text-decoration: none; font-size: .82rem; font-weight: 700; transition: color .15s ease; }
-.setup-back:hover { color: #1e293b; }
-.setup-back mat-icon { width: 17px; height: 17px; font-size: 17px; }
 
 .setup-hero {
   position: relative; display: flex; align-items: center; flex-wrap: wrap; gap: 14px;

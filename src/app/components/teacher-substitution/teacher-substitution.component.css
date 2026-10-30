@@ -9,12 +9,6 @@
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-.sub-back {
-  display: inline-flex; align-items: center; gap: 6px;
-  color: #526075; text-decoration: none; margin-bottom: 18px; font-size: 0.85rem;
-}
-.sub-back mat-icon { font-size: 19px; width: 19px; height: 19px; }
-.sub-back:hover { color: #1e293b; }
 
 /* ── Hero — sized/spaced exactly like Elective Assignment's hero ── */
 .sub-hero {

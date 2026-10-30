@@ -158,10 +158,6 @@ export class PaymentDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  goBack(): void {
-    this.router.navigate(['..'], { relativeTo: this.route });
-  }
-
   /** ₹, from the backend's authoritative per-fee-head breakdown (feeLineItems) plus the two
    * remaining live-computed charges (late fee, platform fee) — never the deprecated fixed
    * buckets (tuitionFee/busFee/annualCharges/labCharges/ecaProject/examinationFee) on

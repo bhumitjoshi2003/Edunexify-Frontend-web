@@ -1,13 +1,5 @@
 <div class="td-page" *ngIf="teacherDetails && updatedDetails">
   <form #editForm="ngForm">
-    <button
-      *ngIf="getUserRole() === 'ADMIN'"
-      type="button"
-      class="td-back-link"
-      (click)="goBackToTeacherList()"
-    >
-      <mat-icon>arrow_back</mat-icon><span>Teachers</span>
-    </button>
 
     <!-- ── Hero banner ──────────────────────────────────────────────── -->
     <div class="td-hero">

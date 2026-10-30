@@ -35,19 +35,6 @@
   flex: 1;
   min-width: 0;
 }
-.bi-back-btn {
-  background: rgba(255,255,255,0.2);
-  border: none;
-  color: #fff;
-  border-radius: 10px;
-  width: 36px; height: 36px;
-  font-size: 1.1rem;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-.bi-back-btn:hover { background: rgba(255,255,255,0.3); }
 .bi-hero-icon { font-size: 1.8rem; flex-shrink: 0; }
 .bi-hero-title { font-size: 1.25rem; font-weight: 800; margin: 0; color: #fff; letter-spacing: -0.3px; line-height: 1.2; }
 .bi-hero-sub { font-size: 0.73rem; font-weight: 500; color: rgba(255,255,255,0.8); margin: 3px 0 0; }

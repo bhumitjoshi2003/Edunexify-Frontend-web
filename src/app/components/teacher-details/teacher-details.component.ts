@@ -586,10 +586,6 @@ export class TeacherDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
-  goBackToTeacherList(): void {
-    this.router.navigate(['/dashboard/teacher-list']);
-  }
-
   openPasswordModal(): void {
     this.cpOldPw = '';
     this.cpNewPw = '';
