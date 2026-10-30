@@ -13,6 +13,8 @@ import {
 } from '../../services/subject-config.service';
 import { LoggerService } from '../../services/logger.service';
 import { SchoolService } from '../../services/school.service';
+import { AuthStateService } from '../../auth/auth-state.service';
+import { FEATURES } from '../../auth/feature-keys';
 
 @Component({
   selector: 'app-subject-config',
@@ -53,7 +55,8 @@ export class SubjectConfigComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private logger: LoggerService,
     private toast: ToastService,
-    private schoolService: SchoolService
+    private schoolService: SchoolService,
+    private authState: AuthStateService
   ) { }
 
   ngOnInit(): void {
@@ -63,8 +66,16 @@ export class SubjectConfigComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
       this.loadClassSubjects();
     });
-    this.loadStreams();
-    this.loadOptionalGroups();
+    if (this.streamsAvailable) {
+      this.loadStreams();
+      this.loadOptionalGroups();
+    }
+  }
+
+  /** Class subjects are part of every plan (the timetable needs them); streams and optional
+   *  groups belong to Exams & Results. */
+  get streamsAvailable(): boolean {
+    return this.authState.hasFeature(FEATURES.EXAMS_RESULTS);
   }
 
   ngOnDestroy(): void {

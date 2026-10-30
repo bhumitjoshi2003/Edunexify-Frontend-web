@@ -15,6 +15,8 @@ import { ClassUpdate } from '../../interfaces/class-update';
 
 /** The dashboard's compact Class Updates section — isolated from the rest of the dashboard load. */
 describe('StudentDashboardComponent — Class Updates', () => {
+  let classroom = true;
+  afterEach(() => classroom = true);
   let fixture: ComponentFixture<StudentDashboardComponent>;
   let component: StudentDashboardComponent;
   let classUpdates: jasmine.SpyObj<ClassUpdateService>;
@@ -31,7 +33,7 @@ describe('StudentDashboardComponent — Class Updates', () => {
       imports: [StudentDashboardComponent],
       providers: [
         provideRouter([]),
-        { provide: AuthStateService, useValue: { getUser: () => null, hasFeature: () => false } },
+        { provide: AuthStateService, useValue: { getUser: () => null, hasFeature: (key: string) => classroom && key === 'CLASSROOM' } },
         { provide: StudentService, useValue: {} },
         { provide: AttendanceService, useValue: {} },
         { provide: LeaveService, useValue: {} },

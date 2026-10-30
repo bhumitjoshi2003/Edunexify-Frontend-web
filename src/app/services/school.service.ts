@@ -197,11 +197,20 @@ export interface SchoolFeature {
   displayName: string;
   description: string;
   category: string;
-  enabled: boolean;
+  enabled?: boolean;
   effectivelyOn: boolean;
   planGranted: boolean;
   overrideState: string;
   isAlwaysOn: boolean;
+  /** In every plan — shown read-only, never switched off. */
+  core?: boolean;
+  /** Display names of the features this one needs, and of the features that need it. */
+  dependsOn?: string[];
+  requiredBy?: string[];
+  /** Students or parents use its screens — switching it off is confirmed first. */
+  studentOrParentFacing?: boolean;
+  /** Can later be added to a plan without it (no pricing yet). */
+  addOnEligible?: boolean;
 }
 
 export interface RazorpayOrder {

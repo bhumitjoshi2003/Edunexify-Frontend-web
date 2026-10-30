@@ -1,12 +1,13 @@
 {
   "description": "Business files intentionally identical in EduPay-Leave-frontend (web) and EduPay-Leave-android. See parity/README.md.",
   "shared": {
-    "src/app/auth/auth-state.service.ts": "a38be0ebe7643af1a1ca4f3f5581ed60c75a28d6efcffa2b02cd938301e2eeac",
+    "src/app/auth/auth-state.service.ts": "4a488bf84a84fe3dbb00978fcd914be37d2648930f12a73f4908843c15f7cffe",
     "src/app/auth/auth.service.ts": "0f790679e878948a2cdd32f5536bf5ae7e7de111f2794745c640db3e12245dfe",
     "src/app/auth/auth.interceptor.ts": "136c5410f56d883b2e51eb7241d52bac9606742c3d5db84ee94ff2872632ccd8",
     "src/app/auth/auth.guard.ts": "65ff4cc8047700f2e7c3a024cd1d22f0ff62fbfa292e084eb27da76a057d11a8",
     "src/app/auth/role.guard.ts": "c65994474895049f440ed8bd88e9512f5257a059846092d9fb09ad4d24f8447b",
-    "src/app/auth/feature.guard.ts": "7108cb96f9fb5817c7d61e95e77a0204184911f5510f3d3baed251a257f55781",
+    "src/app/auth/feature.guard.ts": "5b4a54e369f56a072c090f07f941ab056c56c8b9617870b889e1050294d2b2a0",
+    "src/app/auth/feature-keys.ts": "146ac4bcdacbe1f578d63b1c8766a1e44a49904a082b338cbab737d2fdc6ccbb",
     "src/app/auth/password-change.guard.ts": "896d3f157f849d8987111422b731e3513721f885f70b81274d681b5e94279800",
     "src/app/auth/auth-failure-classifier.ts": "cbad778a437388e06b5099f70d985c8db5b08d894d6a262faa9de0b9a7f8297f",
     "src/app/auth/auth-checking-resolution.util.ts": "9247b37e5c5d269fa8095e3fe40b80e7a52e54f648ba3637050ee8de6ee7c630",

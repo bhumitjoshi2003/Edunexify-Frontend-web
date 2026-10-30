@@ -360,7 +360,7 @@ describe('School Settings — Payments tab', () => {
       imports: [SchoolSettingsComponent],
       providers: [
         { provide: SchoolService, useValue: { getSettings: () => of({ id: 1, name: 'S', razorpayConfigured: false } as any), getEntitlement: () => of(null) } },
-        { provide: AuthStateService, useValue: { getUser: () => ({ role: 'ADMIN', userId: 'Admin_1' }) } },
+        { provide: AuthStateService, useValue: { getUser: () => ({ role: 'ADMIN', userId: 'Admin_1' }), hasFeature: () => true } },
         { provide: TenantService, useValue: { getLogoUrl: (u: string) => u } },
         { provide: LoggerService, useValue: jasmine.createSpyObj('LoggerService', ['error']) },
         { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['success', 'error', 'warning', 'info']) },

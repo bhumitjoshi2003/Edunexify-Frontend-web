@@ -6,6 +6,7 @@ import { AuthStateService } from '../../auth/auth-state.service';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
 import { ListDisplay, ListLoadState, listDisplay } from '../../utils/list-state.util';
+import { FeatureKey } from '../../auth/feature-keys';
 
 interface Teacher {
   teacherId: string;
@@ -95,7 +96,7 @@ export class TeacherListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dashboard/teacher-bulk-import']);
   }
 
-  hasFeature(featureKey: string): boolean {
+  hasFeature(featureKey: FeatureKey): boolean {
     return this.authStateService.hasFeature(featureKey);
   }
 }

@@ -4,6 +4,7 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { DashboardComponent } from './dashboard.component';
 import { routes } from '../../app.routes';
 import { roleGuard } from '../../auth/role.guard';
+import { featureGuard } from '../../auth/feature.guard';
 import { AuthService } from '../../auth/auth.service';
 import { AuthStateService } from '../../auth/auth-state.service';
 import { StudentService } from '../../services/student.service';
@@ -18,6 +19,7 @@ import { LoggerService } from '../../services/logger.service';
 import { WhatsNewService } from '../../services/whats-new.service';
 
 describe('Homework & Classwork — role access', () => {
+  let classroom = true;
   let selectedChild: any = null;
   let fixture: ComponentFixture<DashboardComponent>;
   let authState: jasmine.SpyObj<AuthStateService>;
@@ -32,7 +34,7 @@ describe('Homework & Classwork — role access', () => {
     authState.isUnauthenticated.and.returnValue(false);
     authState.loadCurrentUser.and.returnValue(Promise.resolve());
     authState.getSubscriptionStatus.and.returnValue(null);
-    authState.hasFeature.and.returnValue(false);
+    authState.hasFeature.and.callFake((key: string) => classroom && key === 'CLASSROOM');
     authState.isSubscriptionWarning.and.returnValue(false);
 
     TestBed.configureTestingModule({
@@ -57,7 +59,7 @@ describe('Homework & Classwork — role access', () => {
     fixture.detectChanges();
   }
 
-  afterEach(() => { fixture?.destroy(); selectedChild = null; });
+  afterEach(() => { fixture?.destroy(); selectedChild = null; classroom = true; });
 
   const link = (href: string) => fixture.nativeElement.querySelector(`a[routerLink="${href}"]`);
 
@@ -89,6 +91,20 @@ describe('Homework & Classwork — role access', () => {
     expect(a.getAttribute('href')).toContain('studentId=stu_3');
   });
 
+  it('without Classroom in the plan, no role sees these links', () => {
+    classroom = false;
+    for (const role of ['STUDENT', 'TEACHER', 'ADMIN']) {
+      build(role);
+      expect(link('/dashboard/homework')).withContext(role).toBeNull();
+      expect(link('/dashboard/homework-classwork')).withContext(role).toBeNull();
+      fixture.destroy();
+      TestBed.resetTestingModule();
+    }
+    selectedChild = { studentId: 'stu_3', studentName: 'Kabir', className: '10', sectionName: 'A' };
+    build('PARENT');
+    expect(link('/dashboard/homework')).toBeNull();
+  });
+
   it('routes are guarded: posting is TEACHER-only and reading is STUDENT + PARENT (read-only)', () => {
     const dashboard = routes.find(r => r.path === 'dashboard')!;
     const teacher = dashboard.children!.find(r => r.path === 'homework-classwork')!;
@@ -97,5 +113,7 @@ describe('Homework & Classwork — role access', () => {
     expect(teacher.data!['roles']).toEqual(['TEACHER']);
     expect(student.canActivate).toContain(roleGuard);
     expect(student.data!['roles']).toEqual(['STUDENT', 'PARENT']);
+    expect(student.canActivate).toContain(featureGuard);
+    expect(student.data!['featureKey']).toBe('CLASSROOM');
   });
 });

@@ -5,10 +5,13 @@ import { SubjectConfigService } from '../../services/subject-config.service';
 import { SchoolService } from '../../services/school.service';
 import { LoggerService } from '../../services/logger.service';
 import { ToastService } from '../../services/toast.service';
+import { AuthStateService } from '../../auth/auth-state.service';
 
 /** Shared by the web and Android clients — keep the two copies identical. Class subjects are only
  *  ever read or created for one of the school's configured classes, never a hardcoded one. */
 describe('SubjectConfigComponent — class subjects', () => {
+  let examsResults = true;
+  afterEach(() => examsResults = true);
   let service: jasmine.SpyObj<SubjectConfigService>;
   let toast: jasmine.SpyObj<ToastService>;
 
@@ -23,6 +26,7 @@ describe('SubjectConfigComponent — class subjects', () => {
     TestBed.configureTestingModule({
       imports: [SubjectConfigComponent],
       providers: [
+        { provide: AuthStateService, useValue: { hasFeature: (key: string) => examsResults || key !== 'EXAMS_RESULTS' } },
         { provide: SubjectConfigService, useValue: service },
         { provide: SchoolService, useValue: { getClasses: () => of(classes) } },
         { provide: LoggerService, useValue: { error: () => {} } },
@@ -36,6 +40,16 @@ describe('SubjectConfigComponent — class subjects', () => {
 
   const addButton = (fixture: any): HTMLButtonElement =>
     [...fixture.nativeElement.querySelectorAll('button.btn-add')].find((b: HTMLButtonElement) => b.textContent?.trim() === '+ Add');
+
+  it('class subjects work without Exams & Results; streams and optional groups are hidden and never fetched', () => {
+    examsResults = false;
+    const { fixture, c } = create(['Class 9']);
+    expect(c.classSubjects.map((s) => s.subjectName)).toEqual(['English']);
+    const tabs = [...fixture.nativeElement.querySelectorAll('.sc-tab')].map((b: HTMLElement) => b.textContent?.trim());
+    expect(tabs).toEqual(['Class Subjects']);
+    expect(service.getStreams).not.toHaveBeenCalled();
+    expect(service.getOptionalGroups).not.toHaveBeenCalled();
+  });
 
   it('starts on the first configured class and only fetches subjects for it — never a hardcoded "1"', () => {
     const { c } = create(['Class 9', 'Class 10', 'Class 11']);

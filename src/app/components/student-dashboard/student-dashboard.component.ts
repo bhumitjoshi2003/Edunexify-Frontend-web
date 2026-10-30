@@ -24,6 +24,7 @@ import { ClassUpdate } from '../../interfaces/class-update';
 import { AssessmentService } from '../../services/assessment.service';
 import { Assessment, countdownLabel, countdownTone, dateParts } from '../../interfaces/assessment';
 import { countLabel, countOnPage } from '../../utils/page-count.util';
+import { FeatureKey } from '../../auth/feature-keys';
 
 @Component({
   selector: 'app-student-dashboard',
@@ -180,9 +181,11 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadDashboardData(): void {
-    this.loadTodayHomework();
-    this.loadClassUpdates();
-    this.loadUpcomingAssessments();
+    if (this.hasFeature('CLASSROOM')) {
+      this.loadTodayHomework();
+      this.loadClassUpdates();
+      this.loadUpcomingAssessments();
+    }
 
     forkJoin({
       // Current-session Attendance Insights (the full breakdown lives on the Attendance page).
@@ -247,7 +250,7 @@ export class StudentDashboardComponent implements OnInit, OnDestroy {
     return 'Pending';
   }
 
-  hasFeature(featureKey: string): boolean {
+  hasFeature(featureKey: FeatureKey): boolean {
     return this.authState.hasFeature(featureKey);
   }
 }

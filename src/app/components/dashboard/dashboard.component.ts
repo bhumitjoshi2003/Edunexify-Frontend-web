@@ -35,6 +35,7 @@ import { ParentChildContextService } from '../../services/parent-child-context.s
 import { ChildAccess } from '../../interfaces/parent-portal';
 import { AppResumeService } from '../../core/app-resume.service';
 import { SignOutService } from '../../services/sign-out.service';
+import { FeatureKey } from '../../auth/feature-keys';
 
 @Component({
   selector: 'app-dashboard',
@@ -272,7 +273,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Paid features are denied unless the backend-provided entitlement explicitly
    * grants them. This matches AuthStateService and featureGuard.
    */
-  hasFeature(key: string): boolean {
+  hasFeature(key: FeatureKey): boolean {
     return this.authStateService.hasFeature(key);
   }
 

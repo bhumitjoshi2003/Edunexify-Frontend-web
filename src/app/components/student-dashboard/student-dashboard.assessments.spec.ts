@@ -15,6 +15,8 @@ import { Assessment, assessmentDateKey } from '../../interfaces/assessment';
 
 /** The dashboard's compact Upcoming Assessments section — isolated from the rest of the dashboard load. */
 describe('StudentDashboardComponent — Upcoming Assessments', () => {
+  let classroom = true;
+  afterEach(() => classroom = true);
   let fixture: ComponentFixture<StudentDashboardComponent>;
   let component: StudentDashboardComponent;
   let assessments: jasmine.SpyObj<AssessmentService>;
@@ -34,7 +36,7 @@ describe('StudentDashboardComponent — Upcoming Assessments', () => {
       imports: [StudentDashboardComponent],
       providers: [
         provideRouter([]),
-        { provide: AuthStateService, useValue: { getUser: () => null, hasFeature: () => false } },
+        { provide: AuthStateService, useValue: { getUser: () => null, hasFeature: (key: string) => classroom && key === 'CLASSROOM' } },
         { provide: StudentService, useValue: {} },
         { provide: AttendanceService, useValue: {} },
         { provide: LeaveService, useValue: {} },

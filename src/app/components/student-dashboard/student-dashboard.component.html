@@ -28,7 +28,7 @@
       <div class="sd-blob sd-blob-2"></div>
     </div>
 
-    <app-wisdom-cards *ngIf="hasFeature('WISDOM')"></app-wisdom-cards>
+    <app-wisdom-cards *ngIf="hasFeature('THOUGHT_OF_THE_DAY')"></app-wisdom-cards>
 
     <!-- ── Attendance Ring + Stats ───────────────────────────────────── -->
     <div class="sd-attend-card">
@@ -91,14 +91,14 @@
           <span>Attendance</span>
         </a>
 
-        <a class="sd-action-card" *ngIf="hasFeature('EXAM_MARKS')" routerLink="/dashboard/my-results">
+        <a class="sd-action-card" *ngIf="hasFeature('EXAMS_RESULTS')" routerLink="/dashboard/my-results">
           <div class="sd-action-icon" style="background:#fdf4ff;color:#a21caf">
             <mat-icon>grade</mat-icon>
           </div>
           <span>My Results</span>
         </a>
 
-        <a class="sd-action-card" *ngIf="hasFeature('REPORT_CARD')" routerLink="/dashboard/report-card-documents">
+        <a class="sd-action-card" *ngIf="hasFeature('REPORT_CARDS')" routerLink="/dashboard/report-card-documents">
           <div class="sd-action-icon" style="background:#f0fdf4;color:#15803d">
             <mat-icon>description</mat-icon>
           </div>
@@ -126,7 +126,7 @@
           <span>Fee Structure</span>
         </a>
 
-        <a class="sd-action-card" *ngIf="hasFeature('PAYMENT_COLLECTION')" routerLink="/dashboard/payment-history">
+        <a class="sd-action-card" *ngIf="hasFeature('ONLINE_PAYMENTS')" routerLink="/dashboard/payment-history">
           <div class="sd-action-icon" style="background:#ede9fe;color:#7c3aed">
             <mat-icon>receipt</mat-icon>
           </div>
@@ -151,7 +151,7 @@
     </div>
 
     <!-- ── Today's Homework & Classwork ─────────────────────────────── -->
-    <div class="sd-section sd-hw">
+    <div class="sd-section sd-hw" *ngIf="hasFeature('CLASSROOM')">
       <h2 class="sd-section-title">Today's Homework &amp; Classwork</h2>
 
       <div class="sd-hw-state" *ngIf="homeworkLoading"><span class="sd-hw-spinner"></span>Loading…</div>
@@ -182,7 +182,7 @@
     </div>
 
     <!-- ── Class Updates ────────────────────────────────────────────── -->
-    <div class="sd-section sd-cu">
+    <div class="sd-section sd-cu" *ngIf="hasFeature('CLASSROOM')">
       <h2 class="sd-section-title">Class Updates</h2>
 
       <div class="sd-hw-state" *ngIf="classUpdatesLoading"><span class="sd-hw-spinner"></span>Loading…</div>
@@ -212,7 +212,7 @@
     </div>
 
     <!-- ── Upcoming Assessments ─────────────────────────────────────── -->
-    <div class="sd-section sd-as">
+    <div class="sd-section sd-as" *ngIf="hasFeature('CLASSROOM')">
       <h2 class="sd-section-title">Upcoming Assessments</h2>
 
       <div class="sd-hw-state" *ngIf="assessmentsLoading"><span class="sd-hw-spinner"></span>Loading…</div>

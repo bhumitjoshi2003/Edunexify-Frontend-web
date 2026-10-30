@@ -16,6 +16,7 @@ import { FeeWorkflowSettings } from '../../interfaces/fee-workflow';
 import { FeeWorkflowService } from '../../services/fee-workflow.service';
 import { SchoolPaymentConnectionComponent } from '../school-payment-connection/school-payment-connection.component';
 import { isStaffAttendanceUsable, staffAttendanceConfigError } from '../../utils/staff-attendance-config.util';
+import { FEATURES } from '../../auth/feature-keys';
 
 @Component({
   selector: 'app-school-settings',
@@ -130,6 +131,10 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     this.loadFeePolicy();
     if (this.activeTab === 'subscription') {
       this.loadAvailablePlans();
+    }
+    // A deep link straight to the Features tab (?tab=features) loads it like a tab click does.
+    if (this.activeTab === 'features') {
+      this.loadFeatures();
     }
   }
 
@@ -319,9 +324,22 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     });
   }
 
-  toggleFeatureOverride(feature: SchoolFeature): void {
-    if (feature.isAlwaysOn || !feature.planGranted) return;
+  async toggleFeatureOverride(feature: SchoolFeature): Promise<void> {
+    if (feature.isAlwaysOn || feature.core || !feature.planGranted) return;
     const newState: 'DEFAULT' | 'DISABLED' = feature.overrideState === 'DISABLED' ? 'DEFAULT' : 'DISABLED';
+    if (newState === 'DISABLED' && feature.studentOrParentFacing) {
+      const confirmed = await this.toast.confirm({
+        title: `Turn off ${feature.displayName}?`,
+        message: `Students and parents will no longer see ${feature.displayName} in the app. You can turn it back on at any time.`,
+        confirmText: 'Turn off',
+        cancelText: 'Keep it on',
+        danger: true,
+      });
+      if (!confirmed) {
+        this.cdr.markForCheck();
+        return;
+      }
+    }
     this.savingFeatureKey = feature.featureKey;
     this.cdr.markForCheck();
     this.schoolService.setFeatureOverride(feature.featureKey, newState).pipe(takeUntil(this.destroy$)).subscribe({
@@ -331,12 +349,13 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
         this.authStateService.setFeatureEnabled(feature.featureKey, feature.effectivelyOn);
         void this.authStateService.loadCurrentUser().finally(() => this.cdr.markForCheck());
         this.savingFeatureKey = null;
-        this.toast.success('Saved', `Feature ${newState === 'DISABLED' ? 'disabled' : 'restored'}.`);
+        this.toast.success('Saved', `${feature.displayName} ${newState === 'DISABLED' ? 'turned off' : 'turned back on'}.`);
         this.cdr.markForCheck();
       },
       error: (e) => {
         this.logger.error('Failed to set feature override', e);
-        this.toast.error('Error', 'Failed to update feature.');
+        // A dependency refusal explains what to change first ("Turn off Online Payments first…").
+        this.toast.error('Not changed', e?.error?.error || 'Failed to update feature.');
         this.savingFeatureKey = null;
         this.cdr.markForCheck();
       }
@@ -633,9 +652,20 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** The school's payment gateway connection is part of Online Payments. */
+  get onlinePaymentsEnabled(): boolean {
+    return this.authStateService.hasFeature(FEATURES.ONLINE_PAYMENTS);
+  }
+
+  /** Core features: part of every plan, shown read-only. */
+  get coreFeatures(): SchoolFeature[] {
+    return this.schoolFeatures.filter(f => f.core || f.isAlwaysOn);
+  }
+
+  /** Plan-controlled features, grouped by category. */
   featuresByCategory(): { category: string; features: SchoolFeature[] }[] {
     const map = new Map<string, SchoolFeature[]>();
-    for (const f of this.schoolFeatures) {
+    for (const f of this.schoolFeatures.filter(x => !x.core && !x.isAlwaysOn)) {
       if (!map.has(f.category)) map.set(f.category, []);
       map.get(f.category)!.push(f);
     }

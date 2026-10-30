@@ -42,6 +42,7 @@ import { CalendarEvent } from '../../interfaces/event-calendar.component';
 import { pickNearestUpcomingEvent } from '../../utils/upcoming-event.util';
 import { formatTeacherAttendanceTime } from '../../utils/teacher-attendance.util';
 import { serverTotal } from '../../utils/page-count.util';
+import { FeatureKey } from '../../auth/feature-keys';
 
 const EMPTY_TODAY_VIEW: TeacherTodayClassesView = {
   current: null,
@@ -602,7 +603,7 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
     return 'No pending requests';
   }
 
-  hasFeature(featureKey: string): boolean {
+  hasFeature(featureKey: FeatureKey): boolean {
     return this.authState.hasFeature(featureKey);
   }
 }

@@ -28,7 +28,7 @@
       <div class="ad-blob ad-blob-2"></div>
     </div>
 
-    <app-wisdom-cards *ngIf="hasFeature('WISDOM')"></app-wisdom-cards>
+    <app-wisdom-cards *ngIf="hasFeature('THOUGHT_OF_THE_DAY')"></app-wisdom-cards>
 
     <section class="ad-attention">
       <div class="ad-attention-head"><div><h2>Today's Attention</h2></div><span *ngIf="attentionLoading">Checking…</span></div>
@@ -295,7 +295,7 @@
           </div>
           <span>Leaves</span>
         </a>
-        <a class="ad-action-card" *ngIf="isAdmin && hasFeature('PAYMENT_COLLECTION')" routerLink="/dashboard/payment-history-admin">
+        <a class="ad-action-card" *ngIf="isAdmin && hasFeature('ONLINE_PAYMENTS')" routerLink="/dashboard/payment-history-admin">
           <div class="ad-action-icon" style="background:#ede9fe;color:#7c3aed">
             <mat-icon>payments</mat-icon>
           </div>
@@ -355,25 +355,25 @@
           </div>
           <span>Promotion</span>
         </a>
-        <a class="ad-action-card" *ngIf="isAdmin && hasFeature('REPORT_CARD')" routerLink="/dashboard/report-cards-v2/setup">
+        <a class="ad-action-card" *ngIf="isAdmin && hasFeature('REPORT_CARDS')" routerLink="/dashboard/report-cards-v2/setup">
           <div class="ad-action-icon" style="background:#ede9fe;color:#4338ca">
             <mat-icon>tune</mat-icon>
           </div>
           <span>Report Card Setup</span>
         </a>
-        <a class="ad-action-card" *ngIf="isAdmin && hasFeature('REPORT_CARD')" routerLink="/dashboard/report-cards-v2/remarks">
+        <a class="ad-action-card" *ngIf="isAdmin && hasFeature('REPORT_CARDS')" routerLink="/dashboard/report-cards-v2/remarks">
           <div class="ad-action-icon" style="background:#f5f3ff;color:#7c3aed">
             <mat-icon>edit_note</mat-icon>
           </div>
           <span>Remarks</span>
         </a>
-        <a class="ad-action-card" *ngIf="isAdmin && hasFeature('REPORT_CARD')" routerLink="/dashboard/report-cards-v2/generate">
+        <a class="ad-action-card" *ngIf="isAdmin && hasFeature('REPORT_CARDS')" routerLink="/dashboard/report-cards-v2/generate">
           <div class="ad-action-icon" style="background:#fdf2f8;color:#be185d">
             <mat-icon>preview</mat-icon>
           </div>
           <span>Generate &amp; Preview</span>
         </a>
-        <a class="ad-action-card" *ngIf="isAdmin && hasFeature('REPORT_CARD')" routerLink="/dashboard/report-cards-v2/design">
+        <a class="ad-action-card" *ngIf="isAdmin && hasFeature('REPORT_CARDS')" routerLink="/dashboard/report-cards-v2/design">
           <div class="ad-action-icon" style="background:#e0f2fe;color:#0369a1">
             <mat-icon>palette</mat-icon>
           </div>

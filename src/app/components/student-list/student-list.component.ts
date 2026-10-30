@@ -13,6 +13,7 @@ import { SchoolService, SchoolClass } from '../../services/school.service';
 import { SectionService } from '../../services/section.service';
 import { Section } from '../../interfaces/section';
 import { getStoredSelectedClass, setStoredSelectedClass } from '../../utils/class-selection-storage.util';
+import { FeatureKey } from '../../auth/feature-keys';
 
 interface Student {
   studentId: string;
@@ -209,7 +210,7 @@ export class StudentListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dashboard/student-bulk-import']);
   }
 
-  hasFeature(featureKey: string): boolean {
+  hasFeature(featureKey: FeatureKey): boolean {
     return this.authStateService.hasFeature(featureKey);
   }
 

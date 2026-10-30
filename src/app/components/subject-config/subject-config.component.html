@@ -17,8 +17,8 @@
   <div class="sc-card">
     <div class="sc-tabs">
       <button class="sc-tab" [class.active]="activeTab === 'class'" (click)="setTab('class')">Class Subjects</button>
-      <button class="sc-tab" [class.active]="activeTab === 'streams'" (click)="setTab('streams')">Streams</button>
-      <button class="sc-tab" [class.active]="activeTab === 'optional'" (click)="setTab('optional')">Optional Groups</button>
+      <button class="sc-tab" *ngIf="streamsAvailable" [class.active]="activeTab === 'streams'" (click)="setTab('streams')">Streams</button>
+      <button class="sc-tab" *ngIf="streamsAvailable" [class.active]="activeTab === 'optional'" (click)="setTab('optional')">Optional Groups</button>
     </div>
 
   <!-- CLASS SUBJECTS TAB -->

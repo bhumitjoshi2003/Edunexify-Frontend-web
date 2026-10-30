@@ -22,7 +22,7 @@
       >
     </header>
 
-    <app-wisdom-cards *ngIf="hasFeature('WISDOM')"></app-wisdom-cards>
+    <app-wisdom-cards *ngIf="hasFeature('THOUGHT_OF_THE_DAY')"></app-wisdom-cards>
 
     <section class="td-attention">
       <div class="td-attention-head"><div><mat-icon>priority_high</mat-icon><h2>Needs Attention</h2></div><span *ngIf="teacherAttentionLoading">Checking…</span></div>
@@ -110,7 +110,7 @@
           <div><h2>Today's Classes</h2></div>
         </div>
         <div class="td-today-links">
-          <a routerLink="/dashboard/homework-classwork">Homework &amp; Classwork <mat-icon>edit_note</mat-icon></a>
+          <a *ngIf="hasFeature('CLASSROOM')" routerLink="/dashboard/homework-classwork">Homework &amp; Classwork <mat-icon>edit_note</mat-icon></a>
           <a [routerLink]="timetableRoute"
             >View timetable <mat-icon>arrow_forward</mat-icon></a
           >
@@ -136,7 +136,7 @@
               <small>{{ todayView.current.subjectName }}<span class="td-cover-chip" *ngIf="todayView.current.isSubstitution">Arrangement</span><em class="td-cover-for" *ngIf="todayView.current.isSubstitution && todayView.current.originalTeacherName">Replacing {{ todayView.current.originalTeacherName }}<ng-container *ngIf="todayView.current.substitutionNote"> · {{ todayView.current.substitutionNote }}</ng-container></em></small>
             </span>
             <span class="td-today-time" *ngIf="classTimeRange(todayView.current) as time">{{ time }}</span>
-            <a class="td-today-hw" *ngIf="todayView.current.timetableEntryId" routerLink="/dashboard/homework-classwork"
+            <a class="td-today-hw" *ngIf="todayView.current.timetableEntryId && hasFeature('CLASSROOM')" routerLink="/dashboard/homework-classwork"
                [queryParams]="{ entry: todayView.current.timetableEntryId }" title="Add Homework / Classwork"
                aria-label="Add Homework / Classwork"><mat-icon>edit_note</mat-icon></a>
           </div>
@@ -147,7 +147,7 @@
               <small>{{ entry.subjectName }}<span class="td-cover-chip" *ngIf="entry.isSubstitution">Arrangement</span><em class="td-cover-for" *ngIf="entry.isSubstitution && entry.originalTeacherName">Replacing {{ entry.originalTeacherName }}<ng-container *ngIf="entry.substitutionNote"> · {{ entry.substitutionNote }}</ng-container></em></small>
             </span>
             <span class="td-today-time" *ngIf="classTimeRange(entry) as time">{{ time }}</span>
-            <a class="td-today-hw" *ngIf="entry.timetableEntryId" routerLink="/dashboard/homework-classwork"
+            <a class="td-today-hw" *ngIf="entry.timetableEntryId && hasFeature('CLASSROOM')" routerLink="/dashboard/homework-classwork"
                [queryParams]="{ entry: entry.timetableEntryId }" title="Add Homework / Classwork"
                aria-label="Add Homework / Classwork"><mat-icon>edit_note</mat-icon></a>
           </div>
@@ -323,11 +323,11 @@
         ><a *ngIf="isClassTeacher" routerLink="/dashboard/teacher-attendance"
           ><span class="cyan"><mat-icon>how_to_reg</mat-icon></span
           ><strong>Mark Attendance</strong></a
-        ><a *ngIf="hasFeature('EXAM_MARKS')" routerLink="/dashboard/mark-entry"
+        ><a *ngIf="hasFeature('EXAMS_RESULTS')" routerLink="/dashboard/mark-entry"
           ><span class="pink"><mat-icon>grade</mat-icon></span
           ><strong>Mark Entry</strong></a
         ><a
-          *ngIf="hasFeature('REPORT_CARD')"
+          *ngIf="hasFeature('REPORT_CARDS')"
           routerLink="/dashboard/report-cards-v2/remarks"
           ><span class="violet"><mat-icon>rate_review</mat-icon></span
           ><strong>Remarks</strong></a
