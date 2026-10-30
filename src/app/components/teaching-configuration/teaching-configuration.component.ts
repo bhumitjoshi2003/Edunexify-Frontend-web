@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, OnDestroy, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, forkJoin, Observable, switchMap } from 'rxjs';
@@ -23,6 +23,11 @@ export class TeachingConfigurationComponent implements OnChanges, OnDestroy {
   @Input() session: AcademicSession | null = null;
   @Input() classes: SchoolClass[] = [];
   @Input() teachers: Teacher[] = [];
+
+  /** Only ACTIVE teachers can hold a class-teacher responsibility (the backend enforces the same rule). */
+  get eligibleTeachers(): Teacher[] {
+    return this.teachers.filter(t => t.status === 'ACTIVE');
+  }
   @Output() timetableCopied = new EventEmitter<void>();
   /** Presentational only — which sections are visually expanded. Content stays in the DOM
    *  either way (collapse is CSS-only, not *ngIf) so nothing here affects data/behavior. */
@@ -59,8 +64,11 @@ export class TeachingConfigurationComponent implements OnChanges, OnDestroy {
   private reload$ = new Subject<void>();
   private sectionChange$ = new Subject<void>();
   private destroyed = false;
+  /** This panel is hosted inside the OnPush TimetableComponent, so state set by an async response
+   *  (sections, rows, preview, results, errors) is only rendered once the view is marked for check. */
   constructor(private service: ClassTeacherResponsibilityService, private timetable: TimetableService,
-    private academics: AcademicSessionService, private sectionService: SectionService, private toast: ToastService) {}
+    private academics: AcademicSessionService, private sectionService: SectionService, private toast: ToastService,
+    private cdr: ChangeDetectorRef) {}
   ngOnChanges(): void {
     this.reload$.next(); this.sectionChange$.next();
     this.rows = []; this.preview = null; this.applied = null; this.error = ''; this.copyResult = null;
@@ -80,8 +88,8 @@ export class TeachingConfigurationComponent implements OnChanges, OnDestroy {
     this.loading = true;
     forkJoin({ rows: this.service.list(id), sessions: this.academics.getAllSessions() })
       .pipe(takeUntil(this.reload$), takeUntil(this.destroy$)).subscribe({
-        next: data => { this.rows = data.rows; this.sessions = data.sessions; this.loading = false; },
-        error: err => { this.error = apiMessage(err); this.loading = false; }
+        next: data => { this.rows = data.rows; this.sessions = data.sessions; this.loading = false; this.cdr.markForCheck(); },
+        error: err => { this.error = apiMessage(err); this.loading = false; this.cdr.markForCheck(); }
       });
   }
   resetForm(): void {
@@ -93,8 +101,8 @@ export class TeachingConfigurationComponent implements OnChanges, OnDestroy {
     if (!this.classId) return;
     this.sectionService.getSectionsForClass(this.classId)
       .pipe(takeUntil(this.sectionChange$), takeUntil(this.destroy$)).subscribe({
-        next: sections => { this.sections = sections.filter(s => s.active); this.sectionsLoaded = true; },
-        error: err => { this.error = apiMessage(err); }
+        next: sections => { this.sections = sections.filter(s => s.active); this.sectionsLoaded = true; this.cdr.markForCheck(); },
+        error: err => { this.error = apiMessage(err); this.cdr.markForCheck(); }
       });
   }
   edit(row: Responsibility): void {
@@ -115,10 +123,10 @@ export class TeachingConfigurationComponent implements OnChanges, OnDestroy {
     this.mutate(this.service.delete(row.id, id));
   }
   private mutate<T>(request: Observable<T>, done: (result: T) => void = () => {}): void {
-    this.busy = true; this.error = ''; this.preview = null; this.applied = null;
+    this.busy = true; this.error = ''; this.preview = null; this.applied = null; this.cdr.markForCheck();
     request.pipe(takeUntil(this.destroy$)).subscribe({
-      next: result => { this.busy = false; done(result); this.refresh(); },
-      error: err => { this.busy = false; this.error = apiMessage(err); }
+      next: result => { this.busy = false; done(result); this.refresh(); this.cdr.markForCheck(); },
+      error: err => { this.busy = false; this.error = apiMessage(err); this.cdr.markForCheck(); }
     });
   }
   canCopy(): boolean {
@@ -148,9 +156,9 @@ export class TeachingConfigurationComponent implements OnChanges, OnDestroy {
     this.preview = null; this.error = '';
     this.service.preview().pipe(takeUntil(this.reload$), takeUntil(this.destroy$)).subscribe({
       next: result => {
-        if (result.academicSessionId !== id) { this.error = 'The current session changed. Refresh the session selection.'; return; }
-        this.preview = result;
-      }, error: err => { this.error = apiMessage(err); }
+        if (result.academicSessionId !== id) { this.error = 'The current session changed. Refresh the session selection.'; this.cdr.markForCheck(); return; }
+        this.preview = result; this.cdr.markForCheck();
+      }, error: err => { this.error = apiMessage(err); this.cdr.markForCheck(); }
     });
   }
   async apply(): Promise<void> {
@@ -158,14 +166,14 @@ export class TeachingConfigurationComponent implements OnChanges, OnDestroy {
     const id = this.session.id;
     const confirmed = await this.toast.confirm({ title: `Apply ${this.session.label} class-teacher configuration?`, message: `This replaces live class-teacher access: ${this.preview.becomingLive} gains, ${this.preview.changing} changes, ${this.preview.clearing} removals. Ineligible or invalid rows are reported and protected slots remain unchanged. Direct Teacher edits are immediately live and may be replaced.`, confirmText: 'Apply to current session', danger: true });
     if (!confirmed || this.destroyed || this.session?.id !== id || !this.session.current || this.busy) return;
-    this.busy = true; this.error = '';
+    this.busy = true; this.error = ''; this.cdr.markForCheck();
     // Recheck authority just before calling the parameterless current-session endpoint.
     this.academics.getCurrentSession().pipe(switchMap(current => {
       if (current.id !== id) throw new Error('The current session changed. Refresh and preview again.');
       return this.service.apply();
     }), takeUntil(this.destroy$)).subscribe({
-      next: result => { this.busy = false; this.applied = result; this.preview = null; this.refresh(); },
-      error: err => { this.busy = false; this.error = apiMessage(err, err.message); }
+      next: result => { this.busy = false; this.applied = result; this.preview = null; this.refresh(); this.cdr.markForCheck(); },
+      error: err => { this.busy = false; this.error = apiMessage(err, err.message); this.cdr.markForCheck(); }
     });
   }
   ngOnDestroy(): void { this.destroyed = true; this.destroy$.next(); this.destroy$.complete(); this.reload$.complete(); this.sectionChange$.complete(); }

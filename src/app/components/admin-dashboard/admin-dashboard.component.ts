@@ -23,6 +23,7 @@ import { CalendarEvent } from '../../interfaces/event-calendar.component';
 import { pickNearestUpcomingEvent } from '../../utils/upcoming-event.util';
 import { TeacherSubstitutionService } from '../../services/teacher-substitution.service';
 import { OnLeaveTodayComponent } from '../on-leave-today/on-leave-today.component';
+import { FeatureKey } from '../../auth/feature-keys';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -426,7 +427,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.staffAttendance?.notCheckedInCount ?? 0;
   }
 
-  hasFeature(featureKey: string): boolean {
+  hasFeature(featureKey: FeatureKey): boolean {
     return this.authState.hasFeature(featureKey);
   }
 

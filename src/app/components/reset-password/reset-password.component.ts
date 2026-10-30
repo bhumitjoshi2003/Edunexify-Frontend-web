@@ -6,6 +6,7 @@ import { ToastService } from '../../services/toast.service';
 import { ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
+import { passwordPolicyValidator } from '../../utils/password-policy.util';
 
 @Component({
   selector: 'app-reset-password',
@@ -33,7 +34,7 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
     private toast: ToastService
   ) {
     this.resetForm = this.fb.group({
-      newPassword: ['', [Validators.required, Validators.minLength(6)]],
+      newPassword: ['', [Validators.required, passwordPolicyValidator]],
       confirmPassword: ['', Validators.required]
     }, { validators: this.checkPasswordMatch });
   }

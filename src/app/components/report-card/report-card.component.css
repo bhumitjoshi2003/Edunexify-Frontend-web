@@ -4,8 +4,9 @@
 
 /* ── Page wrapper ──────────────────────────────────────────────────── */
 .rc-page {
-  background: #ccc;
-  padding: 32px 0 48px;
+  /* The dashboard's own page background, not a grey canvas; the document panel below frames the PDF. */
+  background: transparent;
+  padding: 0 0 40px;
   font-family: 'Times New Roman', Times, serif;
 }
 
@@ -14,6 +15,7 @@
 ════════════════════════════════════════════════════════════════════════ */
 .rc-hero {
   position: relative;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: linear-gradient(135deg, #0f4c81 0%, #1565c0 55%, #1e88e5 100%);
   border-radius: 16px;
   padding: 18px 22px;
@@ -1049,7 +1051,31 @@
 }
 
 /* ── The report card document shown in the page (backend PDF) ── */
-.rc-viewer { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,.12); overflow: hidden; }
-.rc-viewer-frame { display: block; width: 100%; height: min(1180px, 85vh); border: 0; background: #525659; }
-.rc-viewer-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 48px 20px; font-family: 'Segoe UI', system-ui, sans-serif; color: #475569; font-size: 0.95rem; }
-@media (max-width: 768px) { .rc-viewer { border-radius: 0; } .rc-viewer-frame { height: 80vh; } }
+/* Document panel: a calm frame around the PDF, in the dashboard's card language. */
+.rc-viewer {
+  max-width: 1000px; margin: 0 auto; padding: 0 14px 14px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 12px 32px rgba(15, 23, 42, 0.06);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+.rc-viewer-head { display: flex; align-items: center; gap: 10px; padding: 14px 4px 12px; }
+.rc-viewer-doc-icon {
+  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center;
+  background: #e0f2fe; color: #0369a1; flex-shrink: 0;
+}
+.rc-viewer-head-text { display: flex; flex-direction: column; min-width: 0; }
+.rc-viewer-head-text strong { font-size: 0.9rem; color: #0f172a; }
+.rc-viewer-head-text span { font-size: 0.75rem; color: #64748b; }
+.rc-viewer-frame {
+  display: block; width: 100%; height: min(1180px, 82vh); border: 1px solid #e2e8f0;
+  border-radius: 10px; background: #f1f5f9;
+}
+.rc-viewer-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  min-height: 320px; padding: 48px 20px; border: 1px dashed #cbd5e1; border-radius: 10px;
+  background: #f8fafc; color: #475569; font-size: 0.95rem;
+}
+@media (max-width: 768px) {
+  .rc-viewer { padding: 0 8px 8px; border-radius: 12px; }
+  .rc-viewer-frame { height: 78vh; }
+}

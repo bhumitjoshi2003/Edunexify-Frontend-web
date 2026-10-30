@@ -219,7 +219,7 @@
             <small class="sa-field-error" *ngIf="adminDob.invalid && adminDob.touched">Date of birth is required.</small>
           </div>
           <div class="sa-form-group">
-            <label>Gender</label>
+            <label>Gender *</label>
             <select class="sa-input" name="adminGender" [(ngModel)]="onboardForm.adminGender">
               <option value="">— Select —</option>
               <option value="Male">Male</option>
@@ -228,12 +228,8 @@
             </select>
           </div>
           <div class="sa-form-group">
-            <label>Admin Password *</label>
-            <input class="sa-input" type="password" name="adminPassword" [(ngModel)]="onboardForm.adminPassword"
-              #adminPassword="ngModel" required minlength="6" placeholder="Temporary password"
-              [class.sa-input-error]="adminPassword.invalid && adminPassword.touched">
-            <small class="sa-field-error" *ngIf="adminPassword.errors?.['required'] && adminPassword.touched">Password is required.</small>
-            <small class="sa-field-error" *ngIf="adminPassword.errors?.['minlength'] && adminPassword.touched">Minimum 6 characters.</small>
+            <label>Admin Password</label>
+            <small class="sa-field-hint">The administrator receives an email with a secure link to set their own password. No password is chosen or shared here.</small>
           </div>
           <div class="sa-form-group">
             <label>Trial Plan <span class="sa-label-opt">(optional)</span></label>
@@ -395,15 +391,11 @@
               <code class="sa-admin-id">{{ school.adminUserId }}</code>
               <span class="sa-id-readonly">(cannot be changed)</span>
             </div>
-            <button class="sa-btn-password-toggle" (click)="showPasswordField = !showPasswordField">
-              {{ showPasswordField ? '✕ Cancel password change' : '🔑 Change Admin Password' }}
+            <button type="button" class="sa-btn-password-toggle" *ngIf="school.adminUserId"
+                    (click)="sendSetupLink(school.adminUserId)" [disabled]="sendingSetupLinkFor === school.adminUserId"
+                    title="Email the administrator a one-time link to set their own password">
+              {{ sendingSetupLinkFor === school.adminUserId ? 'Sending…' : '✉️ Send setup link' }}
             </button>
-          </div>
-          <div class="sa-form-group sa-password-field" *ngIf="showPasswordField">
-            <label>New Admin Password</label>
-            <input class="sa-input" type="password" [(ngModel)]="editForm.newAdminPassword"
-                   placeholder="Minimum 6 characters">
-            <small class="sa-hint">Leave blank to keep the current password.</small>
           </div>
 
           <div class="sa-edit-actions">
@@ -568,24 +560,24 @@
                     <span class="sa-feat-name">{{ f.displayName }}</span>
                     <span class="sa-feat-badge" *ngIf="f.overrideState === 'ENABLED'">+SUPER</span>
                     <span class="sa-feat-badge sa-feat-badge-off" *ngIf="f.overrideState === 'DISABLED'">OFF</span>
-                    <div class="sa-feat-actions">
+                    <div class="sa-feat-actions" *ngIf="featureActions(f) as actions">
                       <button class="sa-feat-btn"
-                              *ngIf="f.overrideState !== 'ENABLED' && !f.planGranted"
-                              [disabled]="savingFeatureFor === school.id + ':' + f.featureKey"
+                              *ngIf="actions.enable"
+                              [disabled]="isSavingFeature(school.id, f.featureKey)"
                               (click)="setSchoolFeatureOverride(school.id, f.featureKey, 'ENABLED')"
                               title="Enable for this school (beyond plan)">
                         Enable
                       </button>
                       <button class="sa-feat-btn sa-feat-btn-off"
-                              *ngIf="f.overrideState !== 'DISABLED' && (f.planGranted || f.overrideState === 'ENABLED')"
-                              [disabled]="savingFeatureFor === school.id + ':' + f.featureKey"
+                              *ngIf="actions.disable"
+                              [disabled]="isSavingFeature(school.id, f.featureKey)"
                               (click)="setSchoolFeatureOverride(school.id, f.featureKey, 'DISABLED')"
                               title="Disable for this school">
                         Disable
                       </button>
                       <button class="sa-feat-btn sa-feat-btn-reset"
-                              *ngIf="f.overrideState !== 'DEFAULT'"
-                              [disabled]="savingFeatureFor === school.id + ':' + f.featureKey"
+                              *ngIf="actions.reset"
+                              [disabled]="isSavingFeature(school.id, f.featureKey)"
                               (click)="setSchoolFeatureOverride(school.id, f.featureKey, 'DEFAULT')"
                               title="Remove override (revert to plan default)">
                         Reset

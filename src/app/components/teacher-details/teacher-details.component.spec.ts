@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { TeacherDetailsComponent } from './teacher-details.component';
 import { TeacherService } from '../../services/teacher.service';
 import { ToastService } from '../../services/toast.service';
+import { baselineTestProviders } from '../../../testing/baseline-test-providers';
 
 describe('TeacherDetailsComponent', () => {
   let component: TeacherDetailsComponent;
@@ -11,6 +12,7 @@ describe('TeacherDetailsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
+      providers: [...baselineTestProviders()],
       imports: [TeacherDetailsComponent]
     })
     .compileComponents();
@@ -44,6 +46,7 @@ describe('TeacherDetailsComponent — photo upload (direct-to-object-storage)', 
     await TestBed.configureTestingModule({
       imports: [TeacherDetailsComponent],
       providers: [
+        ...baselineTestProviders(),
         { provide: TeacherService, useValue: teacherService },
         { provide: ToastService, useValue: toast },
       ],

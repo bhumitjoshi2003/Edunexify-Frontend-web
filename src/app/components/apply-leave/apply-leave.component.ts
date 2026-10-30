@@ -346,15 +346,25 @@ export class ApplyLeaveComponent implements OnInit, OnDestroy {
         this.toast.error('Student unavailable', 'You no longer have access to this student.');
         return;
       }
-      if (this.authStateService.getUserRole() === 'PARENT') {
+      // The confirmed subject is frozen: the date, reason and child named in the dialog are exactly
+      // what is submitted. Switching child while the dialog is open cancels rather than silently
+      // submitting for the newly selected child.
+      const isParent = this.authStateService.getUserRole() === 'PARENT';
+      const subject = { studentId: this.studentId, studentName: this.studentName };
+      if (isParent) {
         const confirmed = await this.toast.confirm({
-          title: `Submit leave for ${this.studentName}?`,
-          message: `This leave request for ${formattedLeaveDate} will be submitted for ${this.studentName} (${this.studentId}).`,
+          title: `Submit leave for ${subject.studentName}?`,
+          message: `This leave request for ${formattedLeaveDate} will be submitted for ${subject.studentName} (${subject.studentId}).`,
           confirmText: 'Submit leave', cancelText: 'Cancel', danger: false, icon: 'info'
         });
         if (!confirmed) return;
+        if (this.studentId !== subject.studentId || this.childUnavailable) {
+          this.toast.warning('Leave not submitted',
+            `You switched away from ${subject.studentName} before confirming. Please review the form and submit again.`);
+          return;
+        }
       }
-      const parentStudentId = this.authStateService.getUserRole() === 'PARENT' ? this.studentId : undefined;
+      const parentStudentId = isParent ? subject.studentId : undefined;
       this.leaveService.applyLeave(leaveRequest, parentStudentId).pipe(takeUntil(this.destroy$)).subscribe({
         next: (response) => {
           this.leaveForm.reset();

@@ -2397,6 +2397,12 @@
   transform: scale(0.98);
 }
 
+.sl-signin-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* ── Footer: change school + need help ── */
 .sl-form-footer {
   display: flex;
@@ -2681,3 +2687,6 @@
     font-size: 1.35rem;
   }
 }
+
+/* Forgot password: where to go without an email on file. */
+.lp-fp-hint { margin: 12px 0 0; font-size: 0.8rem; line-height: 1.5; color: #64748b; text-align: center; }

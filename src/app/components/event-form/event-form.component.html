@@ -154,7 +154,7 @@
     <!-- ── Actions ────────────────────────────────────────────────── -->
     <div class="ef-actions">
       <button type="button" class="ef-btn-cancel" (click)="onCancel()">Cancel</button>
-      <button type="submit" class="ef-btn-save" [disabled]="!eventForm.valid">
+      <button type="submit" class="ef-btn-save" [disabled]="!eventForm.valid || submitting">
         {{ isEditMode ? 'Update Event' : 'Create Event' }}
       </button>
     </div>

@@ -62,7 +62,7 @@ describe('authGuard', () => {
 
     run('/dashboard/timetable');
 
-    expect(localStorage.getItem('redirectUrl')).toBe('/dashboard/timetable');
+    expect(JSON.parse(localStorage.getItem('redirectUrl')!).url).toBe('/dashboard/timetable');
     localStorage.removeItem('redirectUrl');
   });
 });
@@ -153,7 +153,7 @@ describe('authGuard — tri-state integration with the real AuthStateService', (
     expect(authState.getStatus()).toBe('SERVICE_UNAVAILABLE');
     expect(result).toBeFalse();
     expect(router.navigate).toHaveBeenCalledWith(['/home']);
-    expect(localStorage.getItem('redirectUrl')).toBe('/dashboard/timetable');
+    expect(JSON.parse(localStorage.getItem('redirectUrl')!).url).toBe('/dashboard/timetable');
 
     // Draining the guard's own timer (now moot, since the race already settled the other way)
     // must not change anything further.
@@ -166,7 +166,7 @@ describe('authGuard — tri-state integration with the real AuthStateService', (
    *  attempt's intended route is still there to be picked up (by HomeComponent's own bounce,
    *  or a retried navigation) with no credentials re-entered. */
   it('recovers after the network returns, with no credentials required, and the saved route is still usable', async () => {
-    localStorage.setItem('redirectUrl', '/dashboard/timetable');
+    localStorage.setItem('redirectUrl', JSON.stringify({ url: '/dashboard/timetable', school: null }));
 
     const p = authState.loadCurrentUser();
     http.expectOne(`${environment.apiUrl}/auth/me`).flush(userInfo);
@@ -176,7 +176,7 @@ describe('authGuard — tri-state integration with the real AuthStateService', (
 
     const result = TestBed.runInInjectionContext(() => authGuard({} as any, { url: '/dashboard/timetable' } as any));
     expect(result).toBeTrue(); // now a plain synchronous allow — no re-check needed
-    expect(localStorage.getItem('redirectUrl')).toBe('/dashboard/timetable'); // guard doesn't touch it on allow
+    expect(JSON.parse(localStorage.getItem('redirectUrl')!).url).toBe('/dashboard/timetable'); // guard doesn't touch it on allow
     localStorage.removeItem('redirectUrl');
   });
 

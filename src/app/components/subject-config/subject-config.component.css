@@ -173,6 +173,7 @@
   font-size: 0.85rem;
 }
 .btn-add:hover { opacity: 0.85; }
+.btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-delete {
   background: none;

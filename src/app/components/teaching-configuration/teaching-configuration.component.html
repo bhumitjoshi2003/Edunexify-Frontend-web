@@ -133,7 +133,7 @@
           <span class="tc-field-label">Teacher</span>
           <select class="tc-select" [(ngModel)]="teacherId">
             <option value="">Select teacher</option>
-            <option *ngFor="let t of teachers" [value]="t.teacherId">{{ t.name }} ({{ t.teacherId }})</option>
+            <option *ngFor="let t of eligibleTeachers" [value]="t.teacherId">{{ t.name }} ({{ t.teacherId }})</option>
           </select>
         </label>
       </div>

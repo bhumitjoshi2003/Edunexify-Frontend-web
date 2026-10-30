@@ -15,6 +15,7 @@ import { ToastService } from '../../services/toast.service';
 import { StudentService } from '../../services/student.service';
 import { Student } from '../../interfaces/student';
 import { ParentChildContextService } from '../../services/parent-child-context.service';
+import { FeatureKey } from '../../auth/feature-keys';
 
 /**
  * Serves two very different audiences at the same route, exactly as before the
@@ -45,7 +46,7 @@ export class ParentPortalComponent implements OnInit, OnDestroy {
   private readonly directorySearchInput$ = new Subject<string>();
   private readonly directoryQuery$ = new Subject<void>();
   readonly isAdmin = this.authState.getUserRole() === 'ADMIN';
-  hasFeature(featureKey: string): boolean { return this.authState.hasFeature(featureKey); }
+  hasFeature(featureKey: FeatureKey): boolean { return this.authState.hasFeature(featureKey); }
   readonly pageSize = 20;
   loading = true;
   directoryBusy = false;

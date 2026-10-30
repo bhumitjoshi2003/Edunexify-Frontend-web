@@ -6,6 +6,7 @@ import { environment } from '../../environments/environment';
 import { classifyAuthFailure } from './auth-failure-classifier';
 import { ObservabilityService } from '../core/observability.service';
 import { STARTUP_HTTP_TIMEOUT_MS } from '../core/startup.constants';
+import { FeatureKey, isCoreFeature } from './feature-keys';
 
 /**
  * CHECKING: we do not yet know whether an existing session is valid — this is NOT logged out,
@@ -192,10 +193,11 @@ export class AuthStateService {
 
   /**
    * UX-only feature check — backend is always authoritative.
-   * Paid features are denied unless the effective entitlement explicitly grants them.
-   * Core features are included in the effective feature list by the backend.
+   * Core features are part of every plan and always true; plan features are denied unless the
+   * effective entitlement explicitly grants them.
    */
-  hasFeature(featureKey: string): boolean {
+  hasFeature(featureKey: FeatureKey): boolean {
+    if (isCoreFeature(featureKey)) return true;
     const keys = this.user?.featureKeys;
     return keys?.includes(featureKey) ?? false;
   }

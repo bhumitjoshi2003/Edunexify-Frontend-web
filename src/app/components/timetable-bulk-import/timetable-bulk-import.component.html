@@ -19,7 +19,7 @@
 
   <ng-container *ngIf="!result">
 
-    <p class="tbi-note">Columns: Class, Section (optional), Day, Period, Start Time, End Time (HH:mm), Subject, Teacher ID.</p>
+    <p class="tbi-note">Columns: Class, Section (required when the class has sections), Day, Period, Start Time, End Time (HH:mm), Subject, Teacher ID.</p>
 
     <div class="tbi-drop-zone" [class.tbi-drop-zone--ready]="selectedFile"
          (click)="onDropZoneClick()" (dragover)="onDragOver($event)" (drop)="onDrop($event)">
@@ -43,7 +43,7 @@
       <ul>
         <li>One row = one period slot for one class (or class + section).</li>
         <li>Any number of rows may share the exact same slot (same class/section/day/period) — including the same subject or the same teacher. The import never rejects a row for this; reviewing and correcting the schedule afterward is the admin's job.</li>
-        <li>Class, Section and Teacher ID must match existing records exactly.</li>
+        <li>Class and Section must be active and match existing records; Subject must be configured for the class; Teacher ID must be an active teacher.</li>
         <li>Nothing is created until you upload — review the results after import and fix failed rows in a re-upload if needed.</li>
       </ul>
     </details>

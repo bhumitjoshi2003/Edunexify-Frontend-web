@@ -345,6 +345,16 @@
 .pha-page-active { background: #14532d !important; font-weight: 800; }
 .pha-ellipsis { padding: 8px 4px; color: #94a3b8; font-weight: 600; }
 
+/* ── Desktop: the page fills the dashboard even with one or no payments ── */
+/* The class sidebar runs the full height, and the results card (or the empty state) takes the
+   remaining space, so a short list doesn't leave the layout ending halfway down the screen. */
+@media (min-width: 769px) {
+  .pha-container { min-height: calc(100vh - 150px); }
+  .pha-page { padding-bottom: 0; }
+  .pha-table-wrap { flex: 1 1 auto; display: flex; flex-direction: column; }
+  .pha-empty { flex: 1 1 auto; justify-content: center; }
+}
+
 /* ── Responsive — switch to cards on mobile ───────────────────── */
 @media (max-width: 640px) {
   .pha-table-wrap  { display: none; }

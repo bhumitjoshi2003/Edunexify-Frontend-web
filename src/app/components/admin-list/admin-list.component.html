@@ -20,7 +20,15 @@
 
   <!-- List area -->
   <div class="admin-list-area">
-    <div *ngIf="admins.length > 0; else noAdminsContainer">
+    <div class="no-admins" *ngIf="display === 'loading'" data-testid="list-loading">
+      <p>Loading administrators…</p>
+    </div>
+    <div class="no-admins" *ngIf="display === 'error'" data-testid="list-error">
+      <span class="no-icon">⚠️</span>
+      <p>Administrators couldn't be loaded. Please check your connection and try again.</p>
+      <button type="button" class="view-details-button" (click)="loadAdmins()">Retry</button>
+    </div>
+    <div *ngIf="display === 'list'">
       <ul class="admin-list">
         <li *ngFor="let admin of admins; trackBy: trackByAdminId"
             class="admin-item"
@@ -43,12 +51,10 @@
         </li>
       </ul>
     </div>
-    <ng-template #noAdminsContainer>
-      <div class="no-admins">
-        <span class="no-icon">🔍</span>
-        <p>No administrators found.</p>
-      </div>
-    </ng-template>
+    <div class="no-admins" *ngIf="display === 'empty'" data-testid="list-empty">
+      <span class="no-icon">🔍</span>
+      <p>No administrators found.</p>
+    </div>
   </div>
 
 </div>

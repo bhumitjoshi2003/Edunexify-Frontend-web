@@ -7,13 +7,14 @@ import { AuthStateService } from '../../auth/auth-state.service';
 import { StudentService } from '../../services/student.service';
 import { TeacherService } from '../../services/teacher.service';
 import { AdminService } from '../../services/admin.service';
-import { NotificationService } from '../../services/notification.service';
+import { NotificationStateService } from '../../services/notification-state.service';
 import { SchoolService } from '../../services/school.service';
 import { TenantService } from '../../services/tenant.service';
 import { ParentPortalService } from '../../services/parent-portal.service';
 import { ParentChildContextService } from '../../services/parent-child-context.service';
 import { LoggerService } from '../../services/logger.service';
 import { WhatsNewService } from '../../services/whats-new.service';
+import { baselineTestProviders } from '../../../testing/baseline-test-providers';
 
 /**
  * Regression guard: the Teacher Substitution nav entry was originally added inside the
@@ -41,12 +42,13 @@ describe('DashboardComponent — Teacher Substitution nav entry', () => {
     TestBed.configureTestingModule({
       imports: [DashboardComponent, RouterTestingModule],
       providers: [
+        ...baselineTestProviders(),
         { provide: AuthStateService, useValue: authState },
         { provide: AuthService, useValue: {} },
         { provide: StudentService, useValue: {} },
         { provide: TeacherService, useValue: {} },
         { provide: AdminService, useValue: {} },
-        { provide: NotificationService, useValue: { unreadCountState$: of({ status: 'success', count: 0 }), refreshUnreadCount: () => {} } },
+        { provide: NotificationStateService, useValue: { unreadState$: of({ status: 'success', count: 0 }), refreshUnread: () => {}, allRead: () => {} } },
         { provide: SchoolService, useValue: {} },
         { provide: TenantService, useValue: { school: null } },
         { provide: ParentPortalService, useValue: {} },

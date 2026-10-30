@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Edunexify** — the **web (browser) frontend** of a multi-tenant SaaS school management platform. Angular 19 SSR app served at `https://edunexify.co.in`. This repo is the website counterpart to `EduPay-Leave-android` (the mobile/Capacitor app). Both frontends share the same Spring Boot backend.
+**Edunexify** — the **web (browser) frontend** of a multi-tenant SaaS school management platform. Angular 19 single-page app (static build from `dist/ias/browser`) served at `https://edunexify.co.in` — SSR files exist but are dormant (see Dormant areas). This repo is the website counterpart to `EduPay-Leave-android` (the mobile/Capacitor app). Both frontends share the same Spring Boot backend.
 
 Backend: `/Applications/IAS/ias-management(backend)`
 Android app: `/Applications/IAS/EduPay-Leave-android`
@@ -16,10 +16,10 @@ Prod URL: `https://edunexify.co.in`
 
 ```bash
 npm start                                         # Dev server (ng serve)
-ng build                                          # Production build (SSR)
+ng build                                          # Production build (static browser bundle in dist/ias/browser)
 ng build --watch --configuration development      # Dev build with watch
 ng test                                           # Karma/Jasmine unit tests
-node dist/ias/server/server.mjs                   # Serve SSR production build
+npm run parity:check                              # Web/Android shared-file guard (also runs before npm test)
 ```
 
 ---
@@ -30,7 +30,7 @@ node dist/ias/server/server.mjs                   # Serve SSR production build
 
 ### Routing
 
-Single protected parent route `/dashboard` guarded by `authGuard`. All feature routes are lazy-loaded children. Public routes: `/home`, `/reset-password`. Route access restricted by `roleGuard` via `data: { roles: [...] }`.
+Single protected parent route `/dashboard` guarded by `authGuard`. All feature routes are lazy-loaded children (`loadComponent()`), same as Android. Public routes: `/home`, `/reset-password`. Route access restricted by `roleGuard` via `data: { roles: [...] }`.
 
 **Role-to-route map:**
 - `STUDENT` — fees, payment-history, apply-leave, student-attendance, student-dashboard, my-results, report-card, timetable, notice, event-calendar, student-details (own), fee-structure (view)
@@ -41,12 +41,14 @@ Single protected parent route `/dashboard` guarded by `authGuard`. All feature r
 
 ### Authentication
 
-Custom JWT auth. Tokens stored in `localStorage` (`accessToken`, `refreshToken`).
+Custom JWT auth carried in **HTTP-only cookies** (`withCredentials: true`). No tokens in `localStorage`, no `Authorization: Bearer` header; the refresh token cookie also identifies the session for Active Sessions.
 
-- `auth.service.ts` — login, logout, refresh, password reset; decodes JWT via `jwtDecode()` to extract `role` and `userId`
-- `auth.guard.ts` — validates JWT `exp` on every `/dashboard` navigation; clears storage and redirects to `/home` on invalid token
-- `auth.interceptor.ts` — injects `Bearer` header; retries once after 401 via refresh; excludes `/login`, `/refresh-token`, `/request-password-reset`, `/reset-password`
-- `auth-state.service.ts` — holds in-memory `UserInfo { userId, role, name, className }`
+- `auth.service.ts` — login, logout, logout-all, refresh, password reset/change
+- `auth-state.service.ts` — in-memory `UserInfo` loaded from `/auth/me`; status state machine (`CHECKING` / `AUTHENTICATED` / `UNAUTHENTICATED` / `SERVICE_UNAVAILABLE` / `OFFLINE`). Only an authoritative rejection signs out; transient failures never do.
+- `auth.guard.ts` / `role.guard.ts` / `feature.guard.ts` — gate routes on that state, role and plan feature
+- `auth.interceptor.ts` — on 401 refreshes once (shared in-flight refresh); a rejected refresh clears the session and goes to `/home`, saving the page via `redirect-url.util.ts`
+- `core/app-resume.service.ts` — re-verifies the session on resume/reconnect (coalesced), shared with Android
+- Passwords: one rule everywhere — 8+ chars, upper, lower, digit (`utils/password-policy.util.ts`, backend `PasswordPolicy`); never trimmed
 
 **Roles:** `STUDENT`, `TEACHER`, `ADMIN`, `SUB_ADMIN`, `SUPER_ADMIN`
 
@@ -128,7 +130,9 @@ Reactive forms (`ReactiveFormsModule`, `FormBuilder`) for complex forms. Templat
 - `student-details.component.ts`, `teacher-details.component.ts`, `admin-details.component.ts`
 
 ### Notifications & Communication
-- `notice.component.ts`, `view-notification.component.ts`
+- `notification-center.component.ts` — personal inbox (`/dashboard/notifications`, bell); unread count in `notification-state.service.ts`
+- `notice.component.ts` — school Notice Board
+- `active-sessions.component.ts` — account security (`/dashboard/active-sessions`)
 - `event-calendar.component.ts` / `event-form.component.ts`
 
 ### School Configuration
@@ -148,9 +152,23 @@ Reactive forms (`ReactiveFormsModule`, `FormBuilder`) for complex forms. Templat
 |---|---|---|
 | API URL (dev) | `http://localhost:8080/api` | `https://edunexify.co.in/api` |
 | API URL (prod) | `/api` (same-origin) | `https://edunexify.co.in/api` |
-| Routing | Eager imports in `app.routes.ts` | Lazy `loadComponent()` in `app.routes.ts` |
+| Routing | Lazy `loadComponent()` | Lazy `loadComponent()` |
 | Change detection | Mix of Default and OnPush | OnPush everywhere |
 | Capacitor / native | No | Yes — Capacitor wraps it as Android APK |
 | Push notifications | No | Yes — `PushNotifications` Capacitor plugin |
-| SelectMonthDialog | No | Yes — `ToastService.selectMonth()` |
-| Skeleton loaders | Partial | Yes — `sk-shimmer` class used throughout |
+| School/tenant | Subdomain | Stored school picker |
+| Super-admin payment gateways, pricing, delivery log, subscription health, full Razorpay setup | Yes | No — intentional web-only exception (F39); Android shows status + Manage on Web |
+
+Business logic is otherwise meant to match. Files that must stay byte-identical are listed in `parity/shared-files.json` and checked by `npm run parity:check` (runs before `npm test`); see `parity/README.md`. Product decisions are recorded in `EduPay-Leave-android/docs/web-android-parity-product-decisions.md`.
+
+---
+
+## Dormant areas — do not port or revive during parity work
+
+These exist in the source but are not routed, built or used. Leave them alone unless a product decision revives them.
+
+- **Invoice Management (old invoice-based fee system)** — `components/invoice-management`, `components/invoice-detail`, `components/student-fee-overview`, `services/invoice.service.ts`. Not routed. Current fees use `StudentFees` + checkout quotes.
+- **Legacy payment / credit-note paths** — `components/payment-record`, `services/fee-payment.service.ts`, `interfaces/fee-payment.ts`. Not routed. Payments go through `payment.component.ts` (Razorpay) and admin manual payments in `fees.component.ts`.
+- **Unused pricing view** — `components/pricing`. Not routed. (Super-admin `payment-pricing` *is* active and web-only.)
+- **Old notification components** — `components/notification`, `components/view-notification`. Not routed; replaced by `notification-center`.
+- **SSR** — `src/server.ts`, `src/main.server.ts`, `app.config.server.ts`, `app.routes.server.ts` and the `serve:ssr:ias` npm script. `angular.json` has no server/SSR target, `ng build` produces only `dist/ias/browser`, and deploy ships that static folder. Do not rely on SSR or `node dist/ias/server/server.mjs`.

@@ -7,15 +7,20 @@ import { UserSession } from '../../interfaces/user-session';
 import { ToastService } from '../../services/toast.service';
 import { LoggerService } from '../../services/logger.service';
 import { deviceLabel, deviceIcon } from '../../utils/device-label.util';
+import { partitionSessions, withoutSession } from '../../utils/session-security.util';
+import { SignOutService } from '../../services/sign-out.service';
 
 /** Lets a signed-in user see and manage their own active sessions — one login
  * instance each, never a physical device (two browsers on the same laptop are
  * two independent sessions). Every action here is scoped to the caller's own
  * account server-side; nothing here can see or touch another user's sessions.
- * Deliberately does NOT offer a page-level "log out everywhere" — that would
- * duplicate the sidebar/profile-menu Sign Out (for the current session) and
- * "Log out all other sessions" (for every other session) already cover the
- * complete set of intents this page needs to support. */
+ * Shared by the web and Android clients — keep the TypeScript identical (layout per platform).
+ *
+ *  - Log out one other session / all other sessions: this device stays signed in.
+ *  - Log out everywhere: every session including this one; local sign-out follows (SignOutService).
+ *  - This device alone: the normal Sign Out in the menu.
+ * An expired or revoked session surfaces as a 401 that the auth interceptor turns into a sign-out;
+ * this page only reports that it couldn't load. */
 @Component({
   selector: 'app-active-sessions',
   standalone: true,
@@ -32,12 +37,14 @@ export class ActiveSessionsComponent implements OnInit, OnDestroy {
   loadError = false;
   revokingId: number | null = null;
   revokingOthers = false;
+  signingOutEverywhere = false;
 
   constructor(
     private sessionService: SessionService,
     private toast: ToastService,
     private logger: LoggerService,
     private cdr: ChangeDetectorRef,
+    private signOut: SignOutService,
   ) {}
 
   ngOnInit(): void {
@@ -73,11 +80,20 @@ export class ActiveSessionsComponent implements OnInit, OnDestroy {
   }
 
   get current(): UserSession | undefined {
-    return this.sessions.find(s => s.current);
+    return partitionSessions(this.sessions).current;
   }
 
   get otherSessions(): UserSession[] {
-    return this.sessions.filter(s => !s.current);
+    return partitionSessions(this.sessions).others;
+  }
+
+  /** False when the server couldn't identify this device: "others" would then include it. */
+  get canRevokeOthers(): boolean {
+    return partitionSessions(this.sessions).canRevokeOthers;
+  }
+
+  get currentKnown(): boolean {
+    return partitionSessions(this.sessions).currentKnown;
   }
 
   label(session: UserSession): string {
@@ -102,7 +118,7 @@ export class ActiveSessionsComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
     this.sessionService.revoke(session.id).pipe(takeUntil(this.destroy$)).subscribe({
       next: () => {
-        this.sessions = this.sessions.filter(s => s.id !== session.id);
+        this.sessions = withoutSession(this.sessions, session.id);
         this.revokingId = null;
         this.toast.success('Signed out', 'That session has been logged out.');
         this.cdr.markForCheck();
@@ -117,6 +133,7 @@ export class ActiveSessionsComponent implements OnInit, OnDestroy {
   }
 
   async revokeOthers(): Promise<void> {
+    if (!this.canRevokeOthers) return;
     const confirmed = await this.toast.confirm({
       title: 'Log out all other sessions?',
       message: 'Every other place you\'re signed in will be logged out. This session stays signed in.',
@@ -141,5 +158,29 @@ export class ActiveSessionsComponent implements OnInit, OnDestroy {
         this.toast.error('Error', 'Could not log out other sessions. Please try again.');
       },
     });
+  }
+
+  async logOutEverywhere(): Promise<void> {
+    if (this.signingOutEverywhere) return;
+    const confirmed = await this.toast.confirm({
+      title: 'Log out everywhere?',
+      message: 'Every place you\'re signed in will be logged out, including this one. You\'ll need to sign in again.',
+      confirmText: 'Log out everywhere',
+      cancelText: 'Cancel',
+      danger: true,
+    });
+    if (!confirmed) return;
+
+    this.signingOutEverywhere = true;
+    this.cdr.markForCheck();
+    try {
+      await this.signOut.signOutEverywhere();
+    } catch (err) {
+      this.logger.error('Error logging out everywhere:', err);
+      this.toast.error('Error', 'Could not log out everywhere. You are still signed in — please try again.');
+    } finally {
+      this.signingOutEverywhere = false;
+      this.cdr.markForCheck();
+    }
   }
 }

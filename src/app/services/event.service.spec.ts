@@ -1,3 +1,5 @@
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { EventService } from './event.service';
@@ -99,5 +101,21 @@ describe('EventService', () => {
     it('the legacy uploadEventImage method no longer exists on the service', () => {
       expect((service as any).uploadEventImage).toBeUndefined();
     });
+  });
+});
+
+describe('Event write contract', () => {
+  let api: EventService; let http: HttpTestingController;
+  const event = { id: 99, schoolId: 2, createdBy: 'forged', title: 'Day', description: 'Info', startDate: '2026-10-18', category: 'School', targetAudience: ['ALL'] };
+  beforeEach(() => { TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] }); api = TestBed.inject(EventService); http = TestBed.inject(HttpTestingController); });
+  afterEach(() => http.verify());
+  it('create sends retry ID and editable fields only', () => {
+    api.createEvent(event, 'retry-id').subscribe(); const req = http.expectOne(environment.apiUrl + '/events');
+    expect(req.request.body.id).toBeUndefined(); expect(req.request.body.schoolId).toBeUndefined(); expect(req.request.body.createdBy).toBeUndefined();
+    expect(req.request.body.requestId).toBe('retry-id'); expect(req.request.body.endDate).toBeNull(); req.flush({});
+  });
+  it('update uses path identity and does not round-trip metadata', () => {
+    api.updateEvent(10, event).subscribe(); const req = http.expectOne(environment.apiUrl + '/events/10');
+    expect(req.request.body.id).toBeUndefined(); expect(req.request.body.schoolId).toBeUndefined(); expect(req.request.body.requestId).toBeUndefined();req.flush({});
   });
 });

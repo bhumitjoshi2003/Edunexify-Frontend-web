@@ -12,6 +12,7 @@ import { AcademicSession } from '../../interfaces/academic-session';
 import { SchoolService, SchoolClass } from '../../services/school.service';
 import { LoggerService } from '../../services/logger.service';
 import { ToastService } from '../../services/toast.service';
+import { feeMonthLabel } from '../../utils/fee-session.util';
 
 @Component({
   selector: 'app-fee-generation-target',
@@ -48,6 +49,8 @@ export class FeeGenerationTargetComponent implements OnInit, OnDestroy {
 
   // ── Generate / results ────────────────────────────────────────────────
   executing = false;
+  /** True while the confirmation dialog is open — a second click never opens a second one. */
+  private confirming = false;
   results: FeeGenerationStudentResult[] | null = null;
 
   // ── E5C read-only drift review ──
@@ -222,7 +225,7 @@ export class FeeGenerationTargetComponent implements OnInit, OnDestroy {
           this.previewedTargetSessionId = target;
           this.previewedClassFilter = classFilter;
           this.previewedStudentIdFilter = studentIdFilter;
-          this.seedSelection(rows);
+          this.selected.clear();
           this.previewLoading = false;
           this.cdr.markForCheck();
         },
@@ -235,21 +238,29 @@ export class FeeGenerationTargetComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Pre-selects every eligible row not already fully generated — a convenience default the
-   *  admin can still deselect. A row with a blocking error is never auto-selected. */
-  private seedSelection(rows: FeeGenerationStudentPreviewRow[]): void {
-    this.selected.clear();
-    for (const r of rows) {
-      if (r.eligible && r.alreadyGeneratedMonths.length < 12) this.selected.add(r.studentId);
-    }
-  }
-
   // ── Selection handling ─────────────────────────────────────────────────
+  // Nothing is pre-selected: loading a preview must never leave the school one click away from
+  // generating a whole session. Only a row with months to generate can be selected.
 
   isSelected(studentId: string): boolean { return this.selected.has(studentId); }
 
+  canSelect(row: FeeGenerationStudentPreviewRow): boolean {
+    return row.eligible && row.generatableMonths.length > 0;
+  }
+
+  /** Explicit admin action: every row that has months to generate. */
+  selectAllGeneratable(): void {
+    for (const r of this.preview) if (this.canSelect(r)) this.selected.add(r.studentId);
+    this.cdr.markForCheck();
+  }
+
+  clearSelection(): void {
+    this.selected.clear();
+    this.cdr.markForCheck();
+  }
+
   toggleSelected(row: FeeGenerationStudentPreviewRow): void {
-    if (!row.eligible) return;
+    if (!this.canSelect(row)) return;
     if (this.selected.has(row.studentId)) this.selected.delete(row.studentId);
     else this.selected.add(row.studentId);
     this.cdr.markForCheck();
@@ -261,7 +272,36 @@ export class FeeGenerationTargetComponent implements OnInit, OnDestroy {
 
   get eligibleCount(): number { return this.preview.filter(r => r.eligible).length; }
   get blockedCount(): number { return this.preview.filter(r => !r.eligible).length; }
-  get fullyGeneratedCount(): number { return this.preview.filter(r => r.alreadyGeneratedMonths.length >= 12).length; }
+  get generatableCount(): number { return this.preview.filter(r => this.canSelect(r)).length; }
+  get nothingToGenerateCount(): number { return this.preview.filter(r => r.eligible && r.generatableMonths.length === 0).length; }
+  get selectedMonthCount(): number { return this.selectedRows.reduce((sum, r) => sum + r.generatableMonths.length, 0); }
+
+  monthLabel(month: number): string {
+    const start = this.sessions.find(s => s.id === this.previewedTargetSessionId)?.startDate;
+    return feeMonthLabel(start, month);
+  }
+
+  /** "December 2026 – March 2027 (4 months)" for a contiguous scope; otherwise every month is listed. */
+  generatableScope(row: FeeGenerationStudentPreviewRow): string {
+    const months = row.generatableMonths;
+    if (!months.length) return 'nothing to generate';
+    if (months.length === 1) return this.monthLabel(months[0]);
+    const contiguous = months.every((m, i) => i === 0 || m === months[i - 1] + 1);
+    return contiguous
+      ? `${this.monthLabel(months[0])} – ${this.monthLabel(months[months.length - 1])} (${months.length} months)`
+      : `${months.map(m => this.monthLabel(m)).join(', ')} (${months.length} months)`;
+  }
+
+  /** Skipped (not generated, not chargeable) months grouped by their reason. */
+  skippedReasons(row: FeeGenerationStudentPreviewRow): { reason: string; months: string }[] {
+    const byReason = new Map<string, number[]>();
+    for (const m of row.months) {
+      if (m.alreadyGenerated || m.willGenerate) continue;
+      const reason = m.message || 'Not chargeable';
+      byReason.set(reason, [...(byReason.get(reason) ?? []), m.month]);
+    }
+    return [...byReason.entries()].map(([reason, months]) => ({ reason, months: months.map(m => `M${m}`).join(', ') }));
+  }
 
   get canGenerate(): boolean {
     return this.preview.length > 0 && !this.previewIsStale && !this.executing && this.selectedRows.length > 0;
@@ -270,30 +310,44 @@ export class FeeGenerationTargetComponent implements OnInit, OnDestroy {
   // ── Confirmation + generate ────────────────────────────────────────────
 
   async confirmAndGenerate(): Promise<void> {
-    if (!this.canGenerate) return;
+    if (!this.canGenerate || this.confirming) return;
     const count = this.selectedRows.length;
     const targetLabel = this.previewedTargetLabel;
     const totalDue = this.selectedRows.reduce((sum, r) => sum + (r.totalDue || 0), 0);
+    const scope = this.selectedRows
+      .map(r => `<li>${this.escape(r.studentName || r.studentId)}: ${this.generatableScope(r)}</li>`).join('');
 
-    const confirmed = await this.toast.confirm({
-      title: 'Confirm Fee Generation',
-      html: `
-        <p style="margin-bottom:12px;color:#374151;">
-          This generates fees for <strong>${count}</strong> student(s) in <strong>${targetLabel}</strong>,
-          totalling approximately <strong>₹${totalDue.toFixed(2)}</strong> across all selected students' missing months.
-        </p>
-        <p style="margin-top:14px;font-size:0.85rem;color:#334155;">
-          Already-generated months are skipped automatically and never changed — only missing
-          months are created. If a student's target class or enrollment has changed since this
-          preview was loaded, that student is skipped with a conflict instead of being generated
-          against stale data.
-        </p>
-      `,
-      icon: 'warning',
-      confirmText: 'Yes, Generate Fees',
-      cancelText: 'Cancel',
-    });
+    this.confirming = true;
+    let confirmed = false;
+    try {
+      confirmed = await this.toast.confirm({
+        title: 'Confirm Fee Generation',
+        html: `
+          <p style="margin-bottom:12px;color:#374151;">
+            This creates <strong>${this.selectedMonthCount}</strong> month(s) of fees for <strong>${count}</strong> student(s)
+            in <strong>${targetLabel}</strong>, totalling approximately <strong>₹${totalDue.toFixed(2)}</strong>.
+          </p>
+          <ul style="margin:0 0 12px 18px;color:#374151;">${scope}</ul>
+          <p style="margin-top:14px;font-size:0.85rem;color:#334155;">
+            Already-generated months are skipped automatically and never changed, and months before a
+            student's joining, fee-assignment or fee-rule start date are never charged — only the
+            months listed above are created. If a student's target class or enrollment has changed since this
+            preview was loaded, that student is skipped with a conflict instead of being generated
+            against stale data.
+          </p>
+        `,
+        icon: 'warning',
+        confirmText: 'Yes, Generate Fees',
+        cancelText: 'Cancel',
+      });
+    } finally {
+      this.confirming = false;
+    }
     if (confirmed) this.doGenerate();
+  }
+
+  private escape(value: string): string {
+    return value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
   }
 
   private doGenerate(): void {
@@ -336,7 +390,13 @@ export class FeeGenerationTargetComponent implements OnInit, OnDestroy {
   }
 
   isInfoOutcome(outcome: string): boolean {
-    return outcome === 'ALREADY_GENERATED';
+    return outcome === 'ALREADY_GENERATED' || outcome === 'NOT_ELIGIBLE';
+  }
+
+  /** Months created / skipped across the whole last run. */
+  get resultTotals(): { created: number; skipped: number } {
+    return (this.results ?? []).reduce((t, r) => ({ created: t.created + r.generatedMonths, skipped: t.skipped + r.skippedMonths }),
+      { created: 0, skipped: 0 });
   }
 
   summaryEntries(): { code: string; count: number }[] {

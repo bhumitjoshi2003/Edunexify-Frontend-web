@@ -3,6 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { of } from 'rxjs';
 import { NoticeComponent } from './notice.component';
 import { NotificationService } from '../../services/notification.service';
+import { NotificationStateService } from '../../services/notification-state.service';
 import { AuthStateService } from '../../auth/auth-state.service';
 import { LoggerService } from '../../services/logger.service';
 import { ToastService } from '../../services/toast.service';
@@ -42,6 +43,7 @@ describe('NoticeComponent — read more for long messages', () => {
       imports: [NoticeComponent],
       providers: [
         { provide: NotificationService, useValue: notificationService },
+        { provide: NotificationStateService, useValue: jasmine.createSpyObj('NotificationStateService', ['allRead']) },
         { provide: AuthStateService, useValue: { getUser: () => ({ role: 'STUDENT' }), hasFeature: () => false } },
         { provide: LoggerService, useValue: jasmine.createSpyObj('LoggerService', ['error', 'warn', 'info']) },
         { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['success', 'error', 'warning', 'confirm']) },

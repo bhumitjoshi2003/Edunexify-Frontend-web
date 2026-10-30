@@ -213,6 +213,39 @@ describe('StudentPromotionComponent', () => {
     expect(component.getDecision('S2')).toBe('NONE');
   });
 
+  // LC-3: the final configured class recommends Pass Out, but graduation is never pre-selected.
+  it('never preselects Pass Out for the final class: no action, and nothing can be executed', () => {
+    fixture.detectChanges();
+    const finalClass = candidate({
+      studentId: 'S4', availableDecisions: ['DETAIN', 'PASS_OUT'], recommendedDecision: 'PASS_OUT',
+      promoteTargetClassId: null, promoteTargetClassName: null, promoteTargetSectionRequired: false,
+    });
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([finalClass])));
+    component.loadPreview();
+
+    expect(component.getDecision('S4')).toBe('NONE');
+    expect(component.passOutCount).toBe(0);
+    expect(component.canExecute).toBeFalse();
+  });
+
+  it('Pass Out counts only after an explicit choice, and the confirmation shows it', async () => {
+    fixture.detectChanges();
+    const finalClass = candidate({
+      studentId: 'S4', availableDecisions: ['DETAIN', 'PASS_OUT'], recommendedDecision: 'PASS_OUT',
+      promoteTargetClassId: null, promoteTargetClassName: null, promoteTargetSectionRequired: false,
+    });
+    studentServiceSpy.getPromotionPreview.and.returnValue(of(preview([finalClass])));
+    component.loadPreview();
+    component.setDecision(finalClass, 'PASS_OUT');
+    toastSpy.confirm.and.returnValue(Promise.resolve(false));
+
+    expect(component.passOutCount).toBe(1);
+    expect(component.canExecute).toBeTrue();
+    await component.confirmAndExecute();
+    expect(toastSpy.confirm.calls.mostRecent().args[0].html).toContain('1 Pass Out');
+    expect(studentServiceSpy.executePromotion).not.toHaveBeenCalled();
+  });
+
   it('supports explicitly choosing PROMOTE, DETAIN, or PASS_OUT', () => {
     fixture.detectChanges();
     const finalClass = candidate({

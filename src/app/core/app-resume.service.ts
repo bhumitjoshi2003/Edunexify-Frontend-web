@@ -16,6 +16,9 @@ const PROTECTED_PREFIXES = ['/dashboard', '/change-initial-password'];
  * - becomes visible after at least RESUME_REVALIDATE_AFTER_MS hidden, is restored from the
  *   back/forward cache (`pageshow` persisted), or the browser comes back online →
  *   re-verifies the session once (concurrent triggers share one check);
+ * - native apps report their own lifecycle through {@link backgrounded}/{@link foregrounded}
+ *   (Android: Capacitor app-state events). They share the hidden-time bookkeeping with the
+ *   browser visibility events, so a WebView that fires both counts as one resume;
  * - still signed in (the interceptor silently refreshes an expired access token) → emits
  *   {@link resumed$} so the app shell reloads its own data. Open pages are deliberately not
  *   rebuilt: that would throw away anything typed into a form before the tab was hidden;
@@ -23,6 +26,7 @@ const PROTECTED_PREFIXES = ['/dashboard', '/change-initial-password'];
  * - network/server unavailable → the current page stays as it is (transient failures never
  *   log out) and the next resume or reconnect tries again.
  */
+/* Shared by the web and Android clients — keep the two copies identical. */
 @Injectable({ providedIn: 'root' })
 export class AppResumeService implements OnDestroy {
   private readonly resumed = new Subject<void>();
@@ -67,11 +71,20 @@ export class AppResumeService implements OnDestroy {
   }
 
   private onVisibilityChange(): void {
-    if (document.visibilityState === 'hidden') {
-      this.hiddenAt = this.now();
-      return;
-    }
-    const hiddenFor = this.hiddenAt === null ? 0 : this.now() - this.hiddenAt;
+    if (document.visibilityState === 'hidden') this.backgrounded();
+    else this.foregrounded();
+  }
+
+  /** The app/tab went to the background (browser visibility or a native app-state event). */
+  backgrounded(): void {
+    if (this.hiddenAt === null) this.hiddenAt = this.now();
+  }
+
+  /** The app/tab is back. Re-checks the session after a long enough absence; a second report of
+   *  the same return (e.g. native event + visibility event) finds nothing pending and is ignored. */
+  foregrounded(): void {
+    if (this.hiddenAt === null) return;
+    const hiddenFor = this.now() - this.hiddenAt;
     this.hiddenAt = null;
     if (hiddenFor >= RESUME_REVALIDATE_AFTER_MS) this.run(() => this.revalidate());
   }

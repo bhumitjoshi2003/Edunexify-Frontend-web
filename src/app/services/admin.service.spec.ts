@@ -93,4 +93,15 @@ describe('AdminService — uploadAdminPhotoDirect', () => {
   it('the legacy multipart upload method no longer exists on the service (Phase 3 cleanup)', () => {
     expect((service as any).uploadAdminPhoto).toBeUndefined();
   });
+
+  it('create whitelists normalized fields and explicit school assignment', () => {
+    service.createAdmin({ adminId: ' A1 ', name: ' Admin ', email: ' A@EXAMPLE.COM ', phoneNumber: '9876543210', dob: '1990-01-01', gender: 'Male', schoolId: 1, photoUrl: 'forged', createdAt: 'forged' }).subscribe();
+    const req = http.expectOne(environment.apiUrl + '/admins'); expect(req.request.body.adminId).toBe('A1'); expect(req.request.body.email).toBe('a@example.com');
+    expect(req.request.body.schoolId).toBe(1); expect(req.request.body.photoUrl).toBeUndefined(); expect(req.request.body.createdAt).toBeUndefined(); req.flush({});
+  });
+  it('update uses path identity and strips tenant, identity and response metadata', () => {
+    service.updateAdmin('A1', { adminId: 'A2', name: ' Admin ', email: ' NEW@EXAMPLE.COM ', phoneNumber: '9876543210', dob: '1990-01-01', gender: 'Male', schoolId: 2, photoUrl: 'signed' }).subscribe();
+    const req = http.expectOne(environment.apiUrl + '/admins/A1'); expect(req.request.body.email).toBe('new@example.com');
+    for (const field of ['adminId','schoolId','photoUrl','createdAt','updatedAt']) expect(req.request.body[field]).toBeUndefined(); req.flush({});
+  });
 });

@@ -39,7 +39,7 @@ describe('Teacher attendance reminder settings', () => {
     logger = { error: jasmine.createSpy() };
     c = new SchoolSettingsComponent(
       schoolService, {} as any, {} as any, { markForCheck: () => {} } as any, logger, toast,
-      { snapshot: { queryParamMap: { get: () => null } } } as any, {} as any, {} as any
+      { snapshot: { queryParamMap: { get: () => null } } } as any, {} as any, {} as any, {} as any, { run: (fn: any) => fn() } as any
     );
   });
 
@@ -93,6 +93,56 @@ describe('Teacher attendance reminder settings', () => {
     c.saveStaffAttendanceSettings();
 
     expect(schoolService.updateSettings).toHaveBeenCalled();
+  });
+
+  it('B3-4: rejects out-of-range or reversed GPS check-in values without a request', () => {
+    const cases: [string, Partial<typeof c.staffAttendanceForm>, RegExp][] = [
+      ['latitude > 90', { schoolLatitude: 90.5 }, /Latitude/],
+      ['latitude NaN', { schoolLatitude: NaN }, /Latitude/],
+      ['longitude < -180', { schoolLongitude: -500 }, /Longitude/],
+      ['longitude Infinity', { schoolLongitude: Infinity }, /Longitude/],
+      ['negative radius', { geofenceRadius: -10 }, /radius/],
+      ['radius below 50', { geofenceRadius: 49 }, /radius/],
+      ['radius above 5000', { geofenceRadius: 5001 }, /radius/],
+      ['late threshold negative', { lateThresholdMinutes: -1 }, /Late threshold/],
+      ['late threshold > 60', { lateThresholdMinutes: 999 }, /Late threshold/],
+      ['reversed window', { checkinWindowStart: '10:00', checkinWindowEnd: '07:00' }, /start must be before/],
+      ['equal window', { checkinWindowStart: '08:00', checkinWindowEnd: '08:00' }, /start must be before/],
+    ];
+    for (const [, change, message] of cases) {
+      toast.warning.calls.reset();
+      c.settings = baseSettings();
+      c.startStaffAttendanceEdit();
+      Object.assign(c.staffAttendanceForm, change);
+      c.saveStaffAttendanceSettings();
+      expect(toast.warning).toHaveBeenCalledWith('Validation', jasmine.stringMatching(message));
+    }
+    expect(schoolService.updateSettings).not.toHaveBeenCalled();
+  });
+
+  it('B3-4: accepts the boundaries and the E2E configuration', () => {
+    for (const change of [
+      { schoolLatitude: 90, schoolLongitude: 180, geofenceRadius: 50, lateThresholdMinutes: 0 },
+      { schoolLatitude: -90, schoolLongitude: -180, geofenceRadius: 5000, lateThresholdMinutes: 60 },
+      { schoolLatitude: 29.2183, schoolLongitude: 79.513, geofenceRadius: 200, lateThresholdMinutes: 10,
+        schoolStartTime: '08:00', checkinWindowStart: '07:30', checkinWindowEnd: '09:00' },
+    ]) {
+      c.settings = baseSettings();
+      c.startStaffAttendanceEdit();
+      Object.assign(c.staffAttendanceForm, change);
+      c.saveStaffAttendanceSettings();
+    }
+    expect(toast.warning).not.toHaveBeenCalled();
+    expect(schoolService.updateSettings).toHaveBeenCalledTimes(3);
+  });
+
+  it('B3-4: "configured and ready" only for a usable saved configuration', () => {
+    c.settings = baseSettings();
+    expect(c.isStaffAttendanceConfigured).toBeTrue();
+    c.settings = { ...baseSettings(), schoolLatitude: 999, schoolLongitude: -500, geofenceRadius: -10 };
+    expect(c.isStaffAttendanceConfigured).toBeFalse();
+    c.settings = { ...baseSettings(), checkinWindowStart: '10:00', checkinWindowEnd: '07:00' };
+    expect(c.isStaffAttendanceConfigured).toBeFalse();
   });
 
   it('disabling without touching the time field resends the previously configured time unchanged', () => {
@@ -310,7 +360,7 @@ describe('School Settings — Payments tab', () => {
       imports: [SchoolSettingsComponent],
       providers: [
         { provide: SchoolService, useValue: { getSettings: () => of({ id: 1, name: 'S', razorpayConfigured: false } as any), getEntitlement: () => of(null) } },
-        { provide: AuthStateService, useValue: { getUser: () => ({ role: 'ADMIN', userId: 'Admin_1' }) } },
+        { provide: AuthStateService, useValue: { getUser: () => ({ role: 'ADMIN', userId: 'Admin_1' }), hasFeature: () => true } },
         { provide: TenantService, useValue: { getLogoUrl: (u: string) => u } },
         { provide: LoggerService, useValue: jasmine.createSpyObj('LoggerService', ['error']) },
         { provide: ToastService, useValue: jasmine.createSpyObj('ToastService', ['success', 'error', 'warning', 'info']) },
@@ -349,7 +399,7 @@ describe('School Settings — subscription payment verification result', () => {
     toast = jasmine.createSpyObj('ToastService', ['success', 'error', 'warning', 'info']);
     c = new SchoolSettingsComponent(
       schoolService, {} as any, {} as any, { markForCheck: () => {} } as any, jasmine.createSpyObj('LoggerService', ['error']),
-      toast, { snapshot: { queryParamMap: { get: () => null } } } as any, {} as any, {} as any
+      toast, { snapshot: { queryParamMap: { get: () => null } } } as any, {} as any, {} as any, {} as any, { run: (fn: any) => fn() } as any
     );
     c.upgradingPlanId = 4;
   });

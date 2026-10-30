@@ -93,6 +93,17 @@ describe('RegisterTeacherComponent', () => {
     expect(toast.error).toHaveBeenCalledWith('Error!', jasmine.stringMatching(/already has a class teacher/));
   });
 
+  it('B3-1: shows the backend email-conflict reason and shows no success dialog', () => {
+    teacherService.addTeacher.and.returnValue(throwError(() => ({ status: 409, error: 'Email address is already in use.' })));
+    component.teacherForm.patchValue({
+      name: 'Test', email: 'Ananya.Rao@E2E.invalid', gender: 'Female', dob: '1985-03-20', joiningDate: '2026-04-01'
+    });
+    component.onSubmit();
+    expect(toast.error).toHaveBeenCalledWith('Error!', 'Email address is already in use.');
+    expect(toast.confirm).not.toHaveBeenCalled();
+    expect(component.isSubmitting).toBeFalse();
+  });
+
   it('shows the DOB-based initial-password message and the Edunexify-generated Employee ID on success', () => {
     teacherService.addTeacher.and.returnValue(of({ teacherId: 'emp_26010007' } as any));
 

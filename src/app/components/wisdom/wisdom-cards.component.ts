@@ -8,11 +8,11 @@ import { AuthStateService } from '../../auth/auth-state.service';
 @Component({ selector: 'app-wisdom-cards', standalone: true, imports: [CommonModule, RouterLink], template: `
 <section class="wz-cards" aria-label="A moment of wisdom">
  <p *ngIf="loading" class="wz-status" role="status">A little inspiration is on its way…</p>
- <p *ngIf="error" class="wz-status" role="status">Wisdom is unavailable right now. <button (click)="load()">Try again</button></p>
+ <p *ngIf="error" class="wz-status" role="status">Thought of the Day is unavailable right now. <button (click)="load()">Try again</button></p>
  <article class="wz-thought-card" *ngIf="data && !loading && !error">
   <div class="wz-thought-card-head">
    <span class="wz-eyebrow">Thought of the Day</span>
-   <a *ngIf="canManage" class="manage-link" routerLink="/dashboard/wisdom/manage">Manage Wisdom →</a>
+   <a *ngIf="canManage" class="manage-link" routerLink="/dashboard/wisdom/manage">Manage Thought of the Day →</a>
   </div>
   <blockquote class="wz-quote">{{ data.thought.body }}</blockquote>
   <span class="wz-quiet">A small thought. A brighter day.</span>

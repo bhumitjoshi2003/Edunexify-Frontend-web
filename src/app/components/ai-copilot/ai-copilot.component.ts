@@ -330,8 +330,16 @@ export class AiCopilotComponent implements OnInit, OnDestroy, AfterViewChecked {
           this.cdr.markForCheck();
         }
       },
-      error: () => {
-        if (assistantMsg) {
+      error: (err) => {
+        // The backend's own refusals (message too long: 413, too many requests: 429) carry a
+        // message meant for the user; anything else is a connection problem.
+        const refusal = (err?.status === 413 || err?.status === 429) && typeof err?.error === 'string' ? err.error : null;
+        if (refusal && !assistantMsg) {
+          this.messages = [
+            ...this.messages,
+            { id: `e_${Date.now()}`, role: 'assistant', content: refusal, timestamp: new Date(), error: true },
+          ];
+        } else if (assistantMsg) {
           // Partial content already showing — keep it, and note the stream broke,
           // rather than discarding what the user has already read.
           assistantMsg.content += '\n\n⚠️ Connection lost — response may be incomplete.';

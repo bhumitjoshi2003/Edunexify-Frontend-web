@@ -100,6 +100,10 @@
       <h2 class="fg-result-title">Generation Results</h2>
       <button class="fg-result-close" (click)="dismissResults()" aria-label="Dismiss">✕</button>
     </div>
+    <p class="fg-result-totals" data-testid="result-totals">
+      {{ resultTotals.created }} month{{ resultTotals.created !== 1 ? 's' : '' }} created ·
+      {{ resultTotals.skipped }} skipped (already generated or not yet chargeable)
+    </p>
     <div class="fg-result-summary">
       <span class="fg-fs-item" *ngFor="let e of summaryEntries()"
         [class.fg-fs-green]="isSuccessOutcome(e.code)"
@@ -126,16 +130,21 @@
   <ng-container *ngIf="!previewLoading && preview.length > 0">
 
     <div class="fg-summary-card">
-      <span class="fg-fs-item fg-fs-green">{{ eligibleCount }} eligible</span>
-      <span class="fg-fs-item fg-fs-muted">{{ fullyGeneratedCount }} already fully generated</span>
+      <span class="fg-fs-item fg-fs-green">{{ generatableCount }} with months to generate</span>
+      <span class="fg-fs-item fg-fs-muted">{{ nothingToGenerateCount }} with nothing to generate</span>
       <span class="fg-fs-item fg-fs-red" *ngIf="blockedCount > 0">{{ blockedCount }} blocked</span>
+      <span class="fg-select-actions">
+        <button type="button" class="fg-review-btn" (click)="selectAllGeneratable()" [disabled]="generatableCount === 0 || executing">Select all with months to generate</button>
+        <button type="button" class="fg-review-btn" (click)="clearSelection()" [disabled]="selected.size === 0 || executing">Clear selection</button>
+      </span>
     </div>
+    <p class="fg-selection-note">No students are selected until you choose them. Only the months marked “will generate” are created.</p>
 
     <div class="fg-student-card" *ngFor="let row of preview; trackBy: trackByRow">
       <div class="fg-student-row">
-        <label class="fg-checkbox-wrap" [class.fg-checkbox-disabled]="!row.eligible">
-          <input type="checkbox" [checked]="isSelected(row.studentId)" [disabled]="!row.eligible"
-            (change)="toggleSelected(row)" />
+        <label class="fg-checkbox-wrap" [class.fg-checkbox-disabled]="!canSelect(row)">
+          <input type="checkbox" [checked]="isSelected(row.studentId)" [disabled]="!canSelect(row) || executing"
+            [attr.aria-label]="'Select ' + (row.studentName || row.studentId)" (change)="toggleSelected(row)" />
         </label>
 
         <div class="fg-student-info">
@@ -151,6 +160,7 @@
 
         <span class="fg-total-due" *ngIf="row.eligible">₹{{ row.totalDue.toFixed(2) }}</span>
       </div>
+      <p class="fg-scope" *ngIf="row.eligible" data-testid="generatable-scope">Will generate: {{ generatableScope(row) }}</p>
 
       <p class="fg-planned-note" *ngIf="row.targetEnrollmentStatus === 'PLANNED'">
         This enrollment is recorded for the upcoming session and is not yet active.
@@ -159,12 +169,16 @@
       <!-- Monthly breakdown -->
       <div class="fg-months-table" *ngIf="row.eligible && row.months.length > 0">
         <div class="fg-month-cell" *ngFor="let m of row.months; trackBy: trackByMonth"
-          [class.fg-month-generated]="m.alreadyGenerated">
+          [class.fg-month-generated]="m.alreadyGenerated" [class.fg-month-skipped]="!m.alreadyGenerated && !m.willGenerate"
+          [attr.title]="monthLabel(m.month) + (m.message ? ': ' + m.message : '')">
           <span class="fg-month-num">M{{ m.month }}</span>
-          <span class="fg-month-amount">₹{{ m.total.toFixed(0) }}</span>
+          <span class="fg-month-amount">{{ m.alreadyGenerated || m.willGenerate ? '₹' + m.total.toFixed(0) : '—' }}</span>
           <span class="fg-month-flag" *ngIf="m.alreadyGenerated">✓</span>
         </div>
       </div>
+      <ul class="fg-skip-list" *ngIf="row.eligible && skippedReasons(row).length">
+        <li *ngFor="let s of skippedReasons(row)">Skipped {{ s.months }}: {{ s.reason }}</li>
+      </ul>
 
       <ul class="fg-issue-list" *ngIf="row.warnings.length || row.blockingErrors.length">
         <li *ngFor="let e of row.blockingErrors" class="fg-issue fg-issue-error">⛔ {{ e }}</li>
@@ -181,7 +195,7 @@
   <!-- ── Confirm + generate ────────────────────────────────────────── -->
   <div class="fg-execute-card" *ngIf="preview.length > 0">
     <div class="fg-footer-summary">
-      <span class="fg-fs-item fg-fs-green">✓ {{ selectedRows.length }} selected</span>
+      <span class="fg-fs-item fg-fs-green">✓ {{ selectedRows.length }} selected · {{ selectedMonthCount }} month{{ selectedMonthCount !== 1 ? 's' : '' }} to create</span>
       <span class="fg-fs-item fg-fs-muted" *ngIf="previewIsStale">Preview is stale — reload before generating</span>
     </div>
     <button class="fg-execute-btn" (click)="confirmAndGenerate()" [disabled]="!canGenerate">

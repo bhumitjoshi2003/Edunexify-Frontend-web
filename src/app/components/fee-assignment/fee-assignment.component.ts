@@ -28,6 +28,8 @@ import { FeeWorkflowService } from '../../services/fee-workflow.service';
 import { FeeHeadService } from '../../services/fee-head.service';
 import { ToastService } from '../../services/toast.service';
 import { SchoolService } from '../../services/school.service';
+import { summarizeFeeChange } from '../../utils/fee-change-outcome.util';
+import { schoolDateKey } from '../../utils/school-date.util';
 
 type FeeAssignmentTab = 'assign' | 'discounts' | 'history';
 
@@ -176,7 +178,7 @@ export class FeeAssignmentComponent implements OnInit, OnDestroy {
   }
 
   private today(): string {
-    return new Date().toISOString().slice(0, 10);
+    return schoolDateKey(new Date());
   }
 
   private setupProgressiveReload(): void {
@@ -752,23 +754,8 @@ export class FeeAssignmentComponent implements OnInit, OnDestroy {
         next: (result) => {
           this.stopWorking();
           this.changeResult = result;
-          const failed = result.students.filter((s) => !s.changeSaved);
-          if (failed.length === result.students.length) {
-            this.toast.error(
-              'Action failed',
-              failed[0]?.message || 'No students were updated. Please review and try again.',
-            );
-          } else if (failed.length) {
-            this.toast.warning(
-              'Completed with errors',
-              `${result.savedStudents} of ${result.requestedStudents} student(s) updated. ${failed.length} failed: ${failed[0].message || 'Unknown error.'}`,
-            );
-          } else {
-            this.toast.success(
-              'Completed',
-              `${message} ${result.recalculatedMonths} month(s) updated; ${result.skippedMonths} month(s) left unchanged because they were protected or ineligible.`,
-            );
-          }
+          const outcome = summarizeFeeChange(result, message);
+          this.toast[outcome.level](outcome.title, outcome.message);
           if (this.history && this.selected.size === 1) this.loadHistoryForSelected();
         },
         error: (e) => {

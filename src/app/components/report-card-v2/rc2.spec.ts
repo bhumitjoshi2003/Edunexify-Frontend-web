@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { Rc2SetupComponent } from './setup/rc2-setup.component';
 import { Rc2RemarksComponent } from './remarks/rc2-remarks.component';
@@ -12,6 +12,7 @@ import { SchoolService } from '../../services/school.service';
 import { SectionService } from '../../services/section.service';
 import { TeacherService } from '../../services/teacher.service';
 import { AuthStateService } from '../../auth/auth-state.service';
+import { ParentPortalService } from '../../services/parent-portal.service';
 import { ToastService } from '../../services/toast.service';
 import { routes } from '../../app.routes';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
@@ -62,6 +63,7 @@ describe('Report Card V2 (Phase 1)', () => {
         { provide: SectionService, useValue: { getSectionsForClass: () => of([]) } },
         { provide: TeacherService, useValue: { getTeacher: () => of({ classTeacher: '8' }) } },
         { provide: AuthStateService, useValue: { getUserRole: () => role, getUserId: () => 'U1' } },
+        { provide: ParentPortalService, useValue: { getMyProfile: () => of({ children: [child('S1', 'Aarav'), child('S2', 'Kabir')] }) } },
       ],
     });
   });
@@ -214,6 +216,11 @@ describe('Report Card V2 (Phase 1)', () => {
     id: 41, setupId: 5, setupName: 'Annual', sectionId: null, sectionName: null, version: 1, status: 'ACTIVE', documentCount: 2,
     publishedBy: 'admin', publishedAt: '2026-09-29T10:00:00', withdrawnBy: null, withdrawnAt: null, withdrawalReason: null, ...over,
   });
+  const child = (studentId: string, studentName: string): any => ({
+    relationshipId: 1, studentId, studentName, className: '9', sectionName: 'A', relationshipType: 'FATHER', primaryGuardian: true,
+    canViewAttendance: true, canViewFees: true, canPayFees: true, canViewResults: true, canViewTimetable: true, canManageLeave: true,
+    effectiveFrom: '2026-04-01', effectiveUntil: null,
+  });
   const document = (over: Partial<ReportCardDocument> = {}): ReportCardDocument => ({
     id: 900, publicationId: 41, studentId: 'S1', studentName: 'Aarav', title: 'ANNUAL — REPORT CARD', sessionLabel: '2026-2027',
     className: '8', sectionName: 'A', version: 1, status: 'ACTIVE', reference: 'RC-ABCDEFGHJK', issuedAt: '2026-09-29T10:00:00', ...over,
@@ -341,6 +348,33 @@ describe('Report Card V2 (Phase 1)', () => {
     expect(el.textContent).toContain('Official copy');
     expect(el.textContent).toContain('RC-ABCDEFGHJK');
     expect(el.querySelector('iframe.dv-frame')).not.toBeNull();
+  });
+
+  it('My report cards: "Earlier report cards" opens the older page for the signed-in student', () => {
+    role = 'STUDENT';
+    api.myDocuments.and.returnValue(of([]));
+    TestBed.overrideProvider(ActivatedRoute, { useValue: { queryParamMap: of(convertToParamMap({})) } });
+    TestBed.overrideProvider(AcademicSessionService, { useValue: { getCurrentSession: () => of(session) } });
+    const list = TestBed.createComponent(Rc2MyReportCardsComponent);
+    list.detectChanges();
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    (list.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.mrc-older button')!.click();
+    expect(navigate).toHaveBeenCalledWith(['/dashboard/report-card'], { queryParams: { studentId: 'U1', session: '2026-2027' } });
+    role = 'ADMIN';
+  });
+
+  it('My report cards: a parent with two children can switch child, and the list reloads for that child', () => {
+    role = 'PARENT';
+    api.myDocuments.and.returnValue(of([document()]));
+    TestBed.overrideProvider(ActivatedRoute, { useValue: { queryParamMap: of(convertToParamMap({ studentId: 'S1' })) } });
+    const list = TestBed.createComponent(Rc2MyReportCardsComponent);
+    list.detectChanges();
+    const tabs = (list.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.child-tab');
+    expect(Array.from(tabs).map(t => t.textContent)).toEqual([jasmine.stringContaining('Aarav'), jasmine.stringContaining('Kabir')]);
+    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
+    tabs[1].click();
+    expect(navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { studentId: 'S2' } }));
+    role = 'ADMIN';
   });
 
   it('Verify: a withdrawn V2 report card says so; legacy results look as before', () => {

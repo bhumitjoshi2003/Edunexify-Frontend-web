@@ -75,4 +75,20 @@ describe('ParentChildContextComponent (inaccessible child)', () => {
     expect(context.reconcile(profile, 'S2')?.studentId).toBe('S2');
     expect(context.reconcile(profile)?.studentId).toBe('S2');  // no request: the last selected child
   });
+
+  it('locked (e.g. a checkout is open for this child): tabs are disabled and a pick moves nothing', () => {
+    let selected: ChildAccess | null | undefined;
+    context.selectedChild$.subscribe(c => selected = c);
+    const emitted: ChildAccess[] = [];
+    component.childSelected.subscribe(c => emitted.push(c));
+    component.locked = true;
+    const el = open('S1');                                   // no permission filter: both children are tabs
+    const tabs = Array.from(el.querySelectorAll('.child-tab')) as HTMLButtonElement[];
+    expect(tabs.length).toBe(2);
+    expect(tabs.every(t => t.disabled)).toBeTrue();
+
+    component.selectChild(profile.children[1]);
+    expect(emitted).toEqual([]);
+    expect(selected?.studentId).toBe('S1');
+  });
 });

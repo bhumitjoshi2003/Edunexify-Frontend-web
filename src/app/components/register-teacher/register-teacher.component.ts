@@ -13,6 +13,8 @@ import { SchoolClass, SchoolService } from '../../services/school.service';
 import { SectionService } from '../../services/section.service';
 import { Section } from '../../interfaces/section';
 import { strictEmailValidator, pastDateValidator, phoneValidator } from '../../validators/shared.validators';
+import { registrationCredentialsDialog } from '../../utils/registration.util';
+import { schoolDateKey } from '../../utils/school-date.util';
 
 @Component({
   selector: 'app-register-teacher',
@@ -62,7 +64,7 @@ export class RegisterTeacherComponent implements OnInit, OnDestroy {
   }
 
   get todayStr(): string {
-    return new Date().toISOString().split('T')[0];
+    return schoolDateKey(new Date());
   }
 
   ngOnInit(): void {
@@ -171,14 +173,7 @@ export class RegisterTeacherComponent implements OnInit, OnDestroy {
         })
       ).subscribe({
         next: () => {
-          this.toast.confirm({
-            title: 'Teacher Registered!',
-            message: `Edunexify Employee ID: ${generatedTeacherId}. Initial password: Date of birth in YYYYMMDD format. ` +
-              'Example: 23 May 1990 → 19900523. The user must create a new password during their first login.' +
-            (joinsLater ? ' The login activates on the joining date.' : ''),
-            icon: 'success',
-            confirmText: 'Done'
-          });
+          this.toast.confirm(registrationCredentialsDialog('teacher', generatedTeacherId, joinsLater));
           this.teacherForm.reset();
         },
         error: (error) => {

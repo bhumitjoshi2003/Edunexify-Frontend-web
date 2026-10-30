@@ -1,5 +1,7 @@
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { By } from '@angular/platform-browser';
+import { Subject, of, throwError } from 'rxjs';
 import { TeachingConfigurationComponent } from './teaching-configuration.component';
 import { ClassTeacherResponsibilityService } from '../../services/class-teacher-responsibility.service';
 import { AcademicSessionService } from '../../services/academic-session.service';
@@ -63,6 +65,18 @@ describe('F6A responsibility management and activation', () => {
       expect(fixture.nativeElement.textContent).not.toContain('Resync Class Teachers');
     });
   }
+  it('offers only ACTIVE teachers for a class-teacher responsibility (LEFT/UPCOMING never selectable)', () => {
+    fixture.componentRef.setInput('teachers', [
+      { teacherId: 'T1', name: 'Active One', status: 'ACTIVE' },
+      { teacherId: 'T9', name: 'Left One', status: 'LEFT' },
+      { teacherId: 'T8', name: 'Upcoming One', status: 'UPCOMING' },
+    ] as any);
+    fixture.detectChanges();
+    expect(c.eligibleTeachers.map((t) => t.teacherId)).toEqual(['T1']);
+    const options = [...fixture.nativeElement.querySelectorAll('option')].map((o: HTMLOptionElement) => o.textContent?.trim());
+    expect(options).toContain('Active One (T1)');
+    expect(options.some((o) => o?.includes('T9') || o?.includes('T8'))).toBeFalse();
+  });
   it('creates and updates canonical responsibility configuration', () => {
     c.classId = 8; c.teacherId = 'T1'; c.sectionsLoaded = true; c.save();
     expect(service.create).toHaveBeenCalledWith({ academicSessionId: 1, classId: 8, sectionId: null, teacherId: 'T1' });
@@ -84,5 +98,157 @@ describe('F6A responsibility management and activation', () => {
   it('copies responsibilities to future without live activation', async () => {
     c.sourceId = 1; c.targetId = 2; await c.copy('responsibilities');
     expect(service.copy).toHaveBeenCalledWith({ sourceAcademicSessionId: 1, targetAcademicSessionId: 2 }); expect(service.apply).not.toHaveBeenCalled();
+  });
+
+  // ─── Shared by the web and Android clients — keep the two copies identical. ───
+  it('future writable session: responsibilities can be configured but not activated', async () => {
+    fixture.componentRef.setInput('session', future); fixture.detectChanges();
+    c.classId = 8; c.teacherId = 'T1'; c.sectionsLoaded = true;
+    expect(c.canSave()).toBeTrue();
+    c.save();
+    expect(service.create).toHaveBeenCalledWith({ academicSessionId: 2, classId: 8, sectionId: null, teacherId: 'T1' });
+    c.loadPreview(); await c.apply();
+    expect(service.apply).not.toHaveBeenCalled();
+  });
+  it('an invalid section choice blocks saving; a server rejection (e.g. ineligible teacher) is shown', () => {
+    c.classId = 8; c.teacherId = 'T1'; c.sectionsLoaded = true;
+    c.sections = [{ id: 81, name: 'A', active: true } as any];
+    c.sectionId = 99;
+    expect(c.canSave()).toBeFalse();
+    c.sectionId = 81;
+    service.create.and.returnValue(throwError(() => ({ status: 400, error: { message: 'Teacher is not eligible for this class.' } })));
+    c.save();
+    expect(c.error).toContain('Teacher is not eligible');
+    expect(c.busy).toBeFalse();
+  });
+  it('switching session while a delete confirmation is open cancels the delete', async () => {
+    let resolve!: (v: boolean) => void;
+    toast.confirm.and.returnValue(new Promise<boolean>(r => (resolve = r)));
+    const pending = c.remove(row);
+    fixture.componentRef.setInput('session', future); fixture.detectChanges();
+    resolve(true); await pending;
+    expect(service.delete).not.toHaveBeenCalled();
+  });
+  it('actions are gated while an operation is running', () => {
+    const inFlight = new Subject<any>();
+    service.create.and.returnValue(inFlight);
+    c.classId = 8; c.teacherId = 'T1'; c.sectionsLoaded = true; c.save();
+    expect(c.busy).toBeTrue();
+    expect(c.canWrite()).toBeFalse();
+    c.sourceId = 3; c.targetId = 2;
+    expect(c.canCopy()).toBeFalse();
+    inFlight.next({}); inFlight.complete();
+    expect(c.busy).toBeFalse();
+  });
+  it('activation applies only after the current session is rechecked, and reports the result', async () => {
+    c.loadPreview();
+    expect(c.preview).not.toBeNull();
+    await c.apply();
+    expect(academics.getCurrentSession).toHaveBeenCalled();
+    expect(service.apply).toHaveBeenCalled();
+    expect(c.applied?.activationState).toBe('APPLIED_IN_SYNC');
+  });
+});
+
+/** B4-6: the panel lives inside the OnPush TimetableComponent. Every async result must render on the
+ *  next check without any other event marking the host dirty. */
+@Component({
+  selector: 'app-onpush-host', standalone: true, imports: [TeachingConfigurationComponent], changeDetection: ChangeDetectionStrategy.OnPush,
+  template: '<app-teaching-configuration [session]="session" [classes]="classes" [teachers]="teachers" />'
+})
+class OnPushHostComponent {
+  session = current;
+  classes = [{ id: 11, name: 'Class 11', displayOrder: 1, active: true, streamEligible: true }] as any[];
+  teachers = [{ teacherId: 'T3', name: 'Meera', status: 'ACTIVE' }] as any[];
+}
+
+/** A test fixture's root view is refreshed on every detectChanges(), so the OnPush host sits one
+ *  level down — as TimetableComponent does under the dashboard. */
+@Component({ standalone: true, imports: [OnPushHostComponent], template: '<app-onpush-host />' })
+class PageComponent {}
+
+describe('B4-6 teaching configuration renders async results inside an OnPush host', () => {
+  let fixture: ComponentFixture<PageComponent>;
+  let panel: TeachingConfigurationComponent;
+  let service: any;
+  let sections$: Subject<any[]>;
+  let rows: Responsibility[] = [];
+  let toast: any;
+  const text = () => fixture.nativeElement.textContent as string;
+  const sectionOptions = () => Array.from(fixture.nativeElement.querySelectorAll('fieldset.tc-form select')[1].options).map((o: any) => o.textContent.trim());
+  const science = { id: 5, classId: 11, name: 'Science', active: true };
+  const commerce = { id: 6, classId: 11, name: 'Commerce', active: true };
+  const configured: Responsibility = { ...row, id: 20, classId: 11, className: 'Class 11', sectionId: 5, sectionName: 'Science', configuredTeacherId: 'T3', configuredTeacherName: 'Meera', liveMatchesConfigured: true };
+
+  beforeEach(async () => {
+    sections$ = new Subject(); rows = [];
+    service = jasmine.createSpyObj('Responsibilities', ['list', 'create', 'update', 'delete', 'copy', 'preview', 'apply']);
+    service.list.and.callFake(() => of(rows));   // HTTP-like: emits the current rows, then completes
+    toast = { confirm: jasmine.createSpy().and.resolveTo(true) };
+    await TestBed.configureTestingModule({ imports: [PageComponent], providers: [
+      { provide: ClassTeacherResponsibilityService, useValue: service }, { provide: TimetableService, useValue: {} },
+      { provide: AcademicSessionService, useValue: { getAllSessions: () => of([current]), getCurrentSession: () => of(current) } },
+      { provide: SectionService, useValue: { getSectionsForClass: () => sections$ } },
+      { provide: ToastService, useValue: toast }
+    ] }).compileComponents();
+    fixture = TestBed.createComponent(PageComponent);
+    fixture.detectChanges();
+    // Settle: NgModel writes initial values in a microtask and then marks the host for check, so
+    // wait for that before the final pass — from here on the OnPush host is clean, as in the app.
+    await fixture.whenStable(); fixture.detectChanges();
+    panel = fixture.debugElement.query(By.directive(TeachingConfigurationComponent)).componentInstance;
+  });
+
+  it('renders a class\'s sections as soon as they arrive, and enables Save once valid', () => {
+    panel.classId = 11; panel.classChanged();
+    sections$.next([science, commerce]); fixture.detectChanges();
+    expect(sectionOptions()).toEqual(['Select section', 'Science', 'Commerce']);
+    const [, sectionSelect, teacherSelect] = fixture.nativeElement.querySelectorAll('fieldset.tc-form select');
+    sectionSelect.selectedIndex = 1; sectionSelect.dispatchEvent(new Event('change'));
+    teacherSelect.selectedIndex = 1; teacherSelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(panel.sectionId).toBe(5); expect(panel.teacherId).toBe('T3');
+    const save = Array.from(fixture.nativeElement.querySelectorAll('button')).find((b: any) => b.textContent.includes('Save responsibility')) as HTMLButtonElement;
+    expect(save.disabled).toBeFalse();
+  });
+
+  it('renders an added row, an edited row and a removed row immediately', async () => {
+    service.create.and.returnValue(of(configured));
+    panel.classId = 11; panel.classChanged(); sections$.next([science, commerce]);
+    rows = [configured];
+    panel.sectionId = 5; panel.teacherId = 'T3'; panel.save();
+    fixture.detectChanges();
+    expect(text()).toContain('Class 11 / Science');
+
+    service.update.and.returnValue(of({ ...configured, sectionId: 6, sectionName: 'Commerce' }));
+    rows = [{ ...configured, sectionId: 6, sectionName: 'Commerce' }];
+    panel.edit(configured); sections$.next([science, commerce]); panel.sectionId = 6; panel.save();
+    fixture.detectChanges();
+    expect(text()).toContain('Class 11 / Commerce');
+    expect(text()).not.toContain('Class 11 / Science');
+
+    service.delete.and.returnValue(of(undefined));
+    rows = [];
+    await panel.remove(configured);
+    fixture.detectChanges();
+    expect(text()).not.toContain('Class 11 / Commerce');
+  });
+
+  it('renders the resync preview as soon as it arrives', () => {
+    const preview$ = new Subject<ActivationPreview>();
+    service.preview.and.returnValue(preview$);
+    panel.loadPreview();
+    preview$.next(preview); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.tc-preview')).not.toBeNull();
+    expect(text()).toContain('In Sync');
+    expect(text()).toContain('removals 0');
+  });
+
+  it('renders a failed save\'s error immediately', () => {
+    service.create.and.returnValue(throwError(() => ({ error: { message: 'This class/section is already configured.' } })));
+    panel.classId = 11; panel.classChanged(); sections$.next([science]);
+    panel.sectionId = 5; panel.teacherId = 'T3'; panel.save();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.tc-error')?.textContent).toContain('already configured');
   });
 });

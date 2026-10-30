@@ -4,6 +4,7 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { AppComponent } from './app.component';
 import { AuthStateService } from './auth/auth-state.service';
 import { environment } from '../environments/environment';
+import { baselineTestProviders } from '../testing/baseline-test-providers';
 
 /**
  * AppComponent is the root gate between the normal app (<router-outlet>) and the
@@ -17,6 +18,7 @@ describe('AppComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
+      providers: [...baselineTestProviders()],
       imports: [AppComponent, HttpClientTestingModule, RouterTestingModule],
     }).compileComponents();
     http = TestBed.inject(HttpTestingController);

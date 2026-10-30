@@ -19,14 +19,14 @@
 
                 <div class="field-group">
                     <label>Admin ID <span class="req">*</span></label>
-                    <input type="text" name="adminId" [(ngModel)]="adminData.adminId" #adminId="ngModel" required
+                    <input type="text" name="adminId" [(ngModel)]="adminData.adminId" #adminId="ngModel" required maxlength="100" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,99}"
                         placeholder="ADM-001" [class.invalid-field]="adminId.invalid && adminId.touched">
                     <small class="error-text" *ngIf="adminId.invalid && adminId.touched">ID is required</small>
                 </div>
 
                 <div class="field-group">
                     <label>Full Name <span class="req">*</span></label>
-                    <input type="text" name="name" [(ngModel)]="adminData.name" #name="ngModel" required
+                    <input type="text" name="name" [(ngModel)]="adminData.name" #name="ngModel" required maxlength="255"
                         placeholder="John Doe" [class.invalid-field]="name.invalid && name.touched">
                     <small class="error-text" *ngIf="name.invalid && name.touched">Name is required</small>
                 </div>

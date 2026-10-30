@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit } from '@angular/core';
+import { RazorpayCheckoutService } from '../../services/razorpay-checkout.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -14,6 +15,8 @@ import { AcademicSession } from '../../interfaces/academic-session';
 import { FeeWorkflowSettings } from '../../interfaces/fee-workflow';
 import { FeeWorkflowService } from '../../services/fee-workflow.service';
 import { SchoolPaymentConnectionComponent } from '../school-payment-connection/school-payment-connection.component';
+import { isStaffAttendanceUsable, staffAttendanceConfigError } from '../../utils/staff-attendance-config.util';
+import { FEATURES } from '../../auth/feature-keys';
 
 @Component({
   selector: 'app-school-settings',
@@ -109,7 +112,9 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     private toast: ToastService,
     private route: ActivatedRoute,
     private academicSessionService: AcademicSessionService,
-    private feeWorkflowService: FeeWorkflowService
+    private feeWorkflowService: FeeWorkflowService,
+    private checkout: RazorpayCheckoutService,
+    private ngZone: NgZone,
   ) {}
 
   ngOnInit(): void {
@@ -126,6 +131,10 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     this.loadFeePolicy();
     if (this.activeTab === 'subscription') {
       this.loadAvailablePlans();
+    }
+    // A deep link straight to the Features tab (?tab=features) loads it like a tab click does.
+    if (this.activeTab === 'features') {
+      this.loadFeatures();
     }
   }
 
@@ -315,9 +324,22 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     });
   }
 
-  toggleFeatureOverride(feature: SchoolFeature): void {
-    if (feature.isAlwaysOn || !feature.planGranted) return;
+  async toggleFeatureOverride(feature: SchoolFeature): Promise<void> {
+    if (feature.isAlwaysOn || feature.core || !feature.planGranted) return;
     const newState: 'DEFAULT' | 'DISABLED' = feature.overrideState === 'DISABLED' ? 'DEFAULT' : 'DISABLED';
+    if (newState === 'DISABLED' && feature.studentOrParentFacing) {
+      const confirmed = await this.toast.confirm({
+        title: `Turn off ${feature.displayName}?`,
+        message: `Students and parents will no longer see ${feature.displayName} in the app. You can turn it back on at any time.`,
+        confirmText: 'Turn off',
+        cancelText: 'Keep it on',
+        danger: true,
+      });
+      if (!confirmed) {
+        this.cdr.markForCheck();
+        return;
+      }
+    }
     this.savingFeatureKey = feature.featureKey;
     this.cdr.markForCheck();
     this.schoolService.setFeatureOverride(feature.featureKey, newState).pipe(takeUntil(this.destroy$)).subscribe({
@@ -327,12 +349,13 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
         this.authStateService.setFeatureEnabled(feature.featureKey, feature.effectivelyOn);
         void this.authStateService.loadCurrentUser().finally(() => this.cdr.markForCheck());
         this.savingFeatureKey = null;
-        this.toast.success('Saved', `Feature ${newState === 'DISABLED' ? 'disabled' : 'restored'}.`);
+        this.toast.success('Saved', `${feature.displayName} ${newState === 'DISABLED' ? 'turned off' : 'turned back on'}.`);
         this.cdr.markForCheck();
       },
       error: (e) => {
         this.logger.error('Failed to set feature override', e);
-        this.toast.error('Error', 'Failed to update feature.');
+        // A dependency refusal explains what to change first ("Turn off Online Payments first…").
+        this.toast.error('Not changed', e?.error?.error || 'Failed to update feature.');
         this.savingFeatureKey = null;
         this.cdr.markForCheck();
       }
@@ -438,7 +461,8 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
   }
 
   private openRazorpay(order: any, plan: PlanDetail): void {
-    this.loadRazorpayScript().then(() => {
+    // The shared loader (services/razorpay-checkout.service.ts): bounded, retryable, verified.
+    this.checkout.load().then((Razorpay) => {
       const options = {
         key: order.razorpayKey,
         amount: order.amount,
@@ -446,12 +470,20 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
         name: 'Edunexify',
         description: `${plan.name} Plan — ${this.billingCycle === 'ANNUAL' ? 'Annual' : 'Monthly'}`,
         order_id: order.orderId,
-        handler: (response: any) => this.verifyUpgrade(response, plan.id),
-        modal: { ondismiss: () => { this.upgradingPlanId = null; this.cdr.markForCheck(); } },
+        handler: (response: any) => this.ngZone.run(() => this.verifyUpgrade(response, plan.id)),
+        modal: { ondismiss: () => this.ngZone.run(() => { this.upgradingPlanId = null; this.cdr.markForCheck(); }) },
         theme: { color: '#1d4ed8' }
       };
-      new (window as any).Razorpay(options).open();
-    }).catch(() => {
+      try {
+        new Razorpay(options).open();
+      } catch (error) {
+        this.logger.error('Razorpay Checkout could not be opened:', error);
+        this.toast.error('Error', 'Could not open the payment window. Please try again.');
+        this.upgradingPlanId = null;
+        this.cdr.markForCheck();
+      }
+    }).catch((error) => {
+      this.logger.error('Razorpay Checkout could not be loaded:', error);
       this.toast.error('Error', 'Failed to load payment gateway. Please try again.');
       this.upgradingPlanId = null;
       this.cdr.markForCheck();
@@ -471,8 +503,10 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
         if ((result as UpgradePending | null)?.pending) {
           // Money taken, Razorpay confirmation still in progress: reassure, never "failed", so the
           // admin doesn't pay twice. The server activates the plan automatically once confirmed.
-          this.toast.info('Payment received', (result as UpgradePending).message
-            || 'We\'re confirming your payment with Razorpay. Your plan will be activated shortly — please don\'t pay again.');
+          const pending = result as UpgradePending;
+          this.toast.info('Payment received', (pending.message
+            || 'We\'re confirming your payment with Razorpay. Your plan will be activated shortly — please don\'t pay again.')
+            + (pending.paymentId ? ` Payment ID: ${pending.paymentId}` : ''));
           this.upgradingPlanId = null;
           this.cdr.markForCheck();
           return;
@@ -492,17 +526,6 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
         this.upgradingPlanId = null;
         this.cdr.markForCheck();
       }
-    });
-  }
-
-  private loadRazorpayScript(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if ((window as any).Razorpay) { resolve(); return; }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Razorpay'));
-      document.body.appendChild(script);
     });
   }
 
@@ -629,9 +652,20 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** The school's payment gateway connection is part of Online Payments. */
+  get onlinePaymentsEnabled(): boolean {
+    return this.authStateService.hasFeature(FEATURES.ONLINE_PAYMENTS);
+  }
+
+  /** Core features: part of every plan, shown read-only. */
+  get coreFeatures(): SchoolFeature[] {
+    return this.schoolFeatures.filter(f => f.core || f.isAlwaysOn);
+  }
+
+  /** Plan-controlled features, grouped by category. */
   featuresByCategory(): { category: string; features: SchoolFeature[] }[] {
     const map = new Map<string, SchoolFeature[]>();
-    for (const f of this.schoolFeatures) {
+    for (const f of this.schoolFeatures.filter(x => !x.core && !x.isAlwaysOn)) {
       if (!map.has(f.category)) map.set(f.category, []);
       map.get(f.category)!.push(f);
     }
@@ -776,7 +810,27 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     });
     if (!confirmed) return;
 
-    this.academicSessionService.setCurrentSession(session.id).pipe(takeUntil(this.destroy$)).subscribe({
+    // A session that hasn't begun moves attendance dates, class-teacher access and the current
+    // timetable to a year that hasn't started: a second, typed confirmation, which the backend
+    // also requires (it decides in the school's timezone and refuses without it).
+    const startsLater = session.startDate > this.todayIso();
+    if (startsLater) {
+      const early = await this.toast.confirm({
+        title: `${session.label} hasn't started yet`,
+        html: `<p>This academic session starts on <strong>${this.formatSessionRange(session).split(' – ')[0]}</strong>.</p>` +
+              `<p>Making it current now switches current academic operations — attendance, class-teacher ` +
+              `access and the current timetable — to this session <strong>before it begins</strong>.</p>` +
+              `<p>Continue anyway?</p>`,
+        confirmText: 'Make Current Early',
+        cancelText: 'Cancel',
+        icon: 'danger',
+        danger: true,
+        requiredInput: 'EARLY',
+      });
+      if (!early) return;
+    }
+
+    this.academicSessionService.setCurrentSession(session.id, startsLater).pipe(takeUntil(this.destroy$)).subscribe({
       next: (outcome) => {
         if (outcome.activationPerformed && outcome.activation) {
           this.toast.success('Updated', `${session.label} is now current. Class-teacher access updated: ` +
@@ -788,9 +842,16 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
       },
       error: (e) => {
         this.logger.error('Failed to set current session', e);
-        this.toast.error('Error', 'Failed to update current session.');
+        this.toast.error('Error', e?.error?.code === 'FUTURE_SESSION_CONFIRMATION_REQUIRED'
+          ? e.error.error : 'Failed to update current session.');
       }
     });
+  }
+
+  /** Today as YYYY-MM-DD in the browser's local date (the backend re-checks in the school's timezone). */
+  private todayIso(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
   private formatSessionRange(session: AcademicSession): string {
@@ -897,6 +958,11 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
       this.toast.warning('Validation', 'Reminder time is required when the teacher attendance reminder is enabled.');
       return;
     }
+    const rangeError = staffAttendanceConfigError(f);
+    if (rangeError) {
+      this.toast.warning('Validation', rangeError);
+      return;
+    }
     this.savingStaffAttendance = true;
     this.cdr.markForCheck();
     this.schoolService.updateSettings(f as any).pipe(takeUntil(this.destroy$)).subscribe({
@@ -909,15 +975,17 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
       },
       error: (e) => {
         this.logger.error('Failed to save staff attendance settings', e);
-        this.toast.error('Error', 'Failed to save settings. Please try again.');
+        const msg = e?.error?.message;
+        this.toast.error('Error', typeof msg === 'string' && msg.trim() ? msg : 'Failed to save settings. Please try again.');
         this.savingStaffAttendance = false;
         this.cdr.markForCheck();
       }
     });
   }
 
+  /** "Configured and ready" only when the saved values can actually support GPS check-in. */
   get isStaffAttendanceConfigured(): boolean {
-    return !!(this.settings?.schoolLatitude && this.settings?.schoolLongitude && this.settings?.schoolStartTime);
+    return isStaffAttendanceUsable(this.settings);
   }
 
   /** Non-blocking guidance only — backend validation never requires the reminder to fall

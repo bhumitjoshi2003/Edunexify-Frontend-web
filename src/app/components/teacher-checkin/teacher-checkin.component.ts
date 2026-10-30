@@ -1,7 +1,9 @@
+import { schoolDateKey } from '../../utils/school-date.util';
+import { formatTeacherAttendanceTime, teacherAttendanceErrorMessage } from '../../utils/teacher-attendance.util';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, interval, takeUntil } from 'rxjs';
+import { Subject, interval, takeUntil, forkJoin, shareReplay } from 'rxjs';
 import { TeacherCheckinService } from '../../services/teacher-checkin.service';
 import { TeacherAttendanceRecord, TeacherAttendanceSummary } from '../../interfaces/teacher-checkin';
 import { AuthStateService } from '../../auth/auth-state.service';
@@ -24,6 +26,9 @@ interface CalendarDay {
 })
 export class TeacherCheckinComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private monthlyRequest$ = new Subject<void>();
+  private schoolTimezone = 'Asia/Kolkata';
+  private calendarReady = false;
 
   userName = '';
   currentTime = '';
@@ -37,11 +42,14 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
   selectedYear: number;
 
   isLoading = false;
+  todayStateResolved = false;
+  attendanceLoadError: string | null = null;
   isCheckingIn = false;
   isCheckingOut = false;
   gpsError: string | null = null;
 
   readonly CALENDAR_SKELETON_COUNT = 35;
+  skeletonDays = Array(this.CALENDAR_SKELETON_COUNT);
 
   readonly monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -65,7 +73,7 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
     this.userName = user?.name ?? 'Teacher';
     this.updateTime();
     interval(1000).pipe(takeUntil(this.destroy$)).subscribe(() => this.updateTime());
-    this.loadMonthlyData();
+    this.loadCalendar();
   }
 
   ngOnDestroy(): void {
@@ -75,19 +83,19 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
 
   private updateTime(): void {
     const now = new Date();
-    this.currentTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    this.currentTime = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: this.schoolTimezone });
     this.cdr.markForCheck();
   }
 
   get greeting(): string {
-    const h = new Date().getHours();
+    const h = Number(new Intl.DateTimeFormat('en-US', { timeZone: this.schoolTimezone, hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
     if (h < 12) return 'Good Morning';
     if (h < 17) return 'Good Afternoon';
     return 'Good Evening';
   }
 
   get todayDateStr(): string {
-    return new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    return new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: this.schoolTimezone });
   }
 
   get hasCheckedIn(): boolean {
@@ -98,34 +106,55 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
     return !!this.todayRecord?.checkOutTime;
   }
 
-  loadMonthlyData(): void {
-    this.isLoading = true;
-    this.cdr.markForCheck();
-    this.checkinService.getMyAttendance(this.selectedMonth, this.selectedYear)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (data) => {
-          this.monthlyData = data;
-          this.findTodayRecord(data);
-          this.buildCalendar(data);
-          this.isLoading = false;
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.logger.error('Failed to load attendance data', err);
-          this.isLoading = false;
-          this.cdr.markForCheck();
-        }
-      });
+  private loadCalendar(): void {
+    this.todayStateResolved = false;
+    this.attendanceLoadError = null;
+    this.checkinService.getCalendarConfig().pipe(takeUntil(this.destroy$)).subscribe({
+      next: config => {
+        this.schoolTimezone = config.timezone || 'Asia/Kolkata';
+        this.calendarReady = true;
+        this.loadCurrentMonth();
+      },
+      error: err => {
+        this.attendanceLoadError = teacherAttendanceErrorMessage(err, "We could not load the school calendar. Please retry.");
+        this.cdr.markForCheck();
+      },
+    });
   }
 
-  private findTodayRecord(data: TeacherAttendanceSummary): void {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const now = new Date();
-    if (this.selectedMonth === now.getMonth() + 1 && this.selectedYear === now.getFullYear()) {
-      this.todayRecord = data.records.find(r => r.date === todayStr) ?? null;
-      this.expectedToday = data.expectedToday ?? null;
-    }
+  loadMonthlyData(): void {
+    this.monthlyRequest$.next();
+    this.isLoading = true;
+    this.todayStateResolved = false;
+    this.attendanceLoadError = null;
+    const today = schoolDateKey(new Date(), this.schoolTimezone);
+    const year = Number(today.slice(0, 4));
+    const month = Number(today.slice(5, 7));
+    const selected$ = this.checkinService.getMyAttendance(this.selectedMonth, this.selectedYear).pipe(shareReplay({ bufferSize: 1, refCount: true }));
+    const today$ = this.selectedMonth === month && this.selectedYear === year
+      ? selected$ : this.checkinService.getMyAttendance(month, year);
+    this.cdr.markForCheck();
+    forkJoin({ selected: selected$, today: today$ }).pipe(takeUntil(this.monthlyRequest$), takeUntil(this.destroy$)).subscribe({
+      next: data => {
+        this.monthlyData = data.selected;
+        this.todayRecord = data.today.records.find(r => r.date === today) ?? null;
+        this.expectedToday = data.today.expectedToday ?? null;
+        this.buildCalendar(data.selected);
+        this.isLoading = false;
+        this.todayStateResolved = true;
+        if (this.expectedToday === null && !this.todayRecord) {
+          this.todayStateResolved = false;
+          this.attendanceLoadError = "Today's attendance eligibility could not be confirmed. Please retry.";
+        }
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        this.logger.error('Failed to load attendance data', err);
+        this.isLoading = false;
+        this.attendanceLoadError = teacherAttendanceErrorMessage(err, "We could not load today's attendance. Check your connection and try again.");
+        this.cdr.markForCheck();
+      },
+    });
   }
 
   private buildCalendar(data: TeacherAttendanceSummary): void {
@@ -156,15 +185,22 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
   }
 
   async checkIn(): Promise<void> {
+    if (!this.todayStateResolved || this.expectedToday !== true || this.todayRecord) return;
     if (this.hasCheckedIn) {
       this.toast.warning('Already Checked In', 'You have already checked in for today.');
       return;
     }
+    const requestDay = schoolDateKey(new Date(), this.schoolTimezone);
     this.isCheckingIn = true;
     this.gpsError = null;
     this.cdr.markForCheck();
     try {
       const pos = await this.getPosition();
+      if (!this.todayStateResolved || this.expectedToday !== true || this.todayRecord || schoolDateKey(new Date(), this.schoolTimezone) !== requestDay) {
+        this.isCheckingIn = false;
+        this.cdr.markForCheck();
+        return;
+      }
       this.checkinService.checkIn({ latitude: pos.latitude, longitude: pos.longitude })
         .pipe(takeUntil(this.destroy$))
         .subscribe({
@@ -181,7 +217,7 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
           },
           error: (err) => {
             this.isCheckingIn = false;
-            const msg = typeof err?.error === 'string' ? err.error : 'Check-in failed. Please try again.';
+            const msg = teacherAttendanceErrorMessage(err, 'Check-in failed. Please try again.');
             this.toast.error('Check-in Failed', msg);
             this.cdr.markForCheck();
           }
@@ -195,6 +231,7 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
   }
 
   async checkOut(): Promise<void> {
+    if (!this.todayStateResolved) return;
     if (!this.hasCheckedIn) {
       this.toast.warning('Not Checked In', 'You must check in before checking out.');
       return;
@@ -220,7 +257,7 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
           },
           error: (err) => {
             this.isCheckingOut = false;
-            const msg = typeof err?.error === 'string' ? err.error : 'Check-out failed. Please try again.';
+            const msg = teacherAttendanceErrorMessage(err, 'Check-out failed. Please try again.');
             this.toast.error('Check-out Failed', msg);
             this.cdr.markForCheck();
           }
@@ -256,6 +293,17 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
     }
   }
 
+  retryAttendanceLoad(): void {
+    if (!this.calendarReady) this.loadCalendar(); else this.loadCurrentMonth();
+  }
+
+  private loadCurrentMonth(): void {
+    const today = schoolDateKey(new Date(), this.schoolTimezone);
+    this.selectedMonth = Number(today.slice(5, 7));
+    this.selectedYear = Number(today.slice(0, 4));
+    this.loadMonthlyData();
+  }
+
   goToPreviousMonth(): void {
     if (this.selectedMonth === 1) {
       this.selectedMonth = 12;
@@ -278,11 +326,7 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
     this.loadMonthlyData();
   }
 
-  formatCheckInTime(isoTime: string | null): string {
-    if (!isoTime) return '—';
-    const d = new Date(isoTime);
-    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-  }
+  formatCheckInTime(value: string | null): string { return formatTeacherAttendanceTime(value); }
 
   getStatusClass(status: string): string {
     switch (status) {
@@ -316,6 +360,6 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
 
   isToday(day: CalendarDay): boolean {
     if (!day.fullDate) return false;
-    return day.fullDate === new Date().toISOString().slice(0, 10);
+    return day.fullDate === schoolDateKey(new Date(), this.schoolTimezone);
   }
 }

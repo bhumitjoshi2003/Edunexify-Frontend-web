@@ -9,10 +9,14 @@ import { LoggerService } from '../../services/logger.service';
 import { ToastService } from '../../services/toast.service';
 import { StaffAdoptionResponse, StaffAdoptionTeacherRow } from '../../interfaces/staff-adoption';
 import { StaffAdoptionReminderType } from '../../interfaces/staff-adoption-reminder';
+import {
+  AdoptionAccountFilter, AdoptionActivityFilter, AdoptionAttendanceFilter, accountStatusLabel, adoptionRatePercent,
+  appVersionLabel, filterStaffAdoption, notStartedForSummary, relativeActivityLabel, reminderConfirmDialog, reminderSendResult,
+} from '../../utils/staff-adoption.util';
 
-type AccountFilter = 'ALL' | 'STARTED' | 'NOT_STARTED';
-type AttendanceFilter = 'ALL' | 'USED' | 'NOT_USED';
-type ActivityFilter = 'ALL' | 'LAST_7_DAYS' | 'OLDER' | 'NEVER';
+type AccountFilter = AdoptionAccountFilter;
+type AttendanceFilter = AdoptionAttendanceFilter;
+type ActivityFilter = AdoptionActivityFilter;
 
 interface ReminderOption {
   type: StaffAdoptionReminderType;
@@ -82,48 +86,24 @@ export class StaffAdoptionComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** "Not started" for the top summary specifically folds in DISABLED accounts, so the three
-   *  summary numbers always add up to the total a reader sees at a glance — the per-teacher
-   *  table still shows the precise Disabled/Account pending distinction untouched. */
+  /** Shared rules: utils/staff-adoption.util.ts (the same population and labels on both clients). */
   get notStartedForSummary(): number {
-    if (!this.data) return 0;
-    return this.data.summary.notStartedTeachers + this.data.summary.disabledTeachers;
+    return notStartedForSummary(this.data);
   }
 
-  /** Headline figure for the hero — same "% of required essentials" idea as School Setup,
-   *  applied to adoption instead: what share of teachers have actually started. */
   get adoptionRatePercent(): number {
-    if (!this.data || this.data.summary.totalTeachers === 0) return 0;
-    return Math.round((this.data.summary.startedTeachers / this.data.summary.totalTeachers) * 100);
+    return adoptionRatePercent(this.data);
   }
 
   get filteredTeachers(): StaffAdoptionTeacherRow[] {
     if (!this.data) return [];
-    const term = this.searchTerm.trim().toLowerCase();
-    return this.data.teachers.filter(teacher => {
-      if (term && !teacher.name.toLowerCase().includes(term) && !teacher.teacherId.toLowerCase().includes(term)) {
-        return false;
-      }
-      if (this.accountFilter === 'STARTED' && teacher.accountStatus !== 'STARTED') return false;
-      if (this.accountFilter === 'NOT_STARTED' && teacher.accountStatus === 'STARTED') return false;
-      if (this.attendanceFilter === 'USED' && !teacher.hasUsedAttendance) return false;
-      if (this.attendanceFilter === 'NOT_USED' && teacher.hasUsedAttendance) return false;
-      const activeAt = teacher.lastActiveAt ? new Date(teacher.lastActiveAt).getTime() : null;
-      const sevenDaysAgo = Date.now() - 7 * 86_400_000;
-      if (this.activityFilter === 'LAST_7_DAYS' && (!activeAt || activeAt < sevenDaysAgo)) return false;
-      if (this.activityFilter === 'OLDER' && (!activeAt || activeAt >= sevenDaysAgo)) return false;
-      if (this.activityFilter === 'NEVER' && activeAt) return false;
-      return true;
-    });
+    return filterStaffAdoption(this.data.teachers, {
+      search: this.searchTerm, account: this.accountFilter, attendance: this.attendanceFilter, activity: this.activityFilter,
+    }, new Date());
   }
 
   statusLabel(status: StaffAdoptionTeacherRow['accountStatus']): string {
-    switch (status) {
-      case 'STARTED': return 'Started';
-      case 'DISABLED': return 'Disabled';
-      case 'ACCOUNT_PENDING': return 'Account pending';
-      default: return 'Not started';
-    }
+    return accountStatusLabel(status);
   }
 
   statusClass(status: StaffAdoptionTeacherRow['accountStatus']): string {
@@ -135,30 +115,11 @@ export class StaffAdoptionComponent implements OnInit, OnDestroy {
   }
 
   appStatusLabel(teacher: StaffAdoptionTeacherRow): string {
-    switch (teacher.appVersionStatus) {
-      case 'UP_TO_DATE': return 'Up to date';
-      case 'UPDATE_AVAILABLE': return 'Update available';
-      case 'UPDATE_REQUIRED': return 'Update required';
-      default: return 'No version reported';
-    }
+    return appVersionLabel(teacher);
   }
 
-  /** Today / Yesterday / "N days ago" (up to a week) / "MMM D, YYYY" — never a raw ISO string,
-   *  never null/undefined text. Null input always renders as "Never". */
   formatDate(value: string | null): string {
-    if (!value) return 'Never';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Never';
-
-    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const today = startOfDay(new Date());
-    const target = startOfDay(date);
-    const diffDays = Math.round((today.getTime() - target.getTime()) / 86_400_000);
-
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays > 1 && diffDays <= 6) return `${diffDays} days ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return relativeActivityLabel(value, new Date());
   }
 
   ngOnDestroy(): void {
@@ -203,15 +164,7 @@ export class StaffAdoptionComponent implements OnInit, OnDestroy {
   }
 
   private confirmAndSend(type: StaffAdoptionReminderType, count: number, names: string[]): void {
-    const shown = names.slice(0, 8);
-    const more = names.length > shown.length ? `<p>&hellip; and ${names.length - shown.length} more</p>` : '';
-    this.toast.confirm({
-      title: `Send reminder to ${count} teacher${count > 1 ? 's' : ''}?`,
-      html: `<p>${shown.join(', ')}</p>${more}`,
-      icon: 'question',
-      confirmText: 'Send reminder',
-      cancelText: 'Cancel',
-    }).then(confirmed => {
+    this.toast.confirm(reminderConfirmDialog(count, names)).then(confirmed => {
       if (!confirmed) return;
       this.sendReminder(type);
     });
@@ -238,17 +191,8 @@ export class StaffAdoptionComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Truthful wording: "sent" here means accepted for delivery, never a claim that email/push
-   *  was actually received. */
   private toastForSendResult(sentCount: number, skippedRecentCount: number): void {
-    if (sentCount === 0 && skippedRecentCount > 0) {
-      this.toast.info('Already reminded', `All ${skippedRecentCount} teacher${skippedRecentCount > 1 ? 's were' : ' was'} reminded recently.`);
-      return;
-    }
-    let message = `Reminder sent to ${sentCount} teacher${sentCount === 1 ? '' : 's'}.`;
-    if (skippedRecentCount > 0) {
-      message += ` ${skippedRecentCount} skipped because they were reminded recently.`;
-    }
-    this.toast.success('Reminder sent', message);
+    const result = reminderSendResult(sentCount, skippedRecentCount);
+    this.toast[result.level](result.title, result.message);
   }
 }

@@ -60,3 +60,4 @@
   .child-tab-text small { display: none; }
 }
 .child-context.invalid span { display: block; margin-top: 2px; font-size: 12px; }
+.child-tab:disabled { opacity: 0.6; cursor: not-allowed; }

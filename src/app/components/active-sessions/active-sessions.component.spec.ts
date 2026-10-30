@@ -6,12 +6,15 @@ import { SessionService } from '../../services/session.service';
 import { ToastService } from '../../services/toast.service';
 import { LoggerService } from '../../services/logger.service';
 import { UserSession } from '../../interfaces/user-session';
+import { SignOutService } from '../../services/sign-out.service';
 
+/** Shared by the web and Android clients — keep the two copies identical. */
 describe('ActiveSessionsComponent', () => {
   let component: ActiveSessionsComponent;
   let fixture: ComponentFixture<ActiveSessionsComponent>;
   let sessionServiceSpy: jasmine.SpyObj<SessionService>;
   let toastSpy: jasmine.SpyObj<ToastService>;
+  let signOutSpy: jasmine.SpyObj<SignOutService>;
 
   const currentSession: UserSession = {
     id: 1, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/128.0.0.0 Safari/537.36',
@@ -27,12 +30,15 @@ describe('ActiveSessionsComponent', () => {
   beforeEach(async () => {
     sessionServiceSpy = jasmine.createSpyObj('SessionService', ['list', 'revoke', 'revokeOthers']);
     toastSpy = jasmine.createSpyObj('ToastService', ['confirm', 'success', 'error']);
+    signOutSpy = jasmine.createSpyObj('SignOutService', ['signOut', 'signOutEverywhere']);
+    signOutSpy.signOutEverywhere.and.resolveTo();
 
     await TestBed.configureTestingModule({
       imports: [ActiveSessionsComponent],
       providers: [
         { provide: SessionService, useValue: sessionServiceSpy },
         { provide: ToastService, useValue: toastSpy },
+        { provide: SignOutService, useValue: signOutSpy },
         { provide: LoggerService, useValue: jasmine.createSpyObj('LoggerService', ['error', 'warn', 'info']) },
       ],
     }).compileComponents();
@@ -110,12 +116,62 @@ describe('ActiveSessionsComponent', () => {
     expect(fixture.nativeElement.querySelector('.as-empty-card')).not.toBeNull();
   });
 
-  it('does not render a page-level "Log out everywhere" action anywhere', () => {
+  it('log out everywhere: confirmed, it signs out every session through the sign-out adapter', async () => {
     sessionServiceSpy.list.and.returnValue(of([currentSession, otherSession]));
     fixture.detectChanges();
+    toastSpy.confirm.and.resolveTo(true);
 
-    expect(fixture.nativeElement.textContent).not.toContain('Log out everywhere');
-    expect((component as any).logoutEverywhere).toBeUndefined();
+    await component.logOutEverywhere();
+
+    expect(signOutSpy.signOutEverywhere).toHaveBeenCalledTimes(1);
+    expect(sessionServiceSpy.revokeOthers).not.toHaveBeenCalled();
+  });
+
+  it('log out everywhere: cancelling does nothing', async () => {
+    sessionServiceSpy.list.and.returnValue(of([currentSession, otherSession]));
+    fixture.detectChanges();
+    toastSpy.confirm.and.resolveTo(false);
+    await component.logOutEverywhere();
+    expect(signOutSpy.signOutEverywhere).not.toHaveBeenCalled();
+  });
+
+  it('log out everywhere: if the server call fails, says so and stays signed in', async () => {
+    sessionServiceSpy.list.and.returnValue(of([currentSession, otherSession]));
+    fixture.detectChanges();
+    toastSpy.confirm.and.resolveTo(true);
+    signOutSpy.signOutEverywhere.and.rejectWith({ status: 0 });
+    await component.logOutEverywhere();
+    expect(toastSpy.error).toHaveBeenCalledWith('Error', jasmine.stringMatching(/still signed in/));
+    expect(component.signingOutEverywhere).toBeFalse();
+  });
+
+  it('revoking another session never touches this device\'s sign-in', async () => {
+    sessionServiceSpy.list.and.returnValue(of([currentSession, otherSession]));
+    sessionServiceSpy.revoke.and.returnValue(of('Session revoked.'));
+    fixture.detectChanges();
+    toastSpy.confirm.and.resolveTo(true);
+    await component.revoke(otherSession);
+    expect(signOutSpy.signOut).not.toHaveBeenCalled();
+    expect(signOutSpy.signOutEverywhere).not.toHaveBeenCalled();
+    expect(component.current?.id).toBe(1);
+  });
+
+  it('when the server could not identify this device, "log out all others" is not offered', async () => {
+    sessionServiceSpy.list.and.returnValue(of([{ ...currentSession, current: false }, otherSession]));
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-testid="revoke-others"]')).toBeNull();
+    expect(root.querySelector('[data-testid="current-unknown"]')).not.toBeNull();
+    await component.revokeOthers();
+    expect(toastSpy.confirm).not.toHaveBeenCalled();
+    expect(sessionServiceSpy.revokeOthers).not.toHaveBeenCalled();
+  });
+
+  it('an expired or revoked session (401) shows the load error; the auth interceptor handles the sign-out', () => {
+    sessionServiceSpy.list.and.returnValue(throwError(() => ({ status: 401 })));
+    fixture.detectChanges();
+    expect(component.loadError).toBeTrue();
+    expect(signOutSpy.signOut).not.toHaveBeenCalled();
   });
 
   it('revoke: cancelling the confirmation never calls the API', async () => {

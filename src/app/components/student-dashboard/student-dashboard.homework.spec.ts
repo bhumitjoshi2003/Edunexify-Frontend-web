@@ -15,6 +15,8 @@ import { AssessmentService } from '../../services/assessment.service';
 
 /** The dashboard's compact homework section — isolated from the rest of the dashboard load. */
 describe("StudentDashboardComponent — Today's Homework & Classwork", () => {
+  let classroom = true;
+  afterEach(() => classroom = true);
   let fixture: ComponentFixture<StudentDashboardComponent>;
   let component: StudentDashboardComponent;
   let homework: jasmine.SpyObj<HomeworkService>;
@@ -32,7 +34,7 @@ describe("StudentDashboardComponent — Today's Homework & Classwork", () => {
       imports: [StudentDashboardComponent],
       providers: [
         provideRouter([]),
-        { provide: AuthStateService, useValue: { getUser: () => null, hasFeature: () => false } },
+        { provide: AuthStateService, useValue: { getUser: () => null, hasFeature: (key: string) => classroom && key === 'CLASSROOM' } },
         { provide: StudentService, useValue: {} },
         { provide: AttendanceService, useValue: {} },
         { provide: LeaveService, useValue: {} },
@@ -53,6 +55,15 @@ describe("StudentDashboardComponent — Today's Homework & Classwork", () => {
     fixture.detectChanges();
     return fixture.nativeElement;
   }
+
+  it('without Classroom in the plan, the homework, class updates and assessments sections are not shown', () => {
+    classroom = false;
+    homework.studentOn.and.returnValue(of([item(1, 'Science')]));
+    const el = render();
+    expect(el.querySelector('.sd-hw')).toBeNull();
+    expect(el.querySelector('.sd-cu')).toBeNull();
+    expect(el.querySelector('.sd-as')).toBeNull();
+  });
 
   it('shows at most three items and a View all link to the homework page', () => {
     homework.studentOn.and.returnValue(of([item(1, 'Science'), item(2, 'Maths'), item(3, 'English'), item(4, 'Hindi')]));

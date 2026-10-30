@@ -16,7 +16,15 @@
 
   <!-- List area -->
   <div class="teacher-list-area">
-    <div *ngIf="teachers.length > 0; else noTeachersContainer">
+    <div class="no-teachers" *ngIf="display === 'loading'" data-testid="list-loading">
+      <p>Loading teachers…</p>
+    </div>
+    <div class="no-teachers list-error" *ngIf="display === 'error'" data-testid="list-error">
+      <span class="no-icon">⚠️</span>
+      <p>Teachers couldn't be loaded. Please check your connection and try again.</p>
+      <button type="button" class="view-details-button" (click)="loadAllTeachers()">Retry</button>
+    </div>
+    <div *ngIf="display === 'list'">
       <ul class="teacher-list">
         <li *ngFor="let teacher of teachers; trackBy: trackByTeacherId"
             class="teacher-item"
@@ -36,12 +44,10 @@
         </li>
       </ul>
     </div>
-    <ng-template #noTeachersContainer>
-      <div class="no-teachers">
-        <span class="no-icon">🔍</span>
-        <p>No teachers found.</p>
-      </div>
-    </ng-template>
+    <div class="no-teachers" *ngIf="display === 'empty'" data-testid="list-empty">
+      <span class="no-icon">🔍</span>
+      <p>No teachers found.</p>
+    </div>
   </div>
 
 </div>

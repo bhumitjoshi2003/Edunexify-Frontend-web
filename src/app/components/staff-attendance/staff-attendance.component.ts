@@ -10,6 +10,8 @@ import { TenantService } from '../../services/tenant.service';
 import { LoggerService } from '../../services/logger.service';
 import { ToastService } from '../../services/toast.service';
 import { AcademicSessionService } from '../../services/academic-session.service';
+import { formatClockTime12h, toTimeInputValue } from '../../utils/clock-time.util';
+import { schoolDateKey } from '../../utils/school-date.util';
 
 @Component({
   selector: 'app-staff-attendance',
@@ -83,7 +85,8 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef
   ) {
     const now = new Date();
-    this.selectedDate = now.toISOString().slice(0, 10);
+    // Attendance follows the school day (backend SchoolTimeUtil), not the UTC date: at 00:30 IST it is already today.
+    this.selectedDate = schoolDateKey(now);
     this.summaryMonth = now.getMonth() + 1;
     this.summaryYear = now.getFullYear();
     this.individualMonth = now.getMonth() + 1;
@@ -304,6 +307,8 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
     const date = this.markForm.date;
     const request = ++this.markableRequest;
     this.markableTeachers = [];
+    this.markForm.teacherId = '';
+    this.markableLoading = false;
     if (!date) return;
     this.markableLoading = true;
     this.cdr.markForCheck();
@@ -327,6 +332,8 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
   }
 
   openEditDialog(record: TeacherAttendanceRecord): void {
+    this.markableRequest++;
+    this.markableLoading = false;
     this.isEditMode = true;
     this.editingRecordId = record.id;
     this.formDirty = false;
@@ -376,6 +383,10 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
   }
 
   async submitAdminMark(): Promise<void> {
+    if (!this.isEditMode && (this.markableLoading || !this.markableTeachers.some(t => t.teacherId === this.markForm.teacherId))) {
+      this.toast.warning('Teacher unavailable', 'Select a teacher expected to attend on this date.');
+      return;
+    }
     if (!this.markForm.teacherId || !this.markForm.date || !this.markForm.status) {
       this.toast.warning('Validation', 'Please fill all required fields.');
       return;
@@ -386,7 +397,9 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const selectedDate = new Date(this.markForm.date);
+    const draft = { ...this.markForm };
+    const requestVersion = this.markableRequest;
+    const selectedDate = new Date(draft.date);
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     if (selectedDate < thirtyDaysAgo) {
@@ -399,6 +412,7 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
       if (!proceed) return;
     }
 
+    if (requestVersion !== this.markableRequest || JSON.stringify(draft) !== JSON.stringify(this.markForm)) return;
     this.isMarking = true;
     this.cdr.markForCheck();
 
@@ -435,7 +449,7 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
   // ── Helpers ──
 
   get todayStr(): string {
-    return new Date().toISOString().split('T')[0];
+    return schoolDateKey(new Date());
   }
 
   /** Editing an existing record: any teacher (the select is fixed to that record). New mark:
@@ -445,8 +459,7 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
   }
 
   private extractTime(isoTime: string): string {
-    const d = new Date(isoTime);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    return toTimeInputValue(isoTime);
   }
 
   get presentCount(): number { return this.records.filter(r => r.status === 'ON_TIME' || r.status === 'LATE').length; }
@@ -478,9 +491,7 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
   }
 
   formatTime(isoTime: string | null): string {
-    if (!isoTime) return '—';
-    const d = new Date(isoTime);
-    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return formatClockTime12h(isoTime);
   }
 
   getPhotoUrl(record: TeacherAttendanceRecord): string | null {

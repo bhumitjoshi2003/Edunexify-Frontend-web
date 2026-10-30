@@ -4,12 +4,13 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { DashboardComponent } from './dashboard.component';
 import { routes } from '../../app.routes';
 import { roleGuard } from '../../auth/role.guard';
+import { featureGuard } from '../../auth/feature.guard';
 import { AuthService } from '../../auth/auth.service';
 import { AuthStateService } from '../../auth/auth-state.service';
 import { StudentService } from '../../services/student.service';
 import { TeacherService } from '../../services/teacher.service';
 import { AdminService } from '../../services/admin.service';
-import { NotificationService } from '../../services/notification.service';
+import { NotificationStateService } from '../../services/notification-state.service';
 import { SchoolService } from '../../services/school.service';
 import { TenantService } from '../../services/tenant.service';
 import { ParentPortalService } from '../../services/parent-portal.service';
@@ -18,6 +19,8 @@ import { LoggerService } from '../../services/logger.service';
 import { WhatsNewService } from '../../services/whats-new.service';
 
 describe('Assessments — role access', () => {
+  let classroom = true;
+  let selectedChild: any = null;
   let fixture: ComponentFixture<DashboardComponent>;
   let authState: jasmine.SpyObj<AuthStateService>;
 
@@ -31,7 +34,7 @@ describe('Assessments — role access', () => {
     authState.isUnauthenticated.and.returnValue(false);
     authState.loadCurrentUser.and.returnValue(Promise.resolve());
     authState.getSubscriptionStatus.and.returnValue(null);
-    authState.hasFeature.and.returnValue(false);
+    authState.hasFeature.and.callFake((key: string) => classroom && key === 'CLASSROOM');
     authState.isSubscriptionWarning.and.returnValue(false);
 
     TestBed.configureTestingModule({
@@ -42,11 +45,11 @@ describe('Assessments — role access', () => {
         { provide: StudentService, useValue: {} },
         { provide: TeacherService, useValue: {} },
         { provide: AdminService, useValue: {} },
-        { provide: NotificationService, useValue: { unreadCountState$: of({ status: 'success', count: 0 }), refreshUnreadCount: () => {} } },
+        { provide: NotificationStateService, useValue: { unreadState$: of({ status: 'success', count: 0 }), refreshUnread: () => {}, allRead: () => {} } },
         { provide: SchoolService, useValue: {} },
         { provide: TenantService, useValue: { school: null } },
         { provide: ParentPortalService, useValue: { getMyProfile: () => of(null) } },
-        { provide: ParentChildContextService, useValue: { selectedChild$: of(null), reconcile: () => {} } },
+        { provide: ParentChildContextService, useValue: { selectedChild$: of(selectedChild), reconcile: () => {} } },
         { provide: LoggerService, useValue: { error: () => {} } },
         { provide: WhatsNewService, useValue: { checkOnStartup: () => {}, openManually: () => {} } },
       ],
@@ -56,7 +59,7 @@ describe('Assessments — role access', () => {
     fixture.detectChanges();
   }
 
-  afterEach(() => fixture?.destroy());
+  afterEach(() => { fixture?.destroy(); selectedChild = null; classroom = true; });
 
   const link = (href: string) => fixture.nativeElement.querySelector(`a[routerLink="${href}"]`);
 
@@ -86,13 +89,37 @@ describe('Assessments — role access', () => {
     });
   }
 
-  it('routes are guarded: management is TEACHER/ADMIN-only and the calendar STUDENT-only', () => {
+  it('PARENT with a selected child gets the read-only page for that child', () => {
+    selectedChild = { studentId: 'stu_3', studentName: 'Kabir', className: '10', sectionName: 'A' };
+    build('PARENT');
+    const a = link('/dashboard/assessments');
+    expect(a).toBeTruthy();
+    expect(a.getAttribute('href')).toContain('studentId=stu_3');
+  });
+
+  it('without Classroom in the plan, no role sees these links', () => {
+    classroom = false;
+    for (const role of ['STUDENT', 'TEACHER', 'ADMIN']) {
+      build(role);
+      expect(link('/dashboard/assessments')).withContext(role).toBeNull();
+      expect(link('/dashboard/manage-assessments')).withContext(role).toBeNull();
+      fixture.destroy();
+      TestBed.resetTestingModule();
+    }
+    selectedChild = { studentId: 'stu_3', studentName: 'Kabir', className: '10', sectionName: 'A' };
+    build('PARENT');
+    expect(link('/dashboard/assessments')).toBeNull();
+  });
+
+  it('routes are guarded: management is TEACHER/ADMIN-only and the calendar STUDENT + PARENT (read-only)', () => {
     const dashboard = routes.find(r => r.path === 'dashboard')!;
     const manage = dashboard.children!.find(r => r.path === 'manage-assessments')!;
     const student = dashboard.children!.find(r => r.path === 'assessments')!;
     expect(manage.canActivate).toContain(roleGuard);
     expect(manage.data!['roles']).toEqual(['TEACHER', 'ADMIN']);
     expect(student.canActivate).toContain(roleGuard);
-    expect(student.data!['roles']).toEqual(['STUDENT']);
+    expect(student.data!['roles']).toEqual(['STUDENT', 'PARENT']);
+    expect(student.canActivate).toContain(featureGuard);
+    expect(student.data!['featureKey']).toBe('CLASSROOM');
   });
 });
