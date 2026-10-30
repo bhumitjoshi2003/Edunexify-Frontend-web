@@ -3,7 +3,7 @@
   "shared": {
     "src/app/auth/auth-state.service.ts": "4a488bf84a84fe3dbb00978fcd914be37d2648930f12a73f4908843c15f7cffe",
     "src/app/auth/auth.service.ts": "0f790679e878948a2cdd32f5536bf5ae7e7de111f2794745c640db3e12245dfe",
-    "src/app/auth/auth.interceptor.ts": "136c5410f56d883b2e51eb7241d52bac9606742c3d5db84ee94ff2872632ccd8",
+    "src/app/auth/auth.interceptor.ts": "b3b223cff52d4f96d5cf21ea3b074f42ba67acdc4392d7985b4307e788136019",
     "src/app/auth/auth.guard.ts": "65ff4cc8047700f2e7c3a024cd1d22f0ff62fbfa292e084eb27da76a057d11a8",
     "src/app/auth/role.guard.ts": "c65994474895049f440ed8bd88e9512f5257a059846092d9fb09ad4d24f8447b",
     "src/app/auth/feature.guard.ts": "5b4a54e369f56a072c090f07f941ab056c56c8b9617870b889e1050294d2b2a0",
@@ -93,7 +93,7 @@
     "src/app/components/bus-fees/bus-fees.component.ts": "6bad8d2a9a5b4da90b218c7e0fdd2fb8dfb9c119974f8b8fcd7c0b88a98ae7d1",
     "src/app/utils/fee-editor.util.ts": "a0502ede2854d0e41df862c1e180723ea308248605d33531e52436c6a0313dfe",
     "src/app/components/parent-child-context/parent-child-context.component.ts": "1b1a5b571d1afcd5237acc8f7b669dc8e602e182ad30b5c7b06b20cd524ba102",
-    "src/app/services/demo.service.ts": "e4aea3ace3967fc8a9a2ce42b7d638f93818cb9890e53fa9064c0fe99a0e5229",
+    "src/app/services/demo.service.ts": "278aaa7cb76eb94ab670a0c403fcd00080ff3533f24343ed3289102366bd3854",
     "src/app/services/demo.service.spec.ts": "2275d7fe9391f8302c06c03074d7176d80539bba98e2ddd62f9afb254b396ebc",
     "scripts/generate-e2e-environment.mjs": "d51bacb6ba903da89c81083bf5152efaaccecf6871fce23a5508e4d9f829404d",
     "src/app/utils/staff-attendance-config.util.ts": "2eeac8a2f33322e59d4791110f2710bc86a58f0e9166ee2fa17ab23e975d4708"
