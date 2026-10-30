@@ -121,14 +121,15 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     const user = this.authStateService.getUser();
     this.role = user?.role ?? '';
     const tab = this.route.snapshot.queryParamMap.get('tab');
-    if (tab === 'subscription' || tab === 'features' || tab === 'razorpay' || tab === 'staff-attendance') {
+    if (tab === 'subscription' || tab === 'features' || tab === 'staff-attendance'
+        || (tab === 'razorpay' && this.onlinePaymentsEnabled)) {
       this.activeTab = tab;
     }
 
     this.loadSettings();
     this.loadEntitlement();
     this.loadSessions();
-    this.loadFeePolicy();
+    if (this.feeManagementEnabled) this.loadFeePolicy();
     if (this.activeTab === 'subscription') {
       this.loadAvailablePlans();
     }
@@ -138,7 +139,13 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** The fee policy belongs to Fee Management; with it off the policy is never requested or shown. */
+  get feeManagementEnabled(): boolean {
+    return this.authStateService.hasFeature(FEATURES.FEE_MANAGEMENT);
+  }
+
   loadFeePolicy(): void {
+    if (!this.feeManagementEnabled) return;
     this.feePolicyLoading = true;
     this.feeWorkflowService.getSettings().pipe(takeUntil(this.destroy$)).subscribe({
       next: (settings) => {
@@ -155,7 +162,7 @@ export class SchoolSettingsComponent implements OnInit, OnDestroy {
   }
 
   saveFeePolicy(): void {
-    if (!this.feePolicy || this.feePolicySaving) return;
+    if (!this.feeManagementEnabled || !this.feePolicy || this.feePolicySaving) return;
     this.feePolicySaving = true;
     const value: FeeWorkflowSettings = {
       ...this.feePolicy,
