@@ -6,6 +6,7 @@ import { StartupRecoveryComponent } from './startup-recovery.component';
 import { StartupService } from '../../core/startup.service';
 import { AuthStateService, UserInfo } from '../../auth/auth-state.service';
 import { STARTUP_SLOW_NOTICE_MS } from '../../core/startup.constants';
+import { setIntendedRouteSchoolResolver } from '../../auth/redirect-url.util';
 
 describe('StartupRecoveryComponent', () => {
   let startupService: jasmine.SpyObj<StartupService>;
@@ -28,6 +29,9 @@ describe('StartupRecoveryComponent', () => {
     router = TestBed.inject(Router);
     spyOn(router, 'navigateByUrl').and.resolveTo(true);
     localStorage.removeItem('redirectUrl');
+    // TenantService registers a module-wide school resolver; a spec that ran earlier may have
+    // left one behind, so this suite starts from "no school" like a fresh app.
+    setIntendedRouteSchoolResolver(() => null);
   });
 
   afterEach(() => localStorage.removeItem('redirectUrl'));
