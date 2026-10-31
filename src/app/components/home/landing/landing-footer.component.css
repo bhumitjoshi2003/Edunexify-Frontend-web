@@ -1,0 +1,12 @@
+:host { display: block; background: #0b1b33; color: #cbd5e1; }
+.in { max-width: 1200px; margin: 0 auto; padding: 64px 24px 40px; display: grid; grid-template-columns: 1.6fr 1fr 1fr 1.2fr; gap: 40px; }
+.brand { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font: 800 1.25rem/1 Inter, system-ui, sans-serif; color: #fff; letter-spacing: -.02em; } .brand img { border-radius: 8px; background: #fff; padding: 2px; }
+.brand-col p { margin: 0; max-width: 30em; font: 400 .95rem/1.65 Inter, system-ui, sans-serif; color: #94a3b8; }
+h3 { margin: 0 0 16px; font: 700 .78rem/1 Inter, system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #8ceaea; }
+nav, .contact { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+a, button { background: none; border: 0; padding: 7px 0; color: #e2e8f0; font: 500 .96rem/1.3 Inter, system-ui, sans-serif; text-decoration: none; cursor: pointer; text-align: left; }
+a:hover, button:hover { color: #8ceaea; text-decoration: underline; }
+a:focus-visible, button:focus-visible { outline: 3px solid #8ceaea; outline-offset: 3px; border-radius: 6px; }
+.bar { border-top: 1px solid rgba(255, 255, 255, .08); } .bar p { max-width: 1200px; margin: 0 auto; padding: 22px 24px; font: 400 .88rem/1.4 Inter, system-ui, sans-serif; color: #94a3b8; }
+@media (max-width: 860px) { .in { grid-template-columns: 1fr 1fr; padding: 48px 20px 28px; gap: 32px 24px; } .brand-col { grid-column: 1 / -1; } .bar p { padding: 20px; } }
+@media (max-width: 440px) { .in { grid-template-columns: 1fr; } }

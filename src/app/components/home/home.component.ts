@@ -8,6 +8,21 @@ import { ToastService } from '../../services/toast.service';
 import { TenantService } from '../../services/tenant.service';
 import { SchoolService, PlanDetail } from '../../services/school.service';
 import { clearIntendedRoute, postLoginDestination } from '../../auth/redirect-url.util';
+import { LandingNavComponent } from './landing/landing-nav.component';
+import { LandingHeroComponent } from './landing/landing-hero.component';
+import { LandingTrustComponent } from './landing/landing-trust.component';
+import { ProductShowcaseComponent } from './landing/product-showcase.component';
+import { FeatureAreasComponent } from './landing/feature-areas.component';
+import { RoleTabsComponent } from './landing/role-tabs.component';
+import { AiCopilotSectionComponent } from './landing/ai-copilot-section.component';
+import { PlatformsSectionComponent } from './landing/platforms-section.component';
+import { WhySectionComponent } from './landing/why-section.component';
+import { OnboardingStepsComponent } from './landing/onboarding-steps.component';
+import { ProofSectionComponent } from './landing/proof-section.component';
+import { PricingSectionComponent } from './landing/pricing-section.component';
+import { FaqSectionComponent } from './landing/faq-section.component';
+import { FinalCtaComponent } from './landing/final-cta.component';
+import { LandingFooterComponent } from './landing/landing-footer.component';
 
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -17,7 +32,13 @@ import { defer, finalize, Subject, takeUntil, timeout } from 'rxjs';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  imports: [
+    FormsModule, CommonModule,
+    LandingNavComponent, LandingHeroComponent, LandingTrustComponent, ProductShowcaseComponent,
+    FeatureAreasComponent, RoleTabsComponent, AiCopilotSectionComponent, PlatformsSectionComponent,
+    WhySectionComponent, OnboardingStepsComponent, ProofSectionComponent, PricingSectionComponent,
+    FaqSectionComponent, FinalCtaComponent, LandingFooterComponent,
+  ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -44,8 +65,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Plans
   plans: PlanDetail[] = [];
   plansLoading = false;
-  billingCycle: 'monthly' | 'annual' = 'monthly';
-  private _masterFeatureList: { featureKey: string; displayName: string }[] | null = null;
 
   demo: { schoolName: string; contactName: string; email: string; phone: string; students: string | number | null; city: string; message: string } = {
     schoolName:  '',
@@ -87,11 +106,9 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   loadPlans(): void {
     this.plansLoading = true;
-    this._masterFeatureList = null;
     this.schoolService.getPublicPlans().pipe(takeUntil(this.destroy$)).subscribe({
       next: (plans) => {
         this.plans = plans;
-        this._masterFeatureList = null; // recompute on next access
         this.plansLoading = false;
         this.cdr.markForCheck();
       },
@@ -101,86 +118,6 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
-  }
-
-  // ── Plan display helpers ───────────────────────────────────
-  planEmoji(tier: string): string {
-    switch (tier?.toUpperCase()) {
-      case 'CAMPUS':    return '🏫';
-      case 'ACADEMY':   return '🎓';
-      case 'INSTITUTE': return '🏛️';
-      default:          return '📦';
-    }
-  }
-
-  isPopularPlan(tier: string): boolean {
-    return tier?.toUpperCase() === 'ACADEMY';
-  }
-
-  planPrice(plan: PlanDetail): string {
-    const paise = this.billingCycle === 'annual' ? plan.annualPricePaise : plan.monthlyPricePaise;
-    if (!paise || paise <= 0) return 'Contact Us';
-    const rupees = paise / 100;
-    return '₹' + rupees.toLocaleString('en-IN');
-  }
-
-  planPriceSuffix(plan: PlanDetail): string {
-    const paise = this.billingCycle === 'annual' ? plan.annualPricePaise : plan.monthlyPricePaise;
-    if (!paise || paise <= 0) return '';
-    return this.billingCycle === 'annual' ? '/yr' : '/mo';
-  }
-
-  planIsContactSales(plan: PlanDetail): boolean {
-    const paise = this.billingCycle === 'annual' ? plan.annualPricePaise : plan.monthlyPricePaise;
-    return !paise || paise <= 0;
-  }
-
-  planStudentLabel(plan: PlanDetail): string {
-    return plan.maxStudents ? `Up to ${plan.maxStudents.toLocaleString('en-IN')} students` : 'Unlimited students';
-  }
-
-  /**
-   * Union of all features across all plans, sorted by displayName.
-   * Memoized — recomputed only when plans reload.
-   */
-  get masterFeatureList(): { featureKey: string; displayName: string }[] {
-    if (this._masterFeatureList) return this._masterFeatureList;
-    const seen = new Map<string, string>(); // featureKey → displayName
-    for (const plan of this.plans) {
-      for (const f of plan.features) {
-        if (!seen.has(f.featureKey)) seen.set(f.featureKey, f.displayName);
-      }
-    }
-    this._masterFeatureList = Array.from(seen.entries())
-      .map(([featureKey, displayName]) => ({ featureKey, displayName }))
-      .sort((a, b) => a.displayName.localeCompare(b.displayName));
-    return this._masterFeatureList;
-  }
-
-  planHasFeature(plan: PlanDetail, featureKey: string): boolean {
-    return plan.features.some(f => f.featureKey === featureKey);
-  }
-
-  /**
-   * Returns exactly CAP features per card: yes-features first (green), then
-   * no-features (grey). Guarantees at least MIN_NO grey rows when missing
-   * features exist — so higher-tier plans are visibly distinguishable.
-   */
-  sortedFeaturesForPlan(plan: PlanDetail): { featureKey: string; displayName: string; has: boolean }[] {
-    const CAP = 9;
-    const MIN_NO = 2; // always show at least 2 grey rows if any features are missing
-
-    const master = this.masterFeatureList;
-    const yes = master.filter(f =>  this.planHasFeature(plan, f.featureKey)).map(f => ({ ...f, has: true }));
-    const no  = master.filter(f => !this.planHasFeature(plan, f.featureKey)).map(f => ({ ...f, has: false }));
-
-    // Reserve guaranteed no-slots, then fill yes up to the remaining space,
-    // then top up no-slots with whatever remains.
-    const guaranteedNo = no.length > 0 ? Math.min(no.length, MIN_NO) : 0;
-    const actualYes    = Math.min(yes.length, CAP - guaranteedNo);
-    const actualNo     = Math.min(no.length,  CAP - actualYes);
-
-    return [...yes.slice(0, actualYes), ...no.slice(0, actualNo)];
   }
 
   // ── Login ─────────────────────────────────────────────────

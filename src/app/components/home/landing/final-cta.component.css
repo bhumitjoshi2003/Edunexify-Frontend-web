@@ -1,0 +1,13 @@
+:host { display: block; padding: 0 24px 96px; background: #fff; }
+.cta { max-width: 1200px; margin: 0 auto; border-radius: 32px; overflow: hidden; position: relative; background: linear-gradient(135deg, #0f2744 0%, #1e3a5f 55%, #0f766e 130%); }
+.cta::before { content: ''; position: absolute; width: 520px; height: 520px; right: -160px; top: -240px; border-radius: 50%; background: radial-gradient(circle, rgba(79, 189, 189, .35), transparent 65%); }
+.in { position: relative; padding: 80px 32px; text-align: center; max-width: 780px; margin: 0 auto; }
+h2 { margin: 0 0 16px; font: 800 clamp(1.8rem, 3.4vw, 2.7rem)/1.15 Inter, system-ui, sans-serif; letter-spacing: -.03em; color: #fff; }
+p { margin: 0 auto 34px; max-width: 34em; font: 400 clamp(1rem, 1.4vw, 1.15rem)/1.65 Inter, system-ui, sans-serif; color: #cfdcec; }
+.btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+button { font-family: Inter, system-ui, sans-serif; cursor: pointer; min-height: 54px; padding: 0 30px; border-radius: 14px; font-weight: 700; font-size: 1.05rem; transition: transform .18s, background .15s, box-shadow .18s; }
+.primary { border: 0; background: #fff; color: #0f2744; box-shadow: 0 16px 30px -14px rgba(0, 0, 0, .55); } .primary:hover { transform: translateY(-2px); }
+.ghost { background: transparent; color: #fff; border: 1.5px solid rgba(255, 255, 255, .45); font-weight: 600; } .ghost:hover { background: rgba(255, 255, 255, .1); border-color: #fff; }
+button:focus-visible { outline: 3px solid #8ceaea; outline-offset: 3px; }
+@media (max-width: 860px) { :host { padding: 0 16px 64px; } .cta { border-radius: 24px; } .in { padding: 56px 22px; } }
+@media (max-width: 480px) { .btns { flex-direction: column; } button { width: 100%; } }

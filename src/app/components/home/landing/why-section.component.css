@@ -1,0 +1,6 @@
+:host { background: #f6f9fb; }
+.grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.why { padding: 26px 22px; display: flex; flex-direction: column; gap: 16px; }
+.why h3 { font-size: 1.02rem; margin-bottom: 8px; } .why p { margin: 0; font-size: .93rem; line-height: 1.55; color: #475569; }
+@media (max-width: 1020px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .grid { grid-template-columns: 1fr; gap: 10px; } .why:nth-child(n+7) { display: none; } .why { flex-direction: row; align-items: flex-start; padding: 18px; } .ico { flex: none; width: 44px; height: 44px; } }
