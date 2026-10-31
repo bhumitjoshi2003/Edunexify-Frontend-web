@@ -3,7 +3,7 @@ import { AuthService } from '../../auth/auth.service';
 import { AuthStateService } from '../../auth/auth-state.service';
 import { Router } from '@angular/router';
 import { LoggerService } from '../../services/logger.service';
-import { DemoService } from '../../services/demo.service';
+import { DemoService, demoSubmissionError } from '../../services/demo.service';
 import { ToastService } from '../../services/toast.service';
 import { TenantService } from '../../services/tenant.service';
 import { SchoolService, PlanDetail } from '../../services/school.service';
@@ -12,7 +12,7 @@ import { clearIntendedRoute, postLoginDestination } from '../../auth/redirect-ur
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
-import { finalize, Subject, takeUntil, timeout, TimeoutError } from 'rxjs';
+import { defer, finalize, Subject, takeUntil, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-home',
@@ -379,7 +379,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.sendingDemo = true;
     this.cdr.markForCheck();
 
-    this.demoService.submitRequest({
+    // defer(): even a synchronous throw while building the request ends in the error path below.
+    defer(() => this.demoService.submitRequest({
       schoolName:       this.demo.schoolName.trim(),
       contactName:      this.demo.contactName.trim(),
       email:            this.demo.email.trim(),
@@ -387,7 +388,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       numberOfStudents: String(this.demo.students ?? '').trim() || undefined,
       city:             this.demo.city.trim()     || undefined,
       message:          this.demo.message.trim()  || undefined
-    }).pipe(
+    })).pipe(
       timeout(20000),
       takeUntil(this.destroy$),
       finalize(() => { this.sendingDemo = false; this.cdr.markForCheck(); })
@@ -409,13 +410,8 @@ export class HomeComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.logger.error('Demo request failed:', err);
-        const isTimeout = err instanceof TimeoutError;
-        this.toast.error(
-          isTimeout ? 'Request Timed Out' : 'Submission Failed',
-          isTimeout
-            ? 'We could not confirm whether your request was received. Please contact support@edunexify.co.in before submitting again.'
-            : 'Could not send your request. Please try again or contact us directly.'
-        );
+        const { title, message } = demoSubmissionError(err);
+        this.toast.error(title, message);
       }
     });
   }
