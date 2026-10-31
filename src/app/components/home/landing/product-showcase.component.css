@@ -1,0 +1,19 @@
+.tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 36px; }
+.tab { padding: 11px 18px; border-radius: 999px; border: 1px solid #e2e8f0; background: #fff; color: #334155; font-weight: 600; font-size: .93rem; transition: all .15s; }
+.tab:hover { border-color: #94a3b8; }
+.tab.on { background: #1e3a5f; border-color: #1e3a5f; color: #fff; box-shadow: 0 8px 18px -10px rgba(30, 58, 95, .7); }
+.track { max-width: 980px; margin: 0 auto; }
+.slide { display: none; }
+.slide.on { display: block; animation: rise .35s ease both; }
+.cap { margin: 22px auto 0; max-width: 640px; text-align: center; font-size: 1rem; line-height: 1.6; color: #475569; }
+.cap strong { color: #0f172a; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Mobile: swipeable snap row, tabs hidden (every frame is visible by swiping) */
+@media (max-width: 720px) {
+  .tabs { display: none; }
+  .track { max-width: none; display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -16px; padding: 4px 16px 18px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .track::-webkit-scrollbar { display: none; }
+  .slide, .slide.on { display: block; flex: 0 0 86%; scroll-snap-align: center; animation: none; }
+  .cap { margin-top: 14px; font-size: .92rem; text-align: left; }
+}
