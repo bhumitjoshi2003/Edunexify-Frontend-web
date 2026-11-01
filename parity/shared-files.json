@@ -96,7 +96,8 @@
     "src/app/services/demo.service.ts": "278aaa7cb76eb94ab670a0c403fcd00080ff3533f24343ed3289102366bd3854",
     "src/app/services/demo.service.spec.ts": "2275d7fe9391f8302c06c03074d7176d80539bba98e2ddd62f9afb254b396ebc",
     "scripts/generate-e2e-environment.mjs": "d51bacb6ba903da89c81083bf5152efaaccecf6871fce23a5508e4d9f829404d",
-    "src/app/utils/staff-attendance-config.util.ts": "2eeac8a2f33322e59d4791110f2710bc86a58f0e9166ee2fa17ab23e975d4708"
+    "src/app/utils/staff-attendance-config.util.ts": "2eeac8a2f33322e59d4791110f2710bc86a58f0e9166ee2fa17ab23e975d4708",
+    "src/design-system.css": "9743524933a6cc0a2cceb877a11e050497233fa1597d946d0bdd390d88d16ee6"
   },
   "platformSpecific": [
     {
