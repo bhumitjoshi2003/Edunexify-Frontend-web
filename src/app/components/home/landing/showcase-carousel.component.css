@@ -1,0 +1,49 @@
+:host { display: block; }
+.stage { position: relative; }
+
+/* Every screenshot is 16:10, the frame's own ratio, so the frame never changes height between slides. */
+.view { position: absolute; inset: 0; }
+.view.swipe { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0s linear .6s; }
+/* The incoming slide fades in over the outgoing one, which stays put until it is covered (no dip). */
+.slide.on { opacity: 1; z-index: 1; transition: opacity .6s ease; }
+.slide img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: top center; -webkit-user-drag: none; }
+
+.arrow { position: absolute; top: 50%; z-index: 2; display: grid; place-items: center; width: 44px; height: 44px; padding: 0;
+  margin-top: 0; transform: translateY(-50%); border-radius: 50%; border: 1px solid rgba(15, 23, 42, .1); background: rgba(255, 255, 255, .94);
+  color: #1e3a5f; cursor: pointer; box-shadow: 0 10px 24px -10px rgba(15, 23, 42, .45); transition: background .15s, box-shadow .15s, color .15s; }
+.arrow:hover { background: #fff; color: #0f766e; box-shadow: 0 14px 28px -10px rgba(15, 23, 42, .5); }
+.arrow .material-icons { font-size: 28px; }
+.prev { left: -22px; }
+.next { right: -22px; }
+
+.nav { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 28px; margin-top: 18px; }
+.dot { width: 10px; height: 10px; padding: 0; border: 0; border-radius: 999px; background-color: #cbd5e1; cursor: pointer;
+  transition: width .25s ease, background-color .2s; }
+.dot:hover { background-color: #94a3b8; }
+.dot.on { width: 26px; background-color: #1e3a5f; }
+.pause { display: grid; place-items: center; width: 28px; height: 28px; margin-left: 6px; padding: 0; border: 1px solid #e2e8f0;
+  border-radius: 50%; background: #fff; color: #475569; cursor: pointer; }
+.pause:hover { border-color: #94a3b8; color: #1e3a5f; }
+.pause .material-icons { font-size: 18px; }
+
+.arrow:focus-visible, .dot:focus-visible, .pause:focus-visible { outline: 3px solid #4fbdbd; outline-offset: 3px; }
+
+/* Narrower screens: keep the arrows inside the frame, and give the dots a larger tap area. */
+@media (max-width: 1100px) {
+  .prev { left: 10px; }
+  .next { right: 10px; }
+}
+@media (max-width: 720px) {
+  .arrow { width: 36px; height: 36px; }
+  .arrow .material-icons { font-size: 24px; }
+  .prev { left: 6px; }
+  .next { right: 6px; }
+  .nav { gap: 4px; margin-top: 12px; }
+  .dot { box-sizing: content-box; background-clip: content-box; border: 9px solid transparent; }
+  .pause { margin-left: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide, .slide.on, .dot, .arrow { transition: none; }
+}
