@@ -5,7 +5,7 @@ import { LandingShot } from './landing.model';
 /**
  * Browser or phone frame around a product screenshot. Shows the real image when `shot.src` is set
  * (lazy-loaded below the fold) and an honest, clearly-labelled placeholder otherwise — never a
- * fabricated screen.
+ * fabricated screen. Without a `shot` it frames projected content instead.
  */
 @Component({
   selector: 'app-device-frame',
@@ -18,15 +18,18 @@ import { LandingShot } from './landing.model';
         <span></span><span></span><span></span><em>edunexify.co.in</em>
       </div>
       <div class="df-notch" *ngIf="kind === 'phone'" aria-hidden="true"></div>
-      <div class="df-screen">
-        <img *ngIf="shot.src; else placeholder" [src]="shot.src" [alt]="shot.alt"
-             [attr.loading]="eager ? 'eager' : 'lazy'" decoding="async" />
+      <div class="df-screen" [style.aspect-ratio]="screenRatio">
+        <ng-container *ngIf="shot; else projected">
+          <img *ngIf="shot.src; else placeholder" [src]="shot.src" [alt]="shot.alt"
+               [attr.loading]="eager ? 'eager' : 'lazy'" decoding="async" />
+        </ng-container>
+        <ng-template #projected><ng-content /></ng-template>
         <ng-template #placeholder>
-          <div class="df-ph" role="img" [attr.aria-label]="shot.title + ' — preview coming soon'">
+          <div class="df-ph" role="img" [attr.aria-label]="shot?.title + ' — preview coming soon'">
             <div class="df-ph-skel" aria-hidden="true">
               <span class="s1"></span><span class="s2"></span><span class="s3"></span><span class="s4"></span>
             </div>
-            <p>{{ shot.title }}</p>
+            <p>{{ shot?.title }}</p>
             <small>Product preview coming soon</small>
           </div>
         </ng-template>
@@ -60,7 +63,10 @@ import { LandingShot } from './landing.model';
   `],
 })
 export class DeviceFrameComponent {
-  @Input({ required: true }) shot!: LandingShot;
+  /** The screenshot to show. Leave unset to project custom screen content (e.g. a carousel) instead. */
+  @Input() shot?: LandingShot;
   @Input() kind: 'browser' | 'phone' = 'browser';
   @Input() eager = false;
+  /** Overrides the screen's default aspect ratio (e.g. '1080 / 2424') to match projected content. */
+  @Input() screenRatio?: string;
 }

@@ -15,14 +15,55 @@ export interface LandingShot {
   alt: string;
 }
 
-export const SHOWCASE: LandingShot[] = [
-  { id: 'admin', title: 'Admin dashboard', caption: 'Students, staff, attendance and fees at a glance — the day’s priorities in one place.', alt: 'Edunexify admin dashboard' },
-  { id: 'attendance', title: 'Attendance', caption: 'Class-wise attendance marked in seconds, with live summaries for staff.', alt: 'Edunexify attendance screen' },
-  { id: 'parent', title: 'Parent portal', caption: 'Parents follow attendance, results, notices and fees for each linked child.', alt: 'Edunexify parent portal' },
-  { id: 'results', title: 'Results & report cards', caption: 'Enter marks once, then generate report cards for every class.', alt: 'Edunexify results and report cards' },
-  { id: 'notifications', title: 'Notices & notifications', caption: 'Reach the right classes and roles, on the web and on Android.', alt: 'Edunexify notifications' },
-  { id: 'fees', title: 'Fees', caption: 'Fee structures, dues and payment tracking, with online payment optional.', alt: 'Edunexify fees screen' },
-  { id: 'copilot', title: 'AI Copilot', caption: 'Ask questions about school data and review suggested reminder batches.', alt: 'Edunexify AI Copilot' },
+/** One real product screenshot in the "See Edunexify in action" gallery. */
+export interface ShowcaseSlide {
+  /** Full-resolution image (3200 × 2000). */
+  src: string;
+  /** `src` plus the 1600 px copy, so small and 1x screens download less. */
+  srcset: string;
+  alt: string;
+}
+
+/** A gallery category: one or more screenshots of the same area of the product. */
+export interface ShowcaseCategory {
+  id: string;
+  title: string;
+  caption: string;
+  slides: ShowcaseSlide[];
+}
+
+/** Screenshots live in public/landing/showcase/ (3200 px) with 1600 px copies in showcase/1600/. */
+function showcaseSlide(file: string, alt: string): ShowcaseSlide {
+  const src = `landing/showcase/${file}.png`;
+  return { src, srcset: `landing/showcase/1600/${file}.png 1600w, ${src} 3200w`, alt };
+}
+
+export const SHOWCASE: ShowcaseCategory[] = [
+  { id: 'admin', title: 'Admin dashboard', caption: 'Students, staff, attendance and fees at a glance — the day’s priorities in one place.', slides: [
+    showcaseSlide('admin-1', 'Edunexify admin dashboard with leave requests needing attention and totals for students, teachers, fees and pending leaves'),
+    showcaseSlide('admin-2', 'Edunexify analytics page with a six-month fee collection chart, class-wise attendance and the attendance trend'),
+  ] },
+  { id: 'attendance', title: 'Attendance', caption: 'Class-wise attendance marked in seconds, with live summaries for staff.', slides: [
+    showcaseSlide('attendance-1', 'Edunexify attendance summary for a student with the session attendance percentage and a month-by-month trend'),
+    showcaseSlide('attendance-2', 'Edunexify detailed monthly attendance report with working days, present and absent counts and a day-by-day calendar'),
+  ] },
+  { id: 'parent', title: 'Parent portal', caption: 'Parents follow attendance, results, notices and fees for each linked child.', slides: [
+    showcaseSlide('parent-1', 'Edunexify parent portal with a switcher for two children and shortcuts to attendance, fees, results, report cards and leave'),
+  ] },
+  { id: 'results', title: 'Results & report cards', caption: 'Enter marks once, then generate report cards for every class.', slides: [
+    showcaseSlide('results-1', 'Edunexify class results table ranking students by total marks with subject-wise scores and grades'),
+    showcaseSlide('results-2', 'Edunexify Term 1 report card for a student with subject marks, grades, attendance and teacher remarks'),
+  ] },
+  { id: 'notifications', title: 'Notices & notifications', caption: 'Reach the right classes and roles, on the web and on Android.', slides: [
+    showcaseSlide('notification-1', 'Edunexify notice board with a form to post a notice and the list of published notices'),
+    showcaseSlide('notification-2', 'Edunexify notifications inbox with unread leave updates, a report card notice and school events'),
+  ] },
+  { id: 'fees', title: 'Fees', caption: 'Fee structures, dues and payment tracking, with online payment optional.', slides: [
+    showcaseSlide('fees-1', 'Edunexify fee payment page with paid, selected and due months and a payment summary'),
+  ] },
+  { id: 'copilot', title: 'AI Copilot', caption: 'Ask questions about school data and review suggested reminder batches.', slides: [
+    showcaseSlide('ai-1', 'Edunexify AI Copilot panel answering questions about class performance and attendance beside the class results page'),
+  ] },
 ];
 
 /** Single hero visual. Without `src` the hero shows a brand composition instead of a screenshot. */
@@ -32,11 +73,26 @@ export const HERO_SHOT: LandingShot = {
 export const COPILOT_SHOT: LandingShot = {
   id: 'copilot-ui', title: 'Edunexify Copilot', caption: '', alt: 'The Edunexify AI Copilot panel',
 };
-export const WEB_SHOT: LandingShot = {
-  id: 'web', title: 'Edunexify on the web', caption: '', alt: 'Edunexify on the web',
+/** A real, silent screen recording shown looping inside a device frame. */
+export interface LandingVideo {
+  src: string;
+  /** The recording's first frame, shown until it plays and instead of it with reduced motion. */
+  poster: string;
+  /** The recording's pixel size; the frame's screen takes this aspect ratio so nothing is cropped. */
+  width: number;
+  height: number;
+  label: string;
+}
+
+export const WEB_VIDEO: LandingVideo = {
+  src: 'landing/showcase/videos/admin-web-demo.mp4', poster: 'landing/showcase/videos/admin-web-demo-poster.jpg',
+  width: 1440, height: 900,
+  label: 'Screen recording of the Edunexify admin dashboard in a web browser',
 };
-export const ANDROID_SHOT: LandingShot = {
-  id: 'android', title: 'Edunexify on Android', caption: '', alt: 'Edunexify on Android',
+export const ANDROID_VIDEO: LandingVideo = {
+  src: 'landing/showcase/videos/parent-mobile-demo.mp4', poster: 'landing/showcase/videos/parent-mobile-demo-poster.jpg',
+  width: 720, height: 1616,
+  label: 'Screen recording of the Edunexify parent portal in the Android app',
 };
 
 export interface TrustItem { icon: string; title: string; text: string; }

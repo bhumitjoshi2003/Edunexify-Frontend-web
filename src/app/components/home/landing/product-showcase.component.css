@@ -3,17 +3,14 @@
 .tab:hover { border-color: #94a3b8; }
 .tab.on { background: #1e3a5f; border-color: #1e3a5f; color: #fff; box-shadow: 0 8px 18px -10px rgba(30, 58, 95, .7); }
 .track { max-width: 980px; margin: 0 auto; }
-.slide { display: none; }
-.slide.on { display: block; animation: rise .35s ease both; }
-.cap { margin: 22px auto 0; max-width: 640px; text-align: center; font-size: 1rem; line-height: 1.6; color: #475569; }
+.cap { margin: 22px auto 0; max-width: 640px; min-height: 3.2em; text-align: center; font-size: 1rem; line-height: 1.6; color: #475569; }
 .cap strong { color: #0f172a; }
-@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-/* Mobile: swipeable snap row, tabs hidden (every frame is visible by swiping) */
+/* Mobile: the tabs become one swipeable row of chips above the gallery. */
 @media (max-width: 720px) {
-  .tabs { display: none; }
-  .track { max-width: none; display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -16px; padding: 4px 16px 18px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .track::-webkit-scrollbar { display: none; }
-  .slide, .slide.on { display: block; flex: 0 0 86%; scroll-snap-align: center; animation: none; }
-  .cap { margin-top: 14px; font-size: .92rem; text-align: left; }
+  .tabs { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; margin: 0 -16px 22px; padding: 4px 16px 6px;
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: 0 0 auto; padding: 9px 14px; font-size: .86rem; white-space: nowrap; scroll-snap-align: start; scroll-margin-inline: 16px; }
+  .cap { margin-top: 12px; min-height: 4.8em; font-size: .92rem; text-align: left; }
 }
