@@ -553,6 +553,10 @@
            (click)="closeSidebarOnMobile()" title="Support Tickets">
           <mat-icon>support_agent</mat-icon><span>Support Tickets</span>
         </a>
+        <a class="nav-item" routerLink="/dashboard/deletion-requests" routerLinkActive="active"
+           (click)="closeSidebarOnMobile()" title="Deletion Requests">
+          <mat-icon>person_remove</mat-icon><span>Deletion Requests</span>
+        </a>
         <a class="nav-item" routerLink="/dashboard/notification-deliveries" routerLinkActive="active"
            (click)="closeSidebarOnMobile()" title="Notification Delivery">
           <mat-icon>mark_email_read</mat-icon><span>Notification Delivery</span>
@@ -680,6 +684,17 @@
           <button mat-menu-item class="pm-action" (click)="openWhatsNew()">
             <mat-icon>auto_awesome</mat-icon>
             <span>What's New</span>
+          </button>
+
+          <button mat-menu-item class="pm-action" data-testid="privacy-policy-link" (click)="openPrivacyPolicy()">
+            <mat-icon>policy</mat-icon>
+            <span>Privacy Policy</span>
+          </button>
+
+          <button mat-menu-item class="pm-action" data-testid="account-deletion-link" *ngIf="!isSuperAdmin()"
+          routerLink="/dashboard/account-deletion-request">
+            <mat-icon>person_remove</mat-icon>
+            <span>Request account deletion</span>
           </button>
 
           <button mat-menu-item class="pm-action pm-logout" (click)="logout()">

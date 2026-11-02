@@ -129,7 +129,8 @@
 
 .tc-gps-note {
   font-size: 0.72rem;
-  color: #94a3b8;
+  line-height: 1.45;
+  color: #64748b;
   margin: 0;
 }
 
@@ -429,3 +430,5 @@
 @media (max-width: 380px) {
   .tc-stats-row { gap: 8px; }
 }
+
+.tc-checkout-note { margin-top: 12px; }

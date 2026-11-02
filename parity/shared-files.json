@@ -3,7 +3,7 @@
   "shared": {
     "src/app/auth/auth-state.service.ts": "4a488bf84a84fe3dbb00978fcd914be37d2648930f12a73f4908843c15f7cffe",
     "src/app/auth/auth.service.ts": "0f790679e878948a2cdd32f5536bf5ae7e7de111f2794745c640db3e12245dfe",
-    "src/app/auth/auth.interceptor.ts": "b3b223cff52d4f96d5cf21ea3b074f42ba67acdc4392d7985b4307e788136019",
+    "src/app/auth/auth.interceptor.ts": "99f58a4ea005c7484771b2e5d85531c1ffcf96a48beca3b23cb81b4b601d45d8",
     "src/app/auth/auth.guard.ts": "65ff4cc8047700f2e7c3a024cd1d22f0ff62fbfa292e084eb27da76a057d11a8",
     "src/app/auth/role.guard.ts": "c65994474895049f440ed8bd88e9512f5257a059846092d9fb09ad4d24f8447b",
     "src/app/auth/feature.guard.ts": "5b4a54e369f56a072c090f07f941ab056c56c8b9617870b889e1050294d2b2a0",
@@ -96,7 +96,12 @@
     "src/app/services/demo.service.ts": "278aaa7cb76eb94ab670a0c403fcd00080ff3533f24343ed3289102366bd3854",
     "src/app/services/demo.service.spec.ts": "2275d7fe9391f8302c06c03074d7176d80539bba98e2ddd62f9afb254b396ebc",
     "scripts/generate-e2e-environment.mjs": "d51bacb6ba903da89c81083bf5152efaaccecf6871fce23a5508e4d9f829404d",
-    "src/app/utils/staff-attendance-config.util.ts": "2eeac8a2f33322e59d4791110f2710bc86a58f0e9166ee2fa17ab23e975d4708"
+    "src/app/utils/staff-attendance-config.util.ts": "2eeac8a2f33322e59d4791110f2710bc86a58f0e9166ee2fa17ab23e975d4708",
+    "src/app/utils/legal-links.ts": "ead5dce0a7caf9c1cdb2ca056b765bae98959f29a8e2b0582470cd8fa8fc0afb",
+    "src/app/utils/location-disclosure.ts": "b765d9647f5471089ce7cd7da4092482911b152bf3c170ff88b88c1455121504",
+    "src/app/interfaces/account-deletion-request.ts": "591aa3b6af29c64657c484446467dfac1437d1bffb10c7075351bd9ea842c875",
+    "src/app/services/account-deletion.service.ts": "0570ca300acbeb2291b73d0d4fbc20623b44c7b9e1bef084988683846ec9bdfd",
+    "src/app/components/account-deletion-request/account-deletion-request.component.ts": "2a69bd0dd9c7d99cb09ec0d0b9c116eb5ef1fd14fa2d66670035c7d62e25e194"
   },
   "platformSpecific": [
     {

@@ -38,6 +38,7 @@ import { ChildAccess } from '../../interfaces/parent-portal';
 import { AppResumeService } from '../../core/app-resume.service';
 import { SignOutService } from '../../services/sign-out.service';
 import { FeatureKey } from '../../auth/feature-keys';
+import { PRIVACY_POLICY_URL, openExternalUrl } from '../../utils/legal-links';
 
 @Component({
   selector: 'app-dashboard',
@@ -412,6 +413,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.mobileSidebarOpen = false;
       this.cdr.markForCheck();
     }
+  }
+
+  openPrivacyPolicy(): void {
+    openExternalUrl(PRIVACY_POLICY_URL);
   }
 
   navigateToMyProfile(): void {

@@ -47,7 +47,7 @@
           <span *ngIf="!isCheckingIn">Check In</span>
           <span *ngIf="isCheckingIn">Locating...</span>
         </button>
-        <p class="tc-gps-note">GPS location will be used to verify your presence</p>
+        <p class="tc-gps-note" data-testid="location-disclosure">{{ locationDisclosure }}</p>
       </div>
     </ng-container>
 
@@ -71,6 +71,7 @@
         <span *ngIf="!isCheckingOut">Check Out</span>
         <span *ngIf="isCheckingOut">Locating...</span>
       </button>
+      <p class="tc-gps-note tc-checkout-note" data-testid="location-disclosure">{{ locationDisclosure }}</p>
     </ng-container>
 
     <!-- Checked out -->
