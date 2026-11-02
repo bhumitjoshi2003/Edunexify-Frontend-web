@@ -25,6 +25,15 @@ export const routes: Routes = [
     path: 'verify-rc',
     loadComponent: () => import('./components/verify-rc/verify-rc.component').then(m => m.VerifyRcComponent)
   },
+  // Public legal pages (no guard — also listed in AuthInterceptor.PUBLIC_ROUTES).
+  {
+    path: 'privacy-policy',
+    loadComponent: () => import('./components/legal/privacy-policy-page.component').then(m => m.PrivacyPolicyPageComponent)
+  },
+  {
+    path: 'account-deletion',
+    loadComponent: () => import('./components/legal/account-deletion-page.component').then(m => m.AccountDeletionPageComponent)
+  },
 
   {
     path: 'dashboard',
@@ -533,6 +542,11 @@ export const routes: Routes = [
         data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'] }
       },
       {
+        path: 'account-deletion-request',
+        loadComponent: () => import('./components/account-deletion-request/account-deletion-request.component').then(m => m.AccountDeletionRequestComponent),
+        canActivate: [roleGuard], data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'] }
+      },
+      {
         path: 'my-support-requests',
         loadComponent: () => import('./components/my-support-requests/my-support-requests.component').then(m => m.MySupportRequestsComponent),
         canActivate: [roleGuard],
@@ -543,6 +557,12 @@ export const routes: Routes = [
       {
         path: 'support-queue',
         loadComponent: () => import('./components/super-admin-support-queue/super-admin-support-queue.component').then(m => m.SuperAdminSupportQueueComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['SUPER_ADMIN'] }
+      },
+      {
+        path: 'deletion-requests',
+        loadComponent: () => import('./components/super-admin-deletion-requests/super-admin-deletion-requests.component').then(m => m.SuperAdminDeletionRequestsComponent),
         canActivate: [roleGuard],
         data: { roles: ['SUPER_ADMIN'] }
       },

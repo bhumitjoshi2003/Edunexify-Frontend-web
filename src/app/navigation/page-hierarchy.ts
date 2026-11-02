@@ -168,8 +168,10 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
   'event-calendar': topLevel,
   'active-sessions': topLevel,
   'report-problem': topLevel,
+  'account-deletion-request': topLevel,
   'my-support-requests': topLevel,
   'support-queue': topLevel,
+  'deletion-requests': topLevel,
   'notification-deliveries': topLevel,
 
   // ── Nested: details ──────────────────────────────────────────────────
