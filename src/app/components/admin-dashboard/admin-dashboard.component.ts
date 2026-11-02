@@ -23,12 +23,14 @@ import { CalendarEvent } from '../../interfaces/event-calendar.component';
 import { pickNearestUpcomingEvent } from '../../utils/upcoming-event.util';
 import { TeacherSubstitutionService } from '../../services/teacher-substitution.service';
 import { OnLeaveTodayComponent } from '../on-leave-today/on-leave-today.component';
+import { PageHeaderComponent } from '../ui/page-header/page-header.component';
+import { StatCardComponent, StatTone } from '../ui/stat-card/stat-card.component';
 import { FeatureKey } from '../../auth/feature-keys';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [WisdomCardsComponent, OnLeaveTodayComponent, CommonModule, RouterLink, MatIconModule],
+  imports: [WisdomCardsComponent, OnLeaveTodayComponent, PageHeaderComponent, StatCardComponent, CommonModule, RouterLink, MatIconModule],
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -413,11 +415,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return '#dc2626';
   }
 
-  get attendanceGradient(): string {
+  /** Same 85 / 70 thresholds as before — only the presentation (tone) changed. */
+  get attendanceTone(): StatTone {
     const r = this.stats?.todayAttendanceRate ?? 0;
-    if (r >= 85) return '--c1:#059669;--c2:#34d399';
-    if (r >= 70) return '--c1:#d97706;--c2:#fbbf24';
-    return '--c1:#dc2626;--c2:#f87171';
+    if (r >= 85) return 'success';
+    if (r >= 70) return 'warning';
+    return 'danger';
   }
 
   /** Teachers expected to attend today with no attendance yet — straight from today-summary,

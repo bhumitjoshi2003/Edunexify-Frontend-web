@@ -96,7 +96,11 @@
     "src/app/services/demo.service.ts": "278aaa7cb76eb94ab670a0c403fcd00080ff3533f24343ed3289102366bd3854",
     "src/app/services/demo.service.spec.ts": "2275d7fe9391f8302c06c03074d7176d80539bba98e2ddd62f9afb254b396ebc",
     "scripts/generate-e2e-environment.mjs": "d51bacb6ba903da89c81083bf5152efaaccecf6871fce23a5508e4d9f829404d",
-    "src/app/utils/staff-attendance-config.util.ts": "2eeac8a2f33322e59d4791110f2710bc86a58f0e9166ee2fa17ab23e975d4708"
+    "src/app/utils/staff-attendance-config.util.ts": "2eeac8a2f33322e59d4791110f2710bc86a58f0e9166ee2fa17ab23e975d4708",
+    "src/app/components/ui/page-header/page-header.component.ts": "bbf1f4535a88e36d43dc098a43dc4fe4a2bbebc6b079b9823906631d84fe4f8c",
+    "src/app/components/ui/page-header/page-header.component.spec.ts": "44312f905bbda93cb530290535d3195a05aa5061bbed8e3aa12775c934a9e13a",
+    "src/app/components/ui/stat-card/stat-card.component.ts": "10744232aa0fff268dedd6f9bdabd4ab092e354b044a20d2953df1acab424f92",
+    "src/app/components/ui/stat-card/stat-card.component.spec.ts": "702444658d096225ae368cc5079b9db0622a867a584a3b560379009140b9c714"
   },
   "platformSpecific": [
     {
