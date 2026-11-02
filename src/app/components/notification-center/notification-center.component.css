@@ -6,48 +6,6 @@
 
 .nc-shell { max-width: 920px; margin: 0 auto; padding: 24px 20px max(88px, calc(72px + env(safe-area-inset-bottom, 0px))); color: var(--edu-text, #1e293b); }
 
-/* ── Header: the compact Edunexify page hero ── */
-.nc-header {
-  position: relative; overflow: hidden; isolation: isolate;
-  display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  padding: 20px 22px; margin-bottom: 14px; border-radius: 20px; color: #fff;
-  background:
-    radial-gradient(120% 140% at 0% 0%, #134e4a 0%, transparent 55%),
-    linear-gradient(120deg, #042f2e 0%, #0f766e 48%, #0e7490 100%);
-  box-shadow: 0 16px 36px -18px rgba(15, 118, 110, .55), inset 0 1px 0 rgba(255, 255, 255, .12);
-}
-.nc-orb { position: absolute; z-index: -1; border-radius: 50%; pointer-events: none; }
-.nc-orb-1 { width: 240px; height: 240px; right: -70px; top: -120px; background: radial-gradient(circle, rgba(45, 212, 191, .4), transparent 65%); }
-.nc-orb-2 { width: 160px; height: 160px; left: 42%; bottom: -110px; background: radial-gradient(circle, rgba(255, 255, 255, .16), transparent 70%); }
-.nc-dots {
-  position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .3;
-  background-image: radial-gradient(rgba(255, 255, 255, .35) 1px, transparent 1px); background-size: 18px 18px;
-  mask-image: linear-gradient(90deg, transparent 0%, #000 55%, transparent 100%);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 55%, transparent 100%);
-}
-.nc-heading { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.nc-hero-icon {
-  position: relative; width: 48px; height: 48px; flex: none; border-radius: 14px; display: grid; place-items: center;
-  background: linear-gradient(145deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, .08));
-  border: 1px solid rgba(255, 255, 255, .28); box-shadow: 0 8px 20px rgba(15, 23, 42, .25);
-}
-.nc-hero-icon mat-icon { width: 24px; height: 24px; font-size: 24px; }
-.nc-hero-ping { position: absolute; top: 9px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: #fbbf24; box-shadow: 0 0 0 2px #0f766e; }
-.nc-heading-copy { min-width: 0; }
-.nc-eyebrow { display: flex; align-items: center; gap: 5px; margin: 0 0 2px !important; color: rgba(255, 255, 255, .75) !important; font-size: .64rem !important; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
-.nc-eyebrow mat-icon { width: 13px; height: 13px; font-size: 13px; }
-.nc-header h1 { margin: 0; color: #fff; font-size: 1.3rem; font-weight: 800; line-height: 1.15; letter-spacing: -.02em; }
-.nc-header p { margin: 3px 0 0; color: rgba(255, 255, 255, .82); font-size: .8rem; line-height: 1.35; }
-.nc-mark-all, .nc-load-more, .nc-error button { min-height: 44px; border: 0; border-radius: var(--edu-radius-md, 12px); background: transparent; color: var(--nc-accent); padding: 9px 14px; font: inherit; font-size: .8rem; font-weight: 750; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: background-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
-.nc-header .nc-mark-all {
-  flex: none; min-height: 40px; color: #fff; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .28);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
-}
-.nc-header .nc-mark-all:hover { background: #fff; color: var(--nc-accent); }
-.nc-mark-all:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-.nc-mark-all:active, .nc-load-more:active { transform: scale(.98); }
-.nc-mark-all mat-icon { width: 18px; height: 18px; font-size: 18px; }
-
 /* ── Filters ── */
 .nc-toolbar { display: grid; grid-template-columns: minmax(210px, auto) minmax(190px, 260px); align-items: center; justify-content: space-between; gap: 10px; padding: 8px; margin-bottom: 14px; border: 1px solid var(--edu-border, #e2e8f0); border-radius: 16px; background: #fff; box-shadow: 0 2px 10px rgba(30,58,95,.05); }
 .nc-tabs { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; gap: 4px; border-radius: 12px; background: #f1f5f7; }
@@ -157,3 +115,47 @@
   .nc-row, .nc-arrow, .nc-tabs button, .nc-mark-all, .nc-load-more, .nc-category select { transition: none; }
   .nc-shimmer::after { animation: none; display: none; }
 }
+
+/* ══ Design system v2 overrides (plain PageHeader, shared control look) ══ */
+:host { --nc-accent: var(--edu-teal-dark); --nc-accent-soft: var(--edu-teal-tint); }
+.nc-shell { font-family: var(--edu-font); }
+.nc-shell > app-page-header { margin-bottom: 20px; }
+.nc-toolbar { border-radius: var(--edu-card-radius); background: #fff; box-shadow: var(--edu-shadow-xs); padding: 8px; }
+.nc-tabs { background: #f1f5f9; border: 1px solid var(--edu-border); border-radius: 10px; padding: 3px; gap: 2px; }
+.nc-tabs button { border-radius: 7px; font-weight: 600; font-size: var(--edu-text-sm); }
+.nc-tabs button.active { color: var(--edu-text); background: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1), 0 0 0 1px var(--edu-border); }
+.nc-tabs span, .nc-tabs button.active span { background: var(--edu-warning-bg); border: 1px solid var(--edu-warning-border); color: var(--edu-warning-ink); font-weight: 700; }
+.nc-tabs button:not(.active) span { background: var(--edu-warning-bg); color: var(--edu-warning-ink); }
+.nc-category select {
+  appearance: none; -webkit-appearance: none; border: var(--edu-input-border); border-radius: var(--edu-input-radius); background-color: #fff; color: var(--edu-text);
+  font-size: var(--edu-text-base); font-weight: 500; padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+.nc-category select:hover { border-color: #94a3b8; background-color: #fff; }
+.nc-category select:focus-visible { border-color: var(--edu-teal-dark); box-shadow: var(--edu-focus-ring); }
+.nc-category mat-icon { color: var(--edu-text-muted); }
+
+.nc-row { border-radius: var(--edu-card-radius); border-color: var(--edu-border); box-shadow: var(--edu-shadow-xs); }
+.nc-row:hover { transform: none; box-shadow: var(--edu-shadow-sm); border-color: var(--edu-border-strong); }
+.nc-row:active { transform: none; }
+.nc-row.unread { background: linear-gradient(90deg, color-mix(in srgb, var(--card-tint) 55%, #fff) 0%, #fff 45%); box-shadow: var(--edu-shadow-sm); }
+.nc-title { color: var(--edu-text-sec); font-weight: 600; font-size: var(--edu-text-md); }
+.nc-row.unread .nc-title { color: var(--edu-text); font-weight: 700; }
+.nc-message { color: var(--edu-text-muted); font-size: var(--edu-text-base); }
+.nc-icon { border-radius: 10px; }
+.nc-arrow { background: #fff; }
+.nc-row:hover .nc-arrow { transform: none; }
+
+.nc-state { color: var(--edu-text-muted); }
+.nc-state h2 { color: var(--edu-text); font-weight: 700; letter-spacing: -0.01em; }
+.nc-error, .nc-empty { border: 1px dashed var(--edu-border-strong); border-radius: var(--edu-card-radius); background: #fff; box-shadow: none; }
+.nc-empty-icon { background: var(--edu-teal-tint); color: var(--edu-teal-dark); border: 1px solid var(--edu-teal-tint-border); box-shadow: none; width: 56px; height: 56px; border-radius: 14px; }
+.nc-error > mat-icon { color: var(--edu-text-faint); }
+.nc-mark-all, .nc-load-more, .nc-error button { font-weight: 600; font-size: var(--edu-text-sm); }
+.nc-error button, .nc-load-more { border-color: var(--edu-border-strong); }
+.nc-load-more:hover:not(:disabled), .nc-error button:hover { border-color: var(--edu-blue); background: var(--edu-bg-light); }
+.nc-skeleton-card { border-radius: var(--edu-card-radius); background: #fff; border-color: var(--edu-border); }
+.nc-load-more, .nc-error button { min-height: 44px; padding: 0 18px; border: 1px solid var(--edu-border-strong); border-radius: var(--edu-radius-md); background: #fff; color: var(--edu-text); font: 600 var(--edu-text-sm)/1 var(--edu-font); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin: 0 auto; }
+.nc-load-more { margin-top: 6px; border-radius: 999px; }
+.nc-load-more:disabled { opacity: 0.55; cursor: not-allowed; }

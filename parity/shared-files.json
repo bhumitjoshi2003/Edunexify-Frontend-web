@@ -49,7 +49,7 @@
     "src/app/services/fee-workflow.service.ts": "7748a859b1bb49adeb3a94a128c0274006df8f24acbb42ee099d79f0dcacb0d4",
     "src/app/services/fee-reminder.service.ts": "0be54487fac8ddfb64655258b93cb9bd715cdc7b249525aecba10d666d32e8dc",
     "src/app/services/fee-structure.service.ts": "d0fee16023b77309262cd00b88a29a98019d591e5341168b5e87f6f07ebf942e",
-    "src/app/components/fees/fees.component.ts": "c6e921131954217d4877c4fa2930665ba1e9a26e32707642d61bbbcd4825fff4",
+    "src/app/components/fees/fees.component.ts": "6c6c1ce0257d2fb6dfc0b5f1d587e4578ade934a56ae0c83ea110247e3b7974c",
     "src/app/components/fees/fee-breakdown.component.ts": "c2e8d1f58d4a113b0d9793c0ac7377b357e04959250295fea933ef10187ee565",
     "src/app/components/fee-structure/fee-structure.component.ts": "400bcab5cacd1f378a48fb04a86663f313899b9b11f650d8bb176c59075467a0",
     "src/app/components/fee-assignment/fee-assignment.component.ts": "b15d199fdb6c006c0800af9038e83268391c845d58bacedb276a82883db9e54f",
@@ -60,7 +60,7 @@
     "src/app/services/notification-state.service.ts": "d874ae51732ead54b1e76f23b254eb2f2f00f8a316f79d8ae0547774420e9ae1",
     "src/app/services/notification-navigation.service.ts": "8d2edf5e8ab2991d13e4c01297520a2a796eae3eb096cf2e1901923c8bd0cba7",
     "src/app/interfaces/user-notification.ts": "8810bdfdb5c5d533f178f933cc846e2283a0e3b49fca070b539ca567bf74fef9",
-    "src/app/components/notification-center/notification-center.component.ts": "dd5429bb53b9d8acf200224fe0823c9573108c09fd72818b59e0181e6707ea5f",
+    "src/app/components/notification-center/notification-center.component.ts": "029c17d59f8d138963af1ee597ee21428100da4b2ae075cd35ee64a977dd9e0a",
     "src/app/utils/school-date.util.ts": "ce8ece323b722e2bf7461c5e1644da4ac505737a25bd7e6c14c66240fcc6c814",
     "src/app/utils/clock-time.util.ts": "60e382c5982eeea1599fbf48fce46a0d2c79a9b785229cdf34edbea3aa335075",
     "src/app/utils/teacher-attendance.util.ts": "9ce24164595bacf814f0ceeaf14d0a6186d7415a1c05c10617e9b356771c6e5a",
@@ -99,7 +99,7 @@
     "src/app/utils/staff-attendance-config.util.ts": "2eeac8a2f33322e59d4791110f2710bc86a58f0e9166ee2fa17ab23e975d4708",
     "src/app/components/ui/page-header/page-header.component.ts": "bbf1f4535a88e36d43dc098a43dc4fe4a2bbebc6b079b9823906631d84fe4f8c",
     "src/app/components/ui/page-header/page-header.component.spec.ts": "44312f905bbda93cb530290535d3195a05aa5061bbed8e3aa12775c934a9e13a",
-    "src/app/components/ui/stat-card/stat-card.component.ts": "10744232aa0fff268dedd6f9bdabd4ab092e354b044a20d2953df1acab424f92",
+    "src/app/components/ui/stat-card/stat-card.component.ts": "a77edbff3c3e99dcce5fc45b8debbe577ec45d4cf613d5a9a0111a819e8f00bd",
     "src/app/components/ui/stat-card/stat-card.component.spec.ts": "702444658d096225ae368cc5079b9db0622a867a584a3b560379009140b9c714"
   },
   "platformSpecific": [

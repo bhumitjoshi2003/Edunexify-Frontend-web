@@ -25,6 +25,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, forkJoin, of, takeUntil } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { AuthService } from '../../auth/auth.service';
+import { MatIconModule } from '@angular/material/icon';
+import { PageHeaderComponent } from '../ui/page-header/page-header.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { ComingSoonComponent } from '../coming-soon/coming-soon.component';
@@ -115,6 +117,8 @@ export type FeeLedgerDisplay = 'loading' | 'error' | 'empty' | 'rows';
     MatInputModule,
     FeeBreakdownComponent,
     ParentChildContextComponent,
+    MatIconModule,
+    PageHeaderComponent,
     InrPipe,
     InrPaisePipe,
   ],

@@ -1,19 +1,12 @@
 <div *ngIf="showFeesModule; else comingSoonTemplate">
   <div class="pt-page">
     <app-parent-child-context [studentId]="studentId" requiredPermission="canViewFees" [locked]="isLoadingPayment" (childSelected)="onChildTabSelected($event)"></app-parent-child-context>
-    <!-- ── Hero ──────────────────────────────────────────────────────── -->
-    <div class="pt-hero">
-      <div class="pt-hero-left">
-        <div class="pt-hero-icon">💳</div>
-        <div>
-          <h1 class="pt-hero-title">Fee Payment</h1>
-          <p class="pt-hero-sub">Select months to pay your fees</p>
-        </div>
-      </div>
-      <div class="pt-hero-session">
-        <label class="pt-hero-session-label">Session</label>
+    <app-page-header icon="payments" title="Fee Payment" subtitle="Select months to pay your fees">
+      <div class="pt-session">
+        <label class="pt-session-label" for="pt-session-select">Session</label>
         <select
-          class="pt-hero-session-select"
+          id="pt-session-select"
+          class="pt-session-select edu-select"
           [disabled]="isLoadingPayment"
           [(ngModel)]="session"
           (change)="onYearChange($event)"
@@ -26,16 +19,14 @@
           </option>
         </select>
       </div>
-      <div class="pt-blob pt-blob-1"></div>
-      <div class="pt-blob pt-blob-2"></div>
-    </div>
+    </app-page-header>
 
     <!-- ── Warning Banners ──────────────────────────────────────────── -->
     <div
       class="pt-alert pt-alert--overdue"
       *ngIf="pastUnpaidMonthNames.length > 0"
     >
-      <div class="pt-alert-icon">⚠️</div>
+      <div class="pt-alert-icon" aria-hidden="true"><mat-icon>warning_amber</mat-icon></div>
       <div class="pt-alert-body">
         <span class="pt-alert-title">Late Fee Applied</span>
         <span class="pt-alert-text">
@@ -54,7 +45,7 @@
     </div>
 
     <div class="pt-alert pt-alert--reminder" *ngIf="unpaidCurrentMonthName">
-      <div class="pt-alert-icon">🔔</div>
+      <div class="pt-alert-icon" aria-hidden="true"><mat-icon>notifications_active</mat-icon></div>
       <div class="pt-alert-body">
         <span class="pt-alert-title">Payment Reminder</span>
         <span class="pt-alert-text">
@@ -71,7 +62,7 @@
       [ngClass]="pending.status === 'NEEDS_REVIEW' ? 'pt-alert--review' : 'pt-alert--confirming'"
       data-testid="pending-confirmation"
     >
-      <div class="pt-alert-icon">{{ pending.status === 'NEEDS_REVIEW' ? '⚠️' : '⏳' }}</div>
+      <div class="pt-alert-icon" aria-hidden="true"><mat-icon>{{ pending.status === 'NEEDS_REVIEW' ? 'warning_amber' : 'hourglass_top' }}</mat-icon></div>
       <div class="pt-alert-body">
         <span class="pt-alert-title">{{
           pending.status === 'NEEDS_REVIEW' ? 'Payment needs review' : 'Payment being confirmed'
@@ -86,7 +77,7 @@
     <!-- ── An online checkout is open for this student: who, what, and what to do ── -->
     <div class="pt-alert" *ngIf="activeCheckout" [ngClass]="checkoutFailureMessage ? 'pt-alert--overdue' : 'pt-alert--confirming'"
       role="status" aria-live="polite" data-testid="checkout-in-progress">
-      <div class="pt-alert-icon">{{ checkoutFailureMessage ? '⚠️' : '🔒' }}</div>
+      <div class="pt-alert-icon" aria-hidden="true"><mat-icon>{{ checkoutFailureMessage ? 'warning_amber' : 'lock' }}</mat-icon></div>
       <div class="pt-alert-body">
         <span class="pt-alert-title">{{ checkoutFailureMessage ? 'Payment attempt failed' : 'Payment in progress' }}
           — {{ studentName || activeCheckout.studentId }} · {{ activeCheckout.months.length }} {{ activeCheckout.months.length === 1 ? 'month' : 'months' }}</span>
@@ -99,7 +90,7 @@
 
     <!-- ── A checkout for these months was started moments ago ───────── -->
     <div class="pt-alert pt-alert--confirming" *ngIf="retryNotice" data-testid="retry-notice">
-      <div class="pt-alert-icon">⏳</div>
+      <div class="pt-alert-icon" aria-hidden="true"><mat-icon>hourglass_top</mat-icon></div>
       <div class="pt-alert-body">
         <span class="pt-alert-title">Payment already started</span>
         <span class="pt-alert-text">{{ retryNotice }}</span>
@@ -116,11 +107,11 @@
 
     <!-- ── Ledger read state: a failed read is never shown as "no fees" ── -->
     <div class="pt-alert pt-alert--reminder" *ngIf="ledgerDisplay === 'loading'" role="status" data-testid="fees-loading">
-      <div class="pt-alert-icon">⏳</div>
+      <div class="pt-alert-icon" aria-hidden="true"><mat-icon>hourglass_top</mat-icon></div>
       <div class="pt-alert-body"><span class="pt-alert-title">Loading fees…</span></div>
     </div>
     <div class="pt-alert pt-alert--overdue" *ngIf="ledgerDisplay === 'error'" role="alert" data-testid="fees-load-error">
-      <div class="pt-alert-icon">⚠️</div>
+      <div class="pt-alert-icon" aria-hidden="true"><mat-icon>warning_amber</mat-icon></div>
       <div class="pt-alert-body">
         <span class="pt-alert-title">Couldn't load fees</span>
         <span class="pt-alert-text">We couldn't load the fee details right now. This doesn't mean there are no fees due.</span>
@@ -128,7 +119,7 @@
       </div>
     </div>
     <div class="pt-alert pt-alert--overdue" *ngIf="ledgerDisplay === 'rows' && ledgerRefreshFailed" role="alert" data-testid="fees-refresh-error">
-      <div class="pt-alert-icon">⚠️</div>
+      <div class="pt-alert-icon" aria-hidden="true"><mat-icon>warning_amber</mat-icon></div>
       <div class="pt-alert-body">
         <span class="pt-alert-title">Couldn't refresh fees</span>
         <span class="pt-alert-text">These details may be out of date, so months can't be selected until they refresh.</span>
@@ -136,7 +127,7 @@
       </div>
     </div>
     <div class="pt-alert pt-alert--reminder" *ngIf="ledgerDisplay === 'rows' && ledgerRefreshing" role="status" data-testid="fees-refreshing">
-      <div class="pt-alert-icon">⏳</div>
+      <div class="pt-alert-icon" aria-hidden="true"><mat-icon>hourglass_top</mat-icon></div>
       <div class="pt-alert-body"><span class="pt-alert-title">Refreshing fees…</span></div>
     </div>
 
@@ -164,13 +155,13 @@
       >
         <!-- status icon -->
         <div class="pt-month-icon" [ngSwitch]="presentation(month).status">
-          <span *ngSwitchCase="'paid'">✓</span>
-          <span *ngSwitchCase="'selected'">✓</span>
-          <span *ngSwitchCase="'confirming'">⏳</span>
-          <span *ngSwitchCase="'needs-review'">⏳</span>
-          <span *ngSwitchCase="'unavailable'">⚠</span>
-          <span *ngSwitchCase="'overdue'">!</span>
-          <span *ngSwitchDefault>○</span>
+          <mat-icon *ngSwitchCase="'paid'">check</mat-icon>
+          <mat-icon *ngSwitchCase="'selected'">check</mat-icon>
+          <mat-icon *ngSwitchCase="'confirming'">hourglass_top</mat-icon>
+          <mat-icon *ngSwitchCase="'needs-review'">hourglass_top</mat-icon>
+          <mat-icon *ngSwitchCase="'unavailable'">warning_amber</mat-icon>
+          <mat-icon *ngSwitchCase="'overdue'">priority_high</mat-icon>
+          <mat-icon *ngSwitchDefault>radio_button_unchecked</mat-icon>
         </div>
 
         <span class="pt-month-name">{{ month.name }}</span>
@@ -219,7 +210,7 @@
       *ngIf="ledgerDisplay === 'empty'"
       data-testid="fees-empty"
     >
-      <div class="pt-alert-icon">ℹ️</div>
+      <div class="pt-alert-icon" aria-hidden="true"><mat-icon>info_outline</mat-icon></div>
       <div class="pt-alert-body">
         <span class="pt-alert-title">No fees generated yet</span>
         <span class="pt-alert-text"
@@ -304,7 +295,7 @@
             >
             <select
               id="payment-mode-select"
-              class="pt-payment-mode-select"
+              class="pt-payment-mode-select edu-select"
               [(ngModel)]="manualPaymentMode"
             >
               <option *ngFor="let mode of manualPaymentModes" [value]="mode">
@@ -321,7 +312,7 @@
               placeholder="Cheque / UTR number"
             />
           </div>
-          <button [disabled]="!quoteValid || quoteLoading || isLoadingPayment" class="pt-mark-paid-btn" (click)="markAsManuallyPaid()">
+          <button [disabled]="!quoteValid || quoteLoading || isLoadingPayment" class="pt-mark-paid-btn edu-btn edu-btn-primary" (click)="markAsManuallyPaid()">
             Record payment
           </button>
         </div>
