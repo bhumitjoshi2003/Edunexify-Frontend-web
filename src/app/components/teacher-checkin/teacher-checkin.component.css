@@ -96,43 +96,31 @@
 }
 
 .tc-checkin-btn {
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
+  width: auto;
+  min-width: 164px;
+  height: 48px;
+  padding: 0 22px;
+  border-radius: 12px;
   border: none;
   background: linear-gradient(135deg, #0f766e, #14b8a6);
   color: #fff;
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 8px;
   transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 8px 30px rgba(15, 118, 110, 0.35);
+  box-shadow: 0 5px 16px rgba(15, 118, 110, 0.25);
   font-family: inherit;
 }
-.tc-checkin-btn:hover:not(:disabled) { transform: scale(1.04); }
+.tc-checkin-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 7px 18px rgba(15, 118, 110, 0.3); }
 .tc-checkin-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-.tc-btn-icon { font-size: 2rem; }
+.tc-btn-icon { font-size: 1.05rem; }
 
-.tc-btn-pulse {
-  animation: pulse-ring 2s ease-out infinite;
-}
-@keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(15, 118, 110, 0.4); }
-  70% { box-shadow: 0 0 0 20px rgba(15, 118, 110, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(15, 118, 110, 0); }
-}
-
-.tc-gps-note {
-  font-size: 0.72rem;
-  line-height: 1.45;
-  color: #64748b;
-  margin: 0;
-}
+.tc-btn-pulse { animation: none; }
 
 .tc-checkout-btn {
   margin-top: 16px;
@@ -413,8 +401,8 @@
   .tc-hero-clock { font-size: 1.05rem; letter-spacing: 0.5px; }
 
   .tc-action-card { padding: 20px 18px; border-radius: 14px; }
-  .tc-checkin-btn { width: 140px; height: 140px; font-size: 1rem; gap: 6px; }
-  .tc-btn-icon { font-size: 1.6rem; }
+  .tc-checkin-btn { min-width: 154px; height: 46px; padding: 0 18px; font-size: 0.92rem; gap: 7px; }
+  .tc-btn-icon { font-size: 1rem; }
 
   .tc-stat-num { font-size: 1.2rem; }
   .tc-stat-card { padding: 12px 12px; border-radius: 14px; }
@@ -431,4 +419,3 @@
   .tc-stats-row { gap: 8px; }
 }
 
-.tc-checkout-note { margin-top: 12px; }
