@@ -5,17 +5,13 @@ import { AuthStateService } from '../../auth/auth-state.service';
 import { LoggerService } from '../../services/logger.service';
 import { ToastService } from '../../services/toast.service';
 import { TeacherAttendanceRecord } from '../../interfaces/teacher-checkin';
-import { ATTENDANCE_LOCATION_DISCLOSURE } from '../../utils/location-disclosure';
 
-describe('TeacherCheckinComponent location disclosure', () => {
+describe('TeacherCheckinComponent presentation', () => {
   let fixture: ComponentFixture<TeacherCheckinComponent>;
   let checkinService: jasmine.SpyObj<TeacherCheckinService>;
-  let getPosition: jasmine.Spy;
 
   beforeEach(() => {
-    // Rendering only: the screen's own loading is covered elsewhere and must not matter here.
     spyOn(TeacherCheckinComponent.prototype, 'ngOnInit');
-    getPosition = spyOn<any>(TeacherCheckinComponent.prototype, 'getPosition');
     checkinService = jasmine.createSpyObj('TeacherCheckinService', ['getMyAttendance', 'checkIn', 'checkOut']);
     TestBed.configureTestingModule({
       imports: [TeacherCheckinComponent],
@@ -29,31 +25,22 @@ describe('TeacherCheckinComponent location disclosure', () => {
     fixture = TestBed.createComponent(TeacherCheckinComponent);
   });
 
-  const disclosures = (): string[] => Array.from(
-    (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="location-disclosure"]'),
-    el => el.textContent!.trim());
-
-  it('shows the full disclosure next to Check In, before location is requested', () => {
+  it('does not render the long location disclosure beside attendance actions', () => {
     fixture.componentInstance.todayStateResolved = true;
-    // The web screen also needs today to be a working day before it offers Check In.
-    (fixture.componentInstance as unknown as { expectedToday: boolean }).expectedToday = true;
+    fixture.componentInstance.expectedToday = true;
     fixture.detectChanges();
 
-    expect(disclosures()).toEqual([ATTENDANCE_LOCATION_DISCLOSURE]);
-    expect(getPosition).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="location-disclosure"]')).toBeNull();
   });
 
-  it('shows it again next to Check Out', () => {
+  it('renders an admin-marked attendance source as human-readable copy', () => {
     fixture.componentInstance.todayStateResolved = true;
-    fixture.componentInstance.todayRecord = { checkInTime: '2026-11-02T08:55:00', checkOutTime: null, status: 'ON_TIME' } as TeacherAttendanceRecord;
+    fixture.componentInstance.todayRecord = {
+      checkInTime: '2026-11-02T08:55:00', checkOutTime: null, status: 'ON_TIME', method: 'MANUAL_ADMIN'
+    } as TeacherAttendanceRecord;
     fixture.detectChanges();
 
-    expect(disclosures()).toEqual([ATTENDANCE_LOCATION_DISCLOSURE]);
-  });
-
-  it('states that check-in location is saved, checkout location is not, and nothing runs in the background', () => {
-    expect(ATTENDANCE_LOCATION_DISCLOSURE).toContain('check-in location and distance from the school are saved');
-    expect(ATTENDANCE_LOCATION_DISCLOSURE).toContain('Checkout location is used for verification but is not saved');
-    expect(ATTENDANCE_LOCATION_DISCLOSURE).toContain('does not access your location in the background');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Marked by Admin');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('MANUAL_ADMIN');
   });
 });
