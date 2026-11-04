@@ -510,7 +510,7 @@ export const routes: Routes = [
         // business behavior as Android. The school Notice Board below is a separate feature.
         path: 'notifications',
         loadComponent: () => import('./components/notification-center/notification-center.component').then(m => m.NotificationCenterComponent),
-        canActivate: [roleGuard], data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'] }
+        canActivate: [roleGuard], data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'SUPER_ADMIN'] }
       },
       {
         path: 'notice',
