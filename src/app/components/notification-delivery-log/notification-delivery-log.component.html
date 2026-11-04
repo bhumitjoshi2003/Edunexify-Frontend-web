@@ -75,7 +75,16 @@
 
   <!-- ── Summary: one row per notification publication ── -->
   <ng-container *ngIf="view === 'summary'">
-    <div class="ndl-loading" *ngIf="summaryLoading"><span class="spinner"></span>Loading summary…</div>
+    <div class="edu-page-skeleton edu-page-skeleton--content" *ngIf="summaryLoading" aria-busy="true" aria-label="Loading notification summary">
+    <div class="edu-sk-grid">
+      <span class="edu-sk-shimmer edu-sk-card"></span><span class="edu-sk-shimmer edu-sk-card"></span>
+      <span class="edu-sk-shimmer edu-sk-card"></span><span class="edu-sk-shimmer edu-sk-card"></span>
+    </div>
+    <div class="edu-sk-panel">
+      <span class="edu-sk-shimmer edu-sk-line edu-sk-line-md"></span>
+      <span class="edu-sk-shimmer edu-sk-table-line"></span><span class="edu-sk-shimmer edu-sk-table-line"></span><span class="edu-sk-shimmer edu-sk-table-line"></span>
+    </div>
+  </div>
     <div class="ndl-state error" *ngIf="!summaryLoading && summaryFailed">
       <mat-icon>cloud_off</mat-icon>
       <strong>{{ summaryError || 'The notification summary is temporarily unavailable.' }}</strong>
@@ -153,7 +162,20 @@
     <button type="button" (click)="clearDrillDown()" aria-label="Show all notifications"><mat-icon>close</mat-icon></button>
   </div>
 
-  <div class="ndl-loading" *ngIf="loading"><span class="spinner"></span>Loading deliveries…</div>
+  <div class="edu-page-skeleton edu-page-skeleton--content" *ngIf="loading" aria-busy="true" aria-label="Loading notification deliveries">
+    <div class="edu-sk-grid">
+      <span class="edu-sk-shimmer edu-sk-card"></span>
+      <span class="edu-sk-shimmer edu-sk-card"></span>
+      <span class="edu-sk-shimmer edu-sk-card"></span>
+      <span class="edu-sk-shimmer edu-sk-card"></span>
+    </div>
+    <div class="edu-sk-panel">
+      <span class="edu-sk-shimmer edu-sk-line edu-sk-line-md"></span>
+      <span class="edu-sk-shimmer edu-sk-table-line"></span>
+      <span class="edu-sk-shimmer edu-sk-table-line"></span>
+      <span class="edu-sk-shimmer edu-sk-table-line"></span>
+    </div>
+  </div>
   <div class="ndl-state error" *ngIf="!loading && failed">
     <mat-icon>cloud_off</mat-icon>
     <strong>{{ errorMessage || 'Notification delivery data is temporarily unavailable.' }}</strong>

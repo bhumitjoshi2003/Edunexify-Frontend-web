@@ -1,5 +1,15 @@
 <main class="sa-page">
-  <div class="sa-loading" *ngIf="loading"><span class="sa-spinner"></span>Loading staff adoption…</div>
+  <div class="edu-page-skeleton edu-page-skeleton--content" *ngIf="loading" aria-busy="true" aria-label="Loading staff adoption">
+    <span class="edu-sr-only">Loading staff adoption</span>
+    <div class="edu-sk-grid">
+      <span class="edu-sk-shimmer edu-sk-card"></span><span class="edu-sk-shimmer edu-sk-card"></span>
+      <span class="edu-sk-shimmer edu-sk-card"></span><span class="edu-sk-shimmer edu-sk-card"></span>
+    </div>
+    <div class="edu-sk-panel">
+      <span class="edu-sk-shimmer edu-sk-line edu-sk-line-md"></span>
+      <span class="edu-sk-shimmer edu-sk-table-line"></span><span class="edu-sk-shimmer edu-sk-table-line"></span><span class="edu-sk-shimmer edu-sk-table-line"></span>
+    </div>
+  </div>
   <div class="sa-error" *ngIf="error">
     <mat-icon>cloud_off</mat-icon>
     <h2>Staff adoption could not be loaded</h2>

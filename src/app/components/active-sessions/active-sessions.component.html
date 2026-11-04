@@ -15,11 +15,20 @@
   </div>
 
   <!-- ── Loading ─────────────────────────────────────────────────────── -->
-  <div class="as-loading-card" *ngIf="loading">
-    <div class="as-spinner"></div>
-    <p>Loading sessions…</p>
+  <div class="edu-page-skeleton edu-page-skeleton--content" *ngIf="loading" aria-busy="true" aria-label="Loading active sessions">
+    <div class="edu-sk-grid">
+      <span class="edu-sk-shimmer edu-sk-card"></span>
+      <span class="edu-sk-shimmer edu-sk-card"></span>
+      <span class="edu-sk-shimmer edu-sk-card"></span>
+      <span class="edu-sk-shimmer edu-sk-card"></span>
+    </div>
+    <div class="edu-sk-panel">
+      <span class="edu-sk-shimmer edu-sk-line edu-sk-line-md"></span>
+      <span class="edu-sk-shimmer edu-sk-table-line"></span>
+      <span class="edu-sk-shimmer edu-sk-table-line"></span>
+      <span class="edu-sk-shimmer edu-sk-table-line"></span>
+    </div>
   </div>
-
   <!-- ── Error ───────────────────────────────────────────────────────── -->
   <div class="as-card as-error-card" *ngIf="!loading && loadError">
     <mat-icon class="as-error-icon">error_outline</mat-icon>

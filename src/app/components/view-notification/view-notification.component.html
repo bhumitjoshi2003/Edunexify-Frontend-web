@@ -5,10 +5,16 @@
         </header>
 
         <section class="notifications-content">
-            <div *ngIf="isLoading" class="loading-section">
-                <div class="spinner"></div>
-                <span class="loading-text">Loading notifications...</span>
-            </div>
+            <div class="edu-page-skeleton edu-page-skeleton--content" *ngIf="isLoading" aria-busy="true" aria-label="Loading notifications">
+    <div class="edu-sk-grid">
+      <span class="edu-sk-shimmer edu-sk-card"></span><span class="edu-sk-shimmer edu-sk-card"></span>
+      <span class="edu-sk-shimmer edu-sk-card"></span><span class="edu-sk-shimmer edu-sk-card"></span>
+    </div>
+    <div class="edu-sk-panel">
+      <span class="edu-sk-shimmer edu-sk-line edu-sk-line-md"></span>
+      <span class="edu-sk-shimmer edu-sk-table-line"></span><span class="edu-sk-shimmer edu-sk-table-line"></span><span class="edu-sk-shimmer edu-sk-table-line"></span>
+    </div>
+  </div>
 
             <div *ngIf="!isLoading && userNotifications.length === 0" class="empty-state">
                 <div class="empty-icon">🔕</div>
