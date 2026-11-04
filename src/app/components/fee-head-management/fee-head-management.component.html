@@ -11,8 +11,24 @@
     <button class="fhm-btn fhm-btn-add" (click)="openAdd()" *ngIf="!showForm">+ Add</button>
   </div>
 
-  <div class="fhm-loading" *ngIf="isLoading">
-    <div class="fhm-spinner"></div>
+  <div class="edu-page-skeleton" *ngIf="isLoading" aria-busy="true" aria-label="Loading fee heads">
+    <div class="edu-sk-hero">
+      <span class="edu-sk-shimmer edu-sk-avatar"></span>
+      <div class="edu-sk-hero-copy">
+        <span class="edu-sk-shimmer edu-sk-line edu-sk-line-sm"></span>
+        <span class="edu-sk-shimmer edu-sk-line edu-sk-line-lg"></span>
+        <span class="edu-sk-shimmer edu-sk-line edu-sk-line-md"></span>
+      </div>
+    </div>
+    <div class="edu-sk-grid">
+      <span class="edu-sk-shimmer edu-sk-card"></span><span class="edu-sk-shimmer edu-sk-card"></span><span class="edu-sk-shimmer edu-sk-card"></span>
+      <span class="edu-sk-shimmer edu-sk-card"></span><span class="edu-sk-shimmer edu-sk-card"></span><span class="edu-sk-shimmer edu-sk-card"></span>
+    </div>
+    <div class="edu-sk-panel">
+      <span class="edu-sk-shimmer edu-sk-line edu-sk-line-md"></span>
+      <span class="edu-sk-shimmer edu-sk-table-line"></span><span class="edu-sk-shimmer edu-sk-table-line"></span><span class="edu-sk-shimmer edu-sk-table-line"></span>
+    </div>
+  </div>
     <p>Loading fee heads...</p>
   </div>
 
