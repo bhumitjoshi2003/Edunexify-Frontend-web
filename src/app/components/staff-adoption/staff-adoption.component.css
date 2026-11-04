@@ -259,3 +259,23 @@
   .sa-table td[data-label="Teacher"]::before { display: none; }
   .sa-teacher-cell { width: 100%; }
 }
+
+
+/* ── Edunexify visual alignment ────────────────────────────────── */
+.sa-hero{background:linear-gradient(135deg,#1e1b4b 0%,#4338ca 55%,#6366f1 100%);box-shadow:0 8px 28px rgba(67,56,202,.18)}
+.sa-hero-score-card{padding:10px 14px;border:1px solid rgba(255,255,255,.2);border-radius:14px;background:rgba(255,255,255,.12);backdrop-filter:blur(8px)}
+.sa-hero-progress span{background:#a5b4fc}
+.sa-summary-grid--branded .sa-summary-card{border:0;color:#fff;box-shadow:0 4px 18px rgba(15,23,42,.10)}
+.sa-summary-grid--branded .sa-summary-card:nth-child(1){background:linear-gradient(135deg,#0369a1,#0ea5e9)}
+.sa-summary-grid--branded .sa-summary-card:nth-child(2){background:linear-gradient(135deg,#059669,#34d399)}
+.sa-summary-grid--branded .sa-summary-card:nth-child(3){background:linear-gradient(135deg,#0f766e,#14b8a6)}
+.sa-summary-grid--branded .sa-summary-card:nth-child(4){background:linear-gradient(135deg,#b45309,#f59e0b)}
+.sa-summary-grid--branded .sa-summary-icon{background:rgba(255,255,255,.18)}
+.sa-summary-grid--branded .sa-summary-value{color:#fff}
+.sa-summary-grid--branded .sa-summary-label{color:rgba(255,255,255,.82)}
+.sa-directory-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin:0 0 12px;padding:18px 20px 0;background:#fff;border:1px solid #eef2f7;border-bottom:0;border-radius:18px 18px 0 0}
+.sa-directory-head h2{margin:0;font-size:1rem;font-weight:800;color:#0f172a}
+.sa-directory-head p{margin:3px 0 0;font-size:.78rem;color:#64748b}
+.sa-directory-head>span{padding:5px 9px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:.7rem;font-weight:800;white-space:nowrap}
+.sa-controls{margin:0;padding:0 20px 16px;background:#fff;border-left:1px solid #eef2f7;border-right:1px solid #eef2f7}
+.sa-table-wrap{border-radius:0 0 18px 18px}
