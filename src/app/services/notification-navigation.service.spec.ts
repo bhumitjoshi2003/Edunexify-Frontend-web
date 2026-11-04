@@ -27,6 +27,18 @@ describe('NotificationNavigationService', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard/apply-teacher-leave'], { queryParams: {} });
   });
 
+  it('routes historical support-ticket links to My Support Requests for normal users', async () => {
+    role = 'TEACHER';
+    expect(await service.navigate({ actionRoute: '/dashboard/support-tickets' })).toBeTrue();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard/my-support-requests'], { queryParams: {} });
+  });
+
+  it('routes historical support-ticket links to Support Queue for super admins', async () => {
+    role = 'SUPER_ADMIN';
+    expect(await service.navigate({ actionRoute: '/dashboard/support-tickets' })).toBeTrue();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard/support-queue'], { queryParams: {} });
+  });
+
   it('keeps the query string of a safe dashboard route', async () => {
     await service.navigate({ actionRoute: '/dashboard/view-leaves?status=PENDING' });
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard/view-leaves'], { queryParams: { status: 'PENDING' } });
