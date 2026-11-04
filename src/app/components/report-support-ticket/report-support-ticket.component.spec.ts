@@ -166,13 +166,16 @@ describe('ReportSupportTicketComponent', () => {
     expect(toast.error).toHaveBeenCalled();
   });
 
-  it('removeScreenshot clears the selected file and preview', () => {
-    component.selectedFiles = [new File(['x'], 'shot.png', { type: 'image/png' })];
-    component.imagePreviewUrl = 'data:image/png;base64,x';
+  it('removeScreenshot removes only the chosen file and preview', () => {
+    component.selectedFiles = [
+      new File(['a'], 'one.png', { type: 'image/png' }),
+      new File(['b'], 'two.png', { type: 'image/png' }),
+    ];
+    component.imagePreviewUrls = ['data:image/png;base64,a', 'data:image/png;base64,b'];
 
-    component.removeScreenshot();
+    component.removeScreenshot(0);
 
-    expect(component.selectedFiles).toEqual([]);
-    expect(component.imagePreviewUrl).toBeNull();
+    expect(component.selectedFiles.map(file => file.name)).toEqual(['two.png']);
+    expect(component.imagePreviewUrls).toEqual(['data:image/png;base64,b']);
   });
 });
