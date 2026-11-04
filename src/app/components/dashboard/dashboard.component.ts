@@ -118,7 +118,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         filter((e) => e instanceof NavigationEnd),
         takeUntil(this.ngUnsubscribe),
       )
-      .subscribe(() => this.fetchUnreadCount());
+      .subscribe((event) => {
+        this.fetchUnreadCount();
+        const nav = event as NavigationEnd;
+        const path = nav.urlAfterRedirects.split('?')[0];
+        if (path === '/dashboard' || path === '/dashboard/') {
+          this.handleInitialNavigation();
+        }
+      });
     // Also poll every 60 seconds as a background fallback
     this.pollingIntervalSubscription = interval(60000)
       .pipe(takeUntil(this.ngUnsubscribe))
