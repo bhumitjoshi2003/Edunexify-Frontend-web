@@ -342,7 +342,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   fetchUnreadCount(): void {
-    if (this.Role === 'SUPER_ADMIN') return;
     this.notificationState.refreshUnread();
   }
 
