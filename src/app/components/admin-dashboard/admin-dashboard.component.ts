@@ -469,6 +469,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.staffAttendance?.notCheckedInCount ?? 0;
   }
 
+  get staffCheckedInCount(): number {
+    if (!this.staffAttendance) return 0;
+    return this.staffAttendance.presentCount + this.staffAttendance.lateCount + this.staffAttendance.halfDayCount;
+  }
+
   hasFeature(featureKey: FeatureKey): boolean {
     return this.authState.hasFeature(featureKey);
   }
