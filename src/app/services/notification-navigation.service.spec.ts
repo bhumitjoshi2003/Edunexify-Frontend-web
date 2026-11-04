@@ -27,9 +27,36 @@ describe('NotificationNavigationService', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard/apply-teacher-leave'], { queryParams: {} });
   });
 
+  it('routes historical support-ticket links to My Support Requests for normal users', async () => {
+    role = 'TEACHER';
+    expect(await service.navigate({ actionRoute: '/dashboard/support-tickets' })).toBeTrue();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard/my-support-requests'], { queryParams: {} });
+  });
+
+  it('routes historical support-ticket links to Support Queue for super admins', async () => {
+    role = 'SUPER_ADMIN';
+    expect(await service.navigate({ actionRoute: '/dashboard/support-tickets' })).toBeTrue();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard/support-queue'], { queryParams: {} });
+  });
+
   it('keeps the query string of a safe dashboard route', async () => {
     await service.navigate({ actionRoute: '/dashboard/view-leaves?status=PENDING' });
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard/view-leaves'], { queryParams: { status: 'PENDING' } });
+  });
+
+  it('uses event-code fallback when an older notification has no action route', async () => {
+    role = 'TEACHER';
+    expect(await service.navigate({ eventCode: 'ATTENDANCE_REMINDER', actionRoute: null })).toBeTrue();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard/teacher-checkin'], { queryParams: {} });
+  });
+
+  it('opens a published report-card document directly when its route is missing', async () => {
+    role = 'STUDENT';
+    expect(await service.navigate({
+      eventCode: 'REPORT_CARD_READY', actionRoute: null,
+      sourceEntityType: 'ReportCardDocument', sourceEntityId: '42'
+    })).toBeTrue();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard/report-card-documents/42'], { queryParams: {} });
   });
 
   for (const bad of ['https://evil.example/dashboard/fees', '/dashboard/../admin', '/home', 'javascript:alert(1)', '//evil.example/dashboard/x']) {

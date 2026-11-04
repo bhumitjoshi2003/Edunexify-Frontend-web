@@ -9,7 +9,6 @@ import { TeacherAttendanceRecord, TeacherAttendanceSummary } from '../../interfa
 import { AuthStateService } from '../../auth/auth-state.service';
 import { LoggerService } from '../../services/logger.service';
 import { ToastService } from '../../services/toast.service';
-import { ATTENDANCE_LOCATION_DISCLOSURE } from '../../utils/location-disclosure';
 
 interface CalendarDay {
   date: number | null;
@@ -48,9 +47,6 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
   isCheckingIn = false;
   isCheckingOut = false;
   gpsError: string | null = null;
-  /** Shown before any location permission prompt (check-in) and again at check-out. */
-  readonly locationDisclosure = ATTENDANCE_LOCATION_DISCLOSURE;
-
   readonly CALENDAR_SKELETON_COUNT = 35;
   skeletonDays = Array(this.CALENDAR_SKELETON_COUNT);
 
@@ -352,6 +348,25 @@ export class TeacherCheckinComponent implements OnInit, OnDestroy {
       case 'HALF_DAY': return 'Half Day';
       case 'NOT_TRACKED': return 'Not Tracked';
       default: return status;
+    }
+  }
+
+  getAttendanceMethodLabel(method: string | null | undefined): string {
+    switch ((method ?? '').toUpperCase()) {
+      case 'MANUAL_ADMIN': return 'Marked by Admin';
+      case 'GPS':
+      case 'GEOLOCATION': return 'Location Check-in';
+      case 'MANUAL': return 'Marked Manually';
+      case 'SYSTEM':
+      case 'AUTO':
+      case 'AUTOMATIC': return 'Automatic';
+      default:
+        return (method ?? 'Recorded')
+          .toLowerCase()
+          .split(/[_-]+/)
+          .filter(Boolean)
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ');
     }
   }
 
