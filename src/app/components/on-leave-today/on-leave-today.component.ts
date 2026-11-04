@@ -63,7 +63,7 @@ import { LeaveService, OnLeaveToday } from '../../services/leave.service';
           <div class="olt-cover-icon"><mat-icon>swap_horiz</mat-icon></div>
           <div class="olt-cover-copy">
             <strong>Substitution needed</strong>
-            <span>{{ data.periodsNeedingSubstitute }} period{{ data.periodsNeedingSubstitute === 1 ? '' : 's' }} still need cover</span>
+            <span>{{ data.periodsNeedingSubstitute }} period{{ data.periodsNeedingSubstitute === 1 ? '' : 's' }} need substitution</span>
           </div>
           <mat-icon class="olt-arrow">arrow_forward</mat-icon>
         </a>
