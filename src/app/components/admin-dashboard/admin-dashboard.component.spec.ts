@@ -427,14 +427,14 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
     const text: string = fixture.nativeElement.textContent;
     expect(text).toContain('Today at a glance');
     expect(text).toContain('Staff present');
-    expect(text).toContain('Could not load dashboard stats');
+    expect(text).toContain('Attendance unavailable');
   });
 
   it('stats failure does not hide Shortcuts', () => {
     configure('ADMIN', { statsError: true });
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.ad-actions-grid--compact')).toBeTruthy();
-    expect(fixture.nativeElement.textContent).toContain('Quick Actions');
+    expect(fixture.nativeElement.textContent).toContain('Shortcuts');
   });
 
   it('stats failure does not fabricate a student leave attention count', () => {
