@@ -44,7 +44,12 @@
 /* ── Hero ───────────────────────────────────────────────────────── */
 .ad-hero {
   position: relative;
-  background: linear-gradient(135deg, #0f172a 0%, #172033 48%, #1e293b 100%);
+  background: radial-gradient(
+      circle at 87% 5%,
+      rgba(255, 255, 255, 0.18) 0 74px,
+      transparent 75px
+    ),
+    linear-gradient(118deg, #123b46, #087e88 58%, #11aaa8);
   border-radius: 20px;
   padding: 22px 24px;
   margin: 0 0 20px;
@@ -53,10 +58,11 @@
   align-items: flex-start;
   overflow: hidden;
   color: #fff;
+  box-shadow: 0 16px 35px rgba(15, 118, 110, 0.16);
 }
 .ad-blob { position: absolute; border-radius: 50%; opacity: 0.12; pointer-events: none; }
 .ad-blob-1 { width: 130px; height: 130px; background: #fff; top: -40px; right: -30px; }
-.ad-blob-2 { width: 80px; height: 80px; background: #a5b4fc; bottom: -20px; left: 30%; }
+.ad-blob-2 { width: 80px; height: 80px; background: #fff; bottom: -20px; left: 30%; }
 
 .ad-hero-left { position: relative; z-index: 1; flex: 1; }
 .ad-greeting { font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.75); margin: 0 0 4px; letter-spacing: 0.3px; }
