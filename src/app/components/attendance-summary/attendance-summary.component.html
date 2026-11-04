@@ -63,7 +63,7 @@
       <!-- Class selector -->
       <select *ngIf="canChangeClass()" [(ngModel)]="selectedClass" (ngModelChange)="onClassChange()"
         aria-label="Select class" class="as-select">
-        <option value="">-- Class --</option>
+        <option value="">Select Class</option>
         <option *ngFor="let c of classList" [value]="c">Class {{ c }}</option>
       </select>
 
