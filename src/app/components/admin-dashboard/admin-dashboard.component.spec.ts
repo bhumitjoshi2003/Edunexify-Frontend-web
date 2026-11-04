@@ -54,26 +54,26 @@ describe('AdminDashboardComponent — Staff Adoption card', () => {
     fixture = TestBed.createComponent(AdminDashboardComponent);
   }
 
-  it('renders the Staff Adoption card with summary values for an ADMIN', () => {
+  it('renders compact Staff adoption status inside School & plan for an ADMIN', () => {
     configure('ADMIN');
     fixture.detectChanges();
 
     expect(staffAdoptionService.getStaffAdoption).toHaveBeenCalled();
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Staff Adoption');
-    expect(text).toContain('82% started');
-    expect(text).toContain('16 have used attendance');
+    expect(text).toContain('School & plan');
+    expect(text).toContain('Staff adoption');
+    expect(text).toContain('18 of 22 teachers started');
   });
 
-  it('does not call staff adoption or render the card for a non-ADMIN role', () => {
+  it('does not call staff adoption or render its compact status for a non-ADMIN role', () => {
     configure('SUB_ADMIN');
     fixture.detectChanges();
 
     expect(staffAdoptionService.getStaffAdoption).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).not.toContain('Staff Adoption');
+    expect(fixture.nativeElement.textContent).not.toContain('Staff adoption');
   });
 
-  it('the View Staff Adoption CTA links to the dedicated page', () => {
+  it('the Staff adoption row links to the dedicated page', () => {
     configure('ADMIN');
     fixture.detectChanges();
     const link: HTMLAnchorElement | null = fixture.nativeElement.querySelector('a[routerLink="/dashboard/staff-adoption"]');
@@ -184,24 +184,16 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
     expect(adminService.getAdminById).not.toHaveBeenCalled();
   });
 
-  it('renders Staff Attendance Today before School Setup and Staff Adoption', () => {
+  it('renders the new hierarchy with Today at a glance before Needs your attention and School & plan', () => {
     configure('ADMIN');
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    const staffAttendanceIdx = text.indexOf('Staff Attendance Today');
-    expect(staffAttendanceIdx).toBeGreaterThan(-1);
-    expect(staffAttendanceIdx).toBeLessThan(text.indexOf('School Setup'));
-    expect(staffAttendanceIdx).toBeLessThan(text.indexOf('Staff Adoption'));
-  });
-
-  it('renders Pending Leave Requests before School Setup and Staff Adoption', () => {
-    configure('ADMIN');
-    fixture.detectChanges();
-    const text: string = fixture.nativeElement.textContent;
-    const pendingIdx = text.indexOf('Pending Leave Requests');
-    expect(pendingIdx).toBeGreaterThan(-1);
-    expect(pendingIdx).toBeLessThan(text.indexOf('School Setup'));
-    expect(pendingIdx).toBeLessThan(text.lastIndexOf('Staff Adoption'));
+    const todayIdx = text.indexOf('Today at a glance');
+    const attentionIdx = text.indexOf('Needs your attention');
+    const schoolPlanIdx = text.indexOf('School & plan');
+    expect(todayIdx).toBeGreaterThan(-1);
+    expect(attentionIdx).toBeGreaterThan(todayIdx);
+    expect(schoolPlanIdx).toBeGreaterThan(attentionIdx);
   });
 
   it('shows Not Yet Checked In from the backend\'s expected-to-attend count, not total staff minus check-ins', () => {
@@ -211,7 +203,7 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
     });
     fixture.detectChanges();
     expect(component.notYetCheckedIn).toBe(2);   // not 10 − 6: two teachers are off today
-    expect(fixture.nativeElement.textContent).toContain('Not Yet Checked In');
+    expect(fixture.nativeElement.textContent).toContain('2 not checked in');
     expect(fixture.nativeElement.textContent).toContain('Teachers not checked in');
   });
 
@@ -228,102 +220,92 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
   it('never labels the not-yet-checked-in metric as "Absent"', () => {
     configure('ADMIN');
     fixture.detectChanges();
-    const pill = Array.from(fixture.nativeElement.querySelectorAll('.ad-staff-att-pill'))
-      .find((el: any) => el.textContent.includes('Not Yet Checked In')) as HTMLElement;
-    expect(pill).toBeTruthy();
-    expect(pill.textContent).not.toContain('Absent');
+    const today = fixture.nativeElement.querySelector('.ad-today');
+    expect(today).toBeTruthy();
+    expect(today.textContent).toContain('not checked in');
+    expect(today.textContent).not.toContain('Not Yet Checked In');
   });
 
-  it('renders the compact daily quick actions with the correct existing routes', () => {
+  it('renders the compact shortcut set with the correct core routes', () => {
     configure('ADMIN');
     fixture.detectChanges();
-    const routes = ['/dashboard/staff-attendance', '/dashboard/view-leaves', '/dashboard/notice'];
+    const routes = ['/dashboard/register', '/dashboard/notice', '/dashboard/view-leaves', '/dashboard/attendance-summary'];
     for (const route of routes) {
-      const link = fixture.nativeElement.querySelector(`.ad-daily-actions-grid a[routerLink="${route}"]`);
+      const link = fixture.nativeElement.querySelector(`.ad-actions-grid--compact a[routerLink="${route}"]`);
       expect(link).withContext(route).toBeTruthy();
     }
-    expect(fixture.nativeElement.querySelector('.ad-daily-actions-grid a[routerLink="/dashboard/staff-adoption"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('a.ad-setup-action[routerLink="/dashboard/staff-adoption"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.ad-daily-actions-grid')).toBeNull();
   });
 
-  it('hides all ADMIN-only daily actions for SUB_ADMIN', () => {
+  it('hides ADMIN-only dashboard sections for SUB_ADMIN', () => {
     configure('SUB_ADMIN');
     fixture.detectChanges();
-    const link = fixture.nativeElement.querySelector('.ad-daily-actions-grid a[routerLink="/dashboard/staff-adoption"]');
-    expect(link).toBeNull();
-    expect(fixture.nativeElement.querySelector('.ad-daily-actions-grid')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.ad-today')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.ad-actions-grid--compact a[routerLink="/dashboard/register"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('a[routerLink="/dashboard/view-leaves"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('a[routerLink="/dashboard/notice"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('a[routerLink="/dashboard/staff-attendance"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('a[routerLink="/dashboard/class-management"]')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('a[routerLink="/dashboard/timetable"]')).toBeTruthy();
-    expect(fixture.nativeElement.textContent).not.toContain('Staff Attendance Today');
-    expect(fixture.nativeElement.textContent).not.toContain('Pending Leave Requests');
   });
 
-  it('keeps Leave Approval, Send Notice and Events in the full Quick Actions grid', () => {
+  it('keeps Leave Approvals, Send Notice and Attendance in Shortcuts while Events stays in Coming up', () => {
     configure('ADMIN');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.ad-actions-grid')).toBeTruthy();
-    expect(fixture.nativeElement.textContent).toContain('Quick Actions');
-    for (const route of ['/dashboard/view-leaves', '/dashboard/notice', '/dashboard/event-calendar']) {
-      expect(fixture.nativeElement.querySelector(`.ad-actions-grid a[routerLink="${route}"]`)).withContext(route).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('Shortcuts');
+    for (const route of ['/dashboard/view-leaves', '/dashboard/notice', '/dashboard/attendance-summary']) {
+      expect(fixture.nativeElement.querySelector(`.ad-actions-grid--compact a[routerLink="${route}"]`)).withContext(route).toBeTruthy();
     }
-    expect(fixture.nativeElement.querySelector('.ad-daily-actions-grid a[routerLink="/dashboard/view-leaves"]')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('.ad-daily-actions-grid a[routerLink="/dashboard/notice"]')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.ad-view-all[routerLink="/dashboard/event-calendar"]')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('.ad-actions-grid a[routerLink="/dashboard/attendance-summary"]')).toBeTruthy();
   });
 
-  it('keeps the existing dashboard sections intact (stat cards, plan usage placeholder, pending-leave empty state)', () => {
+  it('renders the simplified dashboard instead of the old duplicate sections', () => {
     configure('ADMIN');
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('Total Students');
-    expect(text).toContain('Total Teachers');
-    expect(text).toContain('No pending leave requests');
+    expect(text).toContain('Today at a glance');
+    expect(text).toContain('Needs your attention');
+    expect(text).toContain('Shortcuts');
+    expect(text).not.toContain('Staff Attendance Today');
+    expect(text).not.toContain('Pending Leave Requests');
+    expect(text).not.toContain('Today\'s Actions');
   });
 
   // ─── Teacher pending leave — reuses the existing ADMIN-only status-filtered endpoint ───
 
-  it('renders the student pending-leave count unchanged, from existing dashboard stats', () => {
+  it('renders the student pending-leave count in Needs your attention', () => {
     configure('ADMIN', { stats: { totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 3 } });
     fixture.detectChanges();
-    const studentPill = fixture.nativeElement.querySelector('.ad-leave-type-pill');
-    expect(studentPill.textContent).toContain('Student');
-    expect(studentPill.textContent).toContain('3');
+    const row = Array.from(fixture.nativeElement.querySelectorAll('.ad-attention-list a'))
+      .find((r: any) => r.textContent.includes('Student leave requests')) as HTMLElement;
+    expect(row).toBeTruthy();
+    expect(row.textContent).toContain('3');
   });
 
   it('renders the teacher pending-leave count separately, via getLeaves(0,1,"PENDING")', () => {
     configure('ADMIN', { teacherLeavesTotal: 2 });
     fixture.detectChanges();
     expect(teacherLeaveService.getLeaves).toHaveBeenCalledWith(0, 1, 'PENDING');
-    const pills = fixture.nativeElement.querySelectorAll('.ad-leave-type-pill');
-    const teacherPill = Array.from(pills).find((r: any) => r.textContent.includes('Teacher')) as HTMLElement;
-    expect(teacherPill.textContent).toContain('2');
+    const row = Array.from(fixture.nativeElement.querySelectorAll('.ad-attention-list a'))
+      .find((r: any) => r.textContent.includes('Teacher leave requests')) as HTMLElement;
+    expect(row).toBeTruthy();
+    expect(row.textContent).toContain('2');
   });
 
-  it('shows a zero teacher-pending state distinctly', () => {
+  it('hides the teacher pending-leave attention row when the count is zero', () => {
     configure('ADMIN', { teacherLeavesTotal: 0 });
     fixture.detectChanges();
-    const pills = fixture.nativeElement.querySelectorAll('.ad-leave-type-pill');
-    const teacherPill = Array.from(pills).find((r: any) => r.textContent.includes('Teacher')) as HTMLElement;
-    expect(teacherPill.querySelector('.ad-leave-type-value')?.textContent?.trim()).toBe('0');
+    const rows = Array.from(fixture.nativeElement.querySelectorAll('.ad-attention-list a'));
+    expect(rows.some((r: any) => r.textContent.includes('Teacher leave requests'))).toBeFalse();
   });
 
   it('does not fire the ADMIN-only teacher-leave count request for SUB_ADMIN', () => {
     configure('SUB_ADMIN');
     fixture.detectChanges();
     expect(teacherLeaveService.getLeaves).not.toHaveBeenCalled();
-    const pills = fixture.nativeElement.querySelectorAll('.ad-leave-type-pill');
-    expect(Array.from(pills).some((r: any) => r.textContent.includes('Teacher'))).toBeFalse();
   });
 
-  it('links Review Student Leave and Review Teacher Leave to the correct existing routes', () => {
-    configure('ADMIN');
+  it('links student and teacher leave attention rows to the correct existing routes', () => {
+    configure('ADMIN', { teacherLeavesTotal: 2, stats: { totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 3 } });
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.ad-leave-type-pill a[routerLink="/dashboard/view-leaves"]')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('.ad-leave-type-pill a[routerLink="/dashboard/teacher-leave-requests"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.ad-attention-list a[routerLink="/dashboard/view-leaves"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.ad-attention-list a[routerLink="/dashboard/teacher-leave-requests"]')).toBeTruthy();
   });
 
   it('isolates a teacher-leave-count failure — the rest of the dashboard still loads', () => {
@@ -359,7 +341,7 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
 
     expect(component.teacherPendingLeaveFailed).toBeTrue();
     expect(component.isLoading).toBeFalse();
-    expect(fixture.nativeElement.textContent).toContain('Total Teachers');
+    expect(fixture.nativeElement.textContent).toContain('Today at a glance');
   });
 
   // ─── Upcoming event — bounded to at most 2 requests, isolated failure ───
@@ -396,8 +378,8 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
       fixture.detectChanges();
       const text: string = fixture.nativeElement.textContent;
       expect(text).toContain('No upcoming events this month.');
-      expect(text.indexOf('Upcoming Event')).toBeLessThan(text.indexOf('School Setup'));
-      expect(text.indexOf('Upcoming Event')).toBeLessThan(text.lastIndexOf('Staff Adoption'));
+      expect(text.indexOf('Upcoming Event')).toBeLessThan(text.indexOf('School & plan'));
+      expect(text.indexOf('Upcoming Event')).toBeLessThan(text.lastIndexOf('Staff adoption'));
     });
   });
 
@@ -434,83 +416,78 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
 
     expect(component.upcomingEventFailed).toBeTrue();
     expect(component.isLoading).toBeFalse();
-    expect(fixture.nativeElement.textContent).toContain('Total Teachers');
+    expect(fixture.nativeElement.textContent).toContain('Today at a glance');
   });
 
   // ─── Failure isolation — one failed source must never blank an unrelated section ───
 
-  it('stats failure does not hide Staff Attendance Today', () => {
+  it('stats failure does not hide staff attendance information from Today at a glance', () => {
     configure('ADMIN', { statsError: true });
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('Staff Attendance Today');
-    expect(text).toContain('Present');
-    expect(text).toContain('Could not load dashboard stats');
+    expect(text).toContain('Today at a glance');
+    expect(text).toContain('Staff present');
+    expect(text).toContain('Attendance unavailable');
   });
 
-  it('stats failure does not hide Quick Actions', () => {
+  it('stats failure does not hide Shortcuts', () => {
     configure('ADMIN', { statsError: true });
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.ad-actions-grid')).toBeTruthy();
-    expect(fixture.nativeElement.textContent).toContain('Quick Actions');
+    expect(fixture.nativeElement.querySelector('.ad-actions-grid--compact')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('Shortcuts');
   });
 
-  it('stats failure never fabricates a "0 Students pending" count — shows Unavailable instead', () => {
+  it('stats failure does not fabricate a student leave attention count', () => {
     configure('ADMIN', { statsError: true });
     fixture.detectChanges();
-    const studentPill = fixture.nativeElement.querySelector('.ad-leave-type-pill');
-    expect(studentPill.textContent).toContain('Unavailable');
-    expect(studentPill.querySelector('.ad-leave-type-value').textContent.trim()).toBe('—');
+    const rows = Array.from(fixture.nativeElement.querySelectorAll('.ad-attention-list a'));
+    expect(rows.some((r: any) => r.textContent.includes('Student leave requests'))).toBeFalse();
   });
 
-  it('staff attendance failure does not hide the stat cards, and shows an isolated fallback with Retry', () => {
+  it('staff attendance failure keeps Today at a glance visible with an unavailable state', () => {
     configure('ADMIN', { staffAttendanceError: true });
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('Total Students');
-    expect(text).toContain('Total Teachers');
-    expect(text).toContain('Staff attendance is temporarily unavailable');
-    // Never a fabricated "0 present" — the pill grid itself must not render.
-    expect(fixture.nativeElement.querySelector('.ad-staff-att-grid')).toBeNull();
+    expect(text).toContain('Today at a glance');
+    expect(text).toContain('Staff attendance unavailable');
   });
 
   it('staff attendance failure does not compute "Not Yet Checked In" from missing data', () => {
     configure('ADMIN', { staffAttendanceError: true });
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).not.toContain('Not Yet Checked In');
+    expect(fixture.nativeElement.textContent).not.toContain('Teachers not checked in');
   });
 
-  it('student leave failure does not hide the teacher pending-leave pill', () => {
+  it('student leave failure does not hide the teacher pending-leave attention row', () => {
     configure('ADMIN', { studentLeavesError: true, teacherLeavesTotal: 3 });
     fixture.detectChanges();
-    const pills = fixture.nativeElement.querySelectorAll('.ad-leave-type-pill');
-    const teacherPill = Array.from(pills).find((r: any) => r.textContent.includes('Teacher')) as HTMLElement;
-    expect(teacherPill.textContent).toContain('3');
+    const row = Array.from(fixture.nativeElement.querySelectorAll('.ad-attention-list a'))
+      .find((r: any) => r.textContent.includes('Teacher leave requests')) as HTMLElement;
+    expect(row).toBeTruthy();
+    expect(row.textContent).toContain('3');
   });
 
-  it('student leave failure shows an isolated fallback with Retry, never the false "No pending leave requests" empty state', () => {
+  it('student leave preview failure does not break the simplified dashboard', () => {
     configure('ADMIN', { studentLeavesError: true });
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('Unable to load leave requests right now');
-    expect(text).not.toContain('No pending leave requests');
+    expect(text).toContain('Today at a glance');
+    expect(text).toContain('Shortcuts');
   });
 
-  it('entitlement failure affects only Plan Usage — daily operations remain intact', () => {
+  it('entitlement failure is isolated inside School & plan', () => {
     configure('ADMIN', { entitlementError: true });
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('Plan usage is temporarily unavailable');
-    expect(fixture.nativeElement.querySelector('.ad-plan-section')).toBeNull();
-    expect(text).toContain('Staff Attendance Today');
-    expect(text).toContain('Pending Leave Requests');
-    expect(text).toContain('Quick Actions');
+    expect(text).toContain('Some school status data is unavailable');
+    expect(text).toContain('Today at a glance');
+    expect(text).toContain('Shortcuts');
   });
 
-  it('entitlement success still renders Plan Usage exactly as before', () => {
+  it('entitlement success renders the plan in the compact School & plan section', () => {
     configure('ADMIN', { entitlement: { planName: 'Growth Plan', subscriptionStatus: 'ACTIVE', featureCount: 5, activeStudents: 10, maxStudents: 100, totalStaff: 4, maxStaff: 20 } });
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.ad-plan-section')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('School & plan');
     expect(fixture.nativeElement.textContent).toContain('Growth Plan');
   });
 
@@ -518,54 +495,44 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
     configure('ADMIN', { staffAdoptionError: true });
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('Staff adoption is temporarily unavailable');
-    expect(text).toContain('Staff Attendance Today');
-    expect(text).toContain('Pending Leave Requests');
+    expect(text).toContain('Some school status data is unavailable');
+    expect(text).toContain('Today at a glance');
   });
 
   it('School Setup failure remains isolated from the rest of the dashboard', () => {
     configure('ADMIN', { setupHealthError: true });
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('Setup status is temporarily unavailable');
-    expect(text).toContain('Staff Attendance Today');
-    expect(text).toContain('Pending Leave Requests');
+    expect(text).toContain('Some school status data is unavailable');
+    expect(text).toContain('Today at a glance');
   });
 
-  it('a fully successful ADMIN dashboard renders exactly as before (no visible change on the happy path)', () => {
+  it('a fully successful ADMIN dashboard renders the simplified happy path', () => {
     configure('ADMIN');
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    expect(text).toContain('Total Students');
-    expect(text).toContain('Staff Attendance Today');
-    expect(text).toContain('Pending Leave Requests');
-    expect(text).toContain('Quick Actions');
+    expect(text).toContain('Today at a glance');
+    expect(text).toContain('Needs your attention');
+    expect(text).toContain('School & plan');
+    expect(text).toContain('Shortcuts');
     expect(text).not.toContain('temporarily unavailable');
     expect(text).not.toContain('Could not load dashboard stats');
   });
 
-  it('a fully successful SUB_ADMIN dashboard renders exactly as before (contract unchanged)', () => {
+  it('a fully successful SUB_ADMIN dashboard keeps ADMIN-only sections hidden', () => {
     configure('SUB_ADMIN');
     fixture.detectChanges();
     const text: string = fixture.nativeElement.textContent;
-    expect(text).not.toContain('Staff Attendance Today');
-    expect(text).not.toContain('Pending Leave Requests');
-    expect(text).not.toContain('Staff Adoption');
+    expect(text).not.toContain('Today at a glance');
+    expect(text).not.toContain('Staff adoption');
     expect(text).not.toContain('temporarily unavailable');
-    expect(fixture.nativeElement.querySelector('a[routerLink="/dashboard/class-management"]')).toBeTruthy();
   });
 
-  it('Retry on Staff Attendance re-requests only that source, not stats/leaves/entitlement', () => {
+  it('loadStaffAttendance re-requests only that source, not stats/leaves/entitlement', () => {
     const getStats = jasmine.createSpy('getStats').and.returnValue(of({ totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 0 }));
     const getLeavesPaginated = jasmine.createSpy('getLeavesPaginated').and.returnValue(of({ content: [] }));
     const getEntitlement = jasmine.createSpy('getEntitlement').and.returnValue(of(null));
-    let attendanceCallCount = 0;
-    const getTodaySummary = jasmine.createSpy('getTodaySummary').and.callFake(() => {
-      attendanceCallCount++;
-      return attendanceCallCount === 1
-        ? throwError(() => new Error('attendance offline'))
-        : of({ date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1, expectedCount: 9, notCheckedInCount: 3 });
-    });
+    const getTodaySummary = jasmine.createSpy('getTodaySummary').and.returnValue(of({ date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1, expectedCount: 9, notCheckedInCount: 3 }));
     const authState = jasmine.createSpyObj('AuthStateService', ['getUser', 'hasFeature']);
     authState.getUser.and.returnValue({ userId: 'U1', role: 'ADMIN', name: 'Test', className: '' } as any);
     authState.hasFeature.and.returnValue(false);
@@ -589,23 +556,14 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
       ],
     });
     fixture = TestBed.createComponent(AdminDashboardComponent);
+    const cmp = fixture.componentInstance;
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Staff attendance is temporarily unavailable');
-    expect(getStats).toHaveBeenCalledTimes(1);
-    expect(getLeavesPaginated).toHaveBeenCalledTimes(1);
-    expect(getEntitlement).toHaveBeenCalledTimes(1);
-
-    const retryButton: HTMLButtonElement = Array.from(fixture.nativeElement.querySelectorAll('.ad-setup-retry'))
-      .find((b: any) => b.textContent.includes('Retry')) as HTMLButtonElement;
-    retryButton.click();
-    fixture.detectChanges();
-
+    expect(getTodaySummary).toHaveBeenCalledTimes(1);
+    cmp.loadStaffAttendance();
     expect(getTodaySummary).toHaveBeenCalledTimes(2);
     expect(getStats).toHaveBeenCalledTimes(1);
     expect(getLeavesPaginated).toHaveBeenCalledTimes(1);
     expect(getEntitlement).toHaveBeenCalledTimes(1);
-    expect(fixture.nativeElement.textContent).toContain('Staff Attendance Today');
-    expect(fixture.nativeElement.querySelector('.ad-staff-att-grid')).toBeTruthy();
   });
 });
