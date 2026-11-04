@@ -22,14 +22,13 @@
       <div class="sa-hero-blob sa-hero-blob-1"></div>
       <div class="sa-hero-blob sa-hero-blob-2"></div>
       <div class="sa-hero-left">
-        <div class="sa-hero-icon"><mat-icon>groups</mat-icon></div>
         <div>
-          <span class="sa-eyebrow">ROLLOUT VISIBILITY</span>
+          <span class="sa-eyebrow">TEAM ROLLOUT</span>
           <h1 class="sa-hero-title">Staff Adoption</h1>
           <p class="sa-hero-sub">See how your teaching staff are getting started with Edunexify.</p>
         </div>
       </div>
-      <div class="sa-hero-score">
+      <div class="sa-hero-score sa-hero-score-card">
         <strong>{{ adoptionRatePercent }}%</strong>
         <span>teachers started</span>
       </div>
@@ -72,7 +71,7 @@
       </div>
     </section>
 
-    <section class="sa-summary-grid">
+    <section class="sa-summary-grid sa-summary-grid--branded">
       <div class="sa-summary-card sa-summary-total">
         <div class="sa-summary-icon"><mat-icon>groups</mat-icon></div>
         <div class="sa-summary-copy">
@@ -104,6 +103,7 @@
     </section>
 
     <ng-container *ngIf="d.teachers.length > 0 && d.summary.startedTeachers > 0; else emptyState">
+      <section class="sa-directory-head"><div><h2>Teacher Adoption</h2><p>Track account activity, attendance usage, onboarding and app readiness.</p></div><span>{{ filteredTeachers.length }} of {{ d.teachers.length }}</span></section>
       <section class="sa-controls">
         <div class="sa-search">
           <mat-icon>search</mat-icon>
