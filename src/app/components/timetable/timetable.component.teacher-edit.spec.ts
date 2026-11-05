@@ -42,10 +42,11 @@ describe('TEACHER edit flow (rendered template)', () => {
 
   async function setup(entries: any[] = [mathEntry]) {
     api = jasmine.createSpyObj('TimetableService', [
-      'getTeacherTimetable', 'updateEntry', 'deleteEntry', 'createEntry', 'getClassTimetable', 'getPermittedSubjects'
+      'getTeacherTimetable', 'updateEntry', 'deleteEntry', 'createEntry', 'getClassTimetable', 'getPermittedSubjects', 'getTimingDisplay'
     ]);
     api.getPermittedSubjects.and.returnValue(of(['Mathematics', 'Physics', 'Maths', 'Biology', 'Accountancy']));
     api.getTeacherTimetable.and.returnValue(of(entries));
+    api.getTimingDisplay.and.returnValue(of({ showTimes: true, activeProfileId: null, activeProfileName: null, periods: [] }));
     api.updateEntry.and.returnValue(of({}));
     api.createEntry.and.returnValue(of({}));
     toast = { success: jasmine.createSpy(), confirm: jasmine.createSpy().and.resolveTo(true) };
