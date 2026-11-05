@@ -96,6 +96,8 @@ export class TimetableComponent implements OnInit, OnDestroy {
   myClasses: { classId?: number; className: string; sectionId: number | null; sectionName: string | null }[] = [];
 
   showTimes = true;
+  centralTimingActive = false;
+  activeTimingProfileName: string | null = null;
   timingConfig: TimetableTimingConfig | null = null;
   timingLoading = false;
   timingError = '';
@@ -334,6 +336,8 @@ export class TimetableComponent implements OnInit, OnDestroy {
     this.timetableService.getTimingDisplay().pipe(takeUntil(this.destroy$)).subscribe({
       next: display => {
         this.showTimes = display.showTimes;
+        this.centralTimingActive = display.activeProfileId != null;
+        this.activeTimingProfileName = display.activeProfileName;
         this.applyTimingPeriods(display.periods);
         this.cdr.markForCheck();
       },
@@ -342,6 +346,8 @@ export class TimetableComponent implements OnInit, OnDestroy {
         // preserve the existing timetable row times rather than hiding the schedule.
         this.logger.error('Failed to load timetable timing display settings', err);
         this.showTimes = true;
+        this.centralTimingActive = false;
+        this.activeTimingProfileName = null;
         this.applyTimingPeriods([]);
         this.cdr.markForCheck();
       }
@@ -380,6 +386,10 @@ export class TimetableComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }
     });
+  }
+
+  get selectedTimingProfile(): TimetableTimingProfile | null {
+    return this.timingConfig?.profiles.find(p => p.id === this.timingProfileId) ?? null;
   }
 
   selectTimingProfile(profile: TimetableTimingProfile): void {
@@ -498,10 +508,16 @@ export class TimetableComponent implements OnInit, OnDestroy {
     return this.timingByPeriod.get(entry.periodNumber)?.endTime || entry.endTime || '';
   }
 
+  configuredTimeForPeriod(periodNumber: number): TimetableTimingPeriod | null {
+    return this.timingByPeriod.get(periodNumber) ?? null;
+  }
+
   private applyTimingConfig(config: TimetableTimingConfig): void {
     this.timingConfig = config;
     this.showTimes = config.showTimes;
     const active = config.profiles.find(p => p.active) ?? null;
+    this.centralTimingActive = active != null;
+    this.activeTimingProfileName = active?.name ?? null;
     this.applyTimingPeriods(active?.periods ?? []);
     if (this.timingProfileId) {
       const selected = config.profiles.find(p => p.id === this.timingProfileId);
@@ -826,6 +842,15 @@ export class TimetableComponent implements OnInit, OnDestroy {
     }
     if (!this.modalForm.teacherId) {
       this.modalError = 'Please select a teacher.'; return;
+    }
+    if (this.centralTimingActive) {
+      const timing = this.configuredTimeForPeriod(this.modalForm.periodNumber);
+      if (!timing) {
+        this.modalError = `Period ${this.modalForm.periodNumber} does not have a time in the active timing profile. Ask an admin to configure it in Timetable → Setup.`;
+        return;
+      }
+      this.modalForm.startTime = timing.startTime;
+      this.modalForm.endTime = timing.endTime;
     }
     if (!this.modalForm.startTime || !this.modalForm.endTime) {
       this.modalError = 'Start and end time are required.'; return;
