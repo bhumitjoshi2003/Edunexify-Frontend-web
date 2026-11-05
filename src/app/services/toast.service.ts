@@ -20,6 +20,8 @@ export interface ConfirmDialogData {
   html?: string;
   confirmText?: string;
   cancelText?: string;
+  /** Allow clicking outside this confirmation to cancel it. */
+  dismissOnBackdrop?: boolean;
   danger?: boolean;
   icon?: 'warning' | 'question' | 'info' | 'success' | 'danger';
   requiredInput?: string;
@@ -64,7 +66,7 @@ export class ToastService {
         maxWidth: '440px',
         width: '92vw',
         panelClass: 'edu-dialog',
-        disableClose: true,
+        disableClose: !data.dismissOnBackdrop,
       }).afterClosed()
     ).then(r => !!r);
   }
