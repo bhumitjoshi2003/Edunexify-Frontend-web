@@ -11,10 +11,12 @@ describe('F6A timetable screen', () => {
   let api: any;
   let toast: any;
   beforeEach(() => {
-    api = jasmine.createSpyObj('TimetableService', ['createEntry', 'updateEntry', 'deleteEntry', 'getClassTimetable', 'getTeacherTimetable', 'getPermittedSubjects']);
+    api = jasmine.createSpyObj('TimetableService', ['createEntry', 'updateEntry', 'deleteEntry', 'getClassTimetable', 'getTeacherTimetable', 'getPermittedSubjects', 'getTimingDisplay', 'getTimingConfig', 'setTimingVisibility', 'createTimingProfile', 'updateTimingProfile', 'activateTimingProfile', 'deleteTimingProfile']);
     api.getPermittedSubjects.and.returnValue(of(['Math', 'English']));
     for (const key of ['createEntry', 'updateEntry', 'deleteEntry']) api[key].and.returnValue(of({}));
     api.getClassTimetable.and.returnValue(of([])); api.getTeacherTimetable.and.returnValue(of([]));
+    api.getTimingDisplay.and.returnValue(of({ showTimes: true, activeProfileId: null, activeProfileName: null, periods: [] }));
+    api.getTimingConfig.and.returnValue(of({ showTimes: true, activeProfileId: null, profiles: [] }));
     toast = { success: jasmine.createSpy(), confirm: jasmine.createSpy().and.resolveTo(true) };
     c = new TimetableComponent(api, { getTeacher: () => of({}) } as any, {} as any, {} as any, { error: () => {} } as any, { markForCheck: () => {} } as any, toast, {} as any, {} as any, { snapshot: { queryParamMap: { get: () => null } } } as any, {} as any, { getForTeacher: () => of([]) } as any);
     c.role = 'ADMIN'; c.selectedSession = current; c.selectedClassId = 8; c.selectedClass = '8'; c.sectionsLoaded = true;

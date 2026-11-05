@@ -25,7 +25,7 @@ import { TeacherCheckinService } from '../../services/teacher-checkin.service';
 import { TeacherAttendanceRecord, TeacherAttendanceSummary } from '../../interfaces/teacher-checkin';
 import { TeacherLeaveService } from '../../services/teacher-leave.service';
 import { TeacherLeave } from '../../interfaces/teacher-leave';
-import { TimetableService } from '../../services/timetable.service';
+import { TimetableService, TimetableTimingPeriod } from '../../services/timetable.service';
 import { TeacherSubstitutionService } from '../../services/teacher-substitution.service';
 import { MyCoverage, TeacherSubstitution } from '../../interfaces/teacher-substitution';
 import { TimetableEntry } from '../../interfaces/timetable';
@@ -36,7 +36,6 @@ import {
   TeacherTodayClassesView,
 } from '../../utils/teacher-timetable-today.util';
 import { subjectIcon } from '../../utils/subject-visual.util';
-import { isShowTimesEnabled } from '../../utils/timetable-preferences.util';
 import { EventService } from '../../services/event.service';
 import { CalendarEvent } from '../../interfaces/event-calendar.component';
 import { pickNearestUpcomingEvent } from '../../utils/upcoming-event.util';
@@ -106,11 +105,10 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
    *  the dashboard must stay fully usable either way, this only swaps the Upcoming Event
    *  panel to a neutral fallback line. */
   upcomingEventFailed = false;
-  /** Read synchronously at construction — never loaded asynchronously, so the UI can never
-   * briefly show clock times before the real "show times" preference is known. This is the
-   * same per-device viewer preference as the full Timetable page's own "Show times" toggle
-   * (localStorage, not a school/admin setting) — see timetable-preferences.util. */
-  readonly showTimes: boolean = isShowTimesEnabled();
+  /** School-wide timetable visibility set by ADMIN in Timetable → Setup. */
+  showTimes = true;
+  private centralTimingActive = false;
+  private timingByPeriod = new Map<number, TimetableTimingPeriod>();
 
   constructor(
     private authState: AuthStateService,
@@ -137,6 +135,7 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.loadTimingDisplay();
     this.loadPersonalAttendance();
     this.loadRecentTeacherLeaves();
     this.loadTodayClasses(user.userId);
@@ -397,8 +396,11 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
    */
   classTimeRange(entry: TeacherTodayClassEntry): string | null {
     if (!this.showTimes) return null;
-    if (!entry.startTime || !entry.endTime) return null;
-    return `${this.formatClockTime(entry.startTime)} – ${this.formatClockTime(entry.endTime)}`;
+    const configured = this.timingByPeriod.get(entry.periodNumber);
+    const start = this.centralTimingActive ? configured?.startTime : (configured?.startTime ?? entry.startTime);
+    const end = this.centralTimingActive ? configured?.endTime : (configured?.endTime ?? entry.endTime);
+    if (!start || !end) return null;
+    return `${this.formatClockTime(start)} – ${this.formatClockTime(end)}`;
   }
 
   /** Reuses the exact same "HH:mm" → "h:mm AM/PM" formatting already used for class period
@@ -417,6 +419,25 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
       return message.trim();
     }
     return 'Unable to load today\'s classes.';
+  }
+
+  private loadTimingDisplay(): void {
+    this.timetableService.getTimingDisplay().pipe(takeUntil(this.destroy$)).subscribe({
+      next: display => {
+        this.showTimes = display.showTimes;
+        this.centralTimingActive = display.activeProfileId != null;
+        this.timingByPeriod = new Map(display.periods.map(p => [p.periodNumber, p]));
+        this.cdr.markForCheck();
+      },
+      error: err => {
+        // Preserve existing row times if the new setting endpoint is temporarily unavailable.
+        this.logger.error('Failed to load timetable timing display settings', err);
+        this.showTimes = true;
+        this.centralTimingActive = false;
+        this.timingByPeriod.clear();
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   ngOnDestroy(): void {

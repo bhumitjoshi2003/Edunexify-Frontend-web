@@ -81,7 +81,7 @@
     "src/app/components/fee-generation-target/fee-generation-target.component.ts": "67892e79ad3a187be1ec1e81fd1cc4212cd518ead5ceb1bbe9e2933b26d722d1",
     "src/app/interfaces/teaching-configuration.ts": "48b3bd8d2293aada095e7aa9e0a127912043cfe58e9418144676c14ab456e228",
     "src/app/services/class-teacher-responsibility.service.ts": "dbe30c91de681f43ee6fab913ae303268520440a66f0b5177950bba32727e0a1",
-    "src/app/services/timetable.service.ts": "f7767026bb617017483c662909c90b278aa2e24b6d5c8325e9465d868f468e9d",
+    "src/app/services/timetable.service.ts": "78f00ca5d84b2ff7ed5b0a022d8f88b702c0ad9fa5372afc0d19b48a473d0afa",
     "src/app/services/academic-session.service.ts": "bc4602daae583f62745257cbb6bc633005185d417fda699dd90695b5ab3aeba7",
     "src/app/interfaces/academic-session.ts": "aa5c9beec3041e5bc7ef05cfebbbaef2f896ddc6f614b78f9e60be2d8571f430",
     "src/app/components/teaching-configuration/teaching-configuration.component.ts": "783cacc648db42f2f92b7efe6f16fec117613dc12e984fcbd4b9ab0c6196762e",
