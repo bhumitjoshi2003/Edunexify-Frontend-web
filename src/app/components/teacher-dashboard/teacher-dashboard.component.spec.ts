@@ -70,8 +70,9 @@ describe('TeacherDashboardComponent today classes', () => {
     }));
     teacherLeaveService = jasmine.createSpyObj('TeacherLeaveService', ['getMyLeaves']);
     teacherLeaveService.getMyLeaves.and.returnValue(of({ content: [], totalElements: 0, totalPages: 0 }));
-    timetableService = jasmine.createSpyObj('TimetableService', ['getTeacherTimetable']);
+    timetableService = jasmine.createSpyObj('TimetableService', ['getTeacherTimetable', 'getTimingDisplay']);
     timetableService.getTeacherTimetable.and.returnValue(of([]));
+    timetableService.getTimingDisplay.and.returnValue(of({ showTimes: true, activeProfileId: null, activeProfileName: null, periods: [] }));
     substitutionService = jasmine.createSpyObj('TeacherSubstitutionService', ['getMine', 'getMyCoverage']);
     substitutionService.getMine.and.returnValue(of([]));
     substitutionService.getMyCoverage.and.returnValue(of(null as any));
@@ -386,33 +387,41 @@ describe('TeacherDashboardComponent today classes', () => {
     expect(component.timetableEntries.length).toBe(1);
   });
 
-  // ─── Show Time parity — a per-device viewer preference, not a school/admin setting ───
+  // ─── School-wide period-time visibility and active profile ───
 
-  describe('show-times preference (shared localStorage key with the Timetable page)', () => {
-    afterEach(() => localStorage.removeItem('tt_showTimes'));
-
-    it('A: show times ON (the default) renders a valid time range', () => {
-      localStorage.removeItem('tt_showTimes'); // unset == on
-      timetableService.getTeacherTimetable.and.returnValue(of([timetableEntry({ startTime: '09:10', endTime: '09:50' })]));
+  describe('school-wide show-times setting', () => {
+    it('A: renders row times when the admin setting is ON and no central profile is active', () => {
+      timetableService.getTimingDisplay.and.returnValue(of({
+        showTimes: true, activeProfileId: null, activeProfileName: null, periods: []
+      }));
+      timetableService.getTeacherTimetable.and.returnValue(of([
+        timetableEntry({ startTime: '09:10', endTime: '09:50' })
+      ]));
       const component = build();
       component.ngOnInit();
       expect(component.showTimes).toBeTrue();
       expect(component.classTimeRange(component.todayView.current!)).toBe('9:10 AM – 9:50 AM');
     });
 
-    it('B: show times OFF suppresses the time range entirely (never renders a placeholder)', () => {
-      localStorage.setItem('tt_showTimes', 'false');
-      timetableService.getTeacherTimetable.and.returnValue(of([timetableEntry({ startTime: '09:10', endTime: '09:50' })]));
+    it('B: suppresses clock times when the admin setting is OFF', () => {
+      timetableService.getTimingDisplay.and.returnValue(of({
+        showTimes: false, activeProfileId: null, activeProfileName: null, periods: []
+      }));
+      timetableService.getTeacherTimetable.and.returnValue(of([
+        timetableEntry({ startTime: '09:10', endTime: '09:50' })
+      ]));
       const component = build();
       component.ngOnInit();
       expect(component.showTimes).toBeFalse();
       expect(component.classTimeRange(component.todayView.current!)).toBeNull();
     });
 
-    it('C: show times OFF still allows internal current/next classification using real start/end times', () => {
-      localStorage.setItem('tt_showTimes', 'false');
+    it('C: hiding clock times does not affect current/next classification', () => {
+      timetableService.getTimingDisplay.and.returnValue(of({
+        showTimes: false, activeProfileId: null, activeProfileName: null, periods: []
+      }));
       timetableService.getTeacherTimetable.and.returnValue(of([
-        timetableEntry({ id: 1, startTime: '09:10', endTime: '09:50' }), // covers mocked "now" 09:30
+        timetableEntry({ id: 1, startTime: '09:10', endTime: '09:50' }),
         timetableEntry({ id: 2, startTime: '10:00', endTime: '10:40', className: 'IX' }),
       ]));
       const component = build();
@@ -421,36 +430,50 @@ describe('TeacherDashboardComponent today classes', () => {
       expect(component.todayView.upcoming[0].key).toBe('2');
     });
 
-    it('D: re-enabling show times (new component instance) renders the time again', () => {
-      timetableService.getTeacherTimetable.and.returnValue(of([timetableEntry({ startTime: '09:10', endTime: '09:50' })]));
-
-      localStorage.setItem('tt_showTimes', 'false');
-      const off = build();
-      off.ngOnInit();
-      expect(off.classTimeRange(off.todayView.current!)).toBeNull();
-
-      localStorage.setItem('tt_showTimes', 'true');
-      const on = build();
-      on.ngOnInit();
-      expect(on.classTimeRange(on.todayView.current!)).toBe('9:10 AM – 9:50 AM');
+    it('D: active profile times override legacy timetable row times', () => {
+      timetableService.getTimingDisplay.and.returnValue(of({
+        showTimes: true,
+        activeProfileId: 7,
+        activeProfileName: 'Winter Schedule',
+        periods: [{ periodNumber: 1, startTime: '10:10', endTime: '10:50' }]
+      }));
+      timetableService.getTeacherTimetable.and.returnValue(of([
+        timetableEntry({ periodNumber: 1, startTime: '09:10', endTime: '09:50' })
+      ]));
+      const component = build();
+      component.ngOnInit();
+      expect(component.classTimeRange(component.todayView.current!)).toBe('10:10 AM – 10:50 AM');
     });
 
-    it('N: the preference is read synchronously at construction, so it can never briefly show times before the real value is known', () => {
-      localStorage.setItem('tt_showTimes', 'false');
-      const component = build(); // showTimes is already correct before ngOnInit or any subscription resolves
-      expect(component.showTimes).toBeFalse();
+    it('E: never falls back to stale row times when the active profile lacks that period', () => {
+      timetableService.getTimingDisplay.and.returnValue(of({
+        showTimes: true,
+        activeProfileId: 7,
+        activeProfileName: 'Winter Schedule',
+        periods: [{ periodNumber: 2, startTime: '10:10', endTime: '10:50' }]
+      }));
+      timetableService.getTeacherTimetable.and.returnValue(of([
+        timetableEntry({ periodNumber: 1, startTime: '09:10', endTime: '09:50' })
+      ]));
+      const component = build();
+      component.ngOnInit();
+      expect(component.classTimeRange(component.todayView.current!)).toBeNull();
     });
   });
 
   // ─── Period number + subject icon — reused from the existing timetable, never hidden ───
 
-  it('E/F: period number renders and remains visible regardless of the show-times preference', () => {
-    localStorage.setItem('tt_showTimes', 'false');
-    timetableService.getTeacherTimetable.and.returnValue(of([timetableEntry({ periodNumber: 3, startTime: '09:10', endTime: '09:50' })]));
+  it('F: period number remains visible even when the school hides clock times', () => {
+    timetableService.getTimingDisplay.and.returnValue(of({
+      showTimes: false, activeProfileId: null, activeProfileName: null, periods: []
+    }));
+    timetableService.getTeacherTimetable.and.returnValue(of([
+      timetableEntry({ periodNumber: 3, startTime: '09:10', endTime: '09:50' })
+    ]));
     const component = build();
     component.ngOnInit();
     expect(component.periodClassLabel(component.todayView.current!)).toBe('Period 3 · Class X');
-    localStorage.removeItem('tt_showTimes');
+    expect(component.classTimeRange(component.todayView.current!)).toBeNull();
   });
 
   it('G: reuses the existing timetable subject-icon mapping rather than a separate one', () => {
@@ -710,8 +733,9 @@ describe('TeacherDashboardComponent layout order', () => {
     }));
     const teacherLeaveService = jasmine.createSpyObj('TeacherLeaveService', ['getMyLeaves']);
     teacherLeaveService.getMyLeaves.and.returnValue(of({ content: [], totalElements: 0, totalPages: 0 }));
-    const timetableService = jasmine.createSpyObj('TimetableService', ['getTeacherTimetable']);
+    const timetableService = jasmine.createSpyObj('TimetableService', ['getTeacherTimetable', 'getTimingDisplay']);
     timetableService.getTeacherTimetable.and.returnValue(of([]));
+    timetableService.getTimingDisplay.and.returnValue(of({ showTimes: true, activeProfileId: null, activeProfileName: null, periods: [] }));
     const substitutionService = jasmine.createSpyObj('TeacherSubstitutionService', ['getMine', 'getMyCoverage']);
     substitutionService.getMine.and.returnValue(of([]));
     substitutionService.getMyCoverage.and.returnValue(of(null as any));
