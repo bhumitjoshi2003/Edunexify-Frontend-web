@@ -46,6 +46,7 @@ export class TimetableComponent implements OnInit, OnDestroy {
   role = '';
   userId = '';
   userClassName = '';
+  activeTab: 'timetable' | 'setup' = 'timetable';
 
   private static readonly DAY_LABELS: Record<string, string> = {
     MONDAY: 'Monday', TUESDAY: 'Tuesday', WEDNESDAY: 'Wednesday',
