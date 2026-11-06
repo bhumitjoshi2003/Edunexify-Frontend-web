@@ -56,8 +56,6 @@ const RC_SETUP = target('Report Card Setup', `${D}/report-cards-v2/setup`);
 const RC_REMARKS = target('Remarks', `${D}/report-cards-v2/remarks`);
 const RC_PUBLISHED = target('Published Report Cards', `${D}/bulk-report-cards`);
 const RC_MY_CARDS = target('Report Cards', `${D}/report-card-documents`);
-const MY_RESULTS = target('Results', `${D}/my-results`);
-const CLASS_RESULTS = target('Class Results', `${D}/class-results`);
 const TIMETABLE = target('Timetable', `${D}/timetable`);
 
 const STAFF_ROLES = ['ADMIN', 'SUB_ADMIN', 'TEACHER'];
@@ -228,12 +226,8 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
     const studentId = ctx.queryParams['studentId'];
     return studentId ? { ...RC_MY_CARDS, queryParams: { studentId } } : RC_MY_CARDS;
   }),
-  'report-card': nested(ctx => {
-    // A Class Results caller passes its own URL (selection intact) — only an in-app path is honoured.
-    const returned = parseInAppUrl(ctx.queryParams['returnUrl']);
-    if (returned) return { ...CLASS_RESULTS, ...returned };
-    return ctx.role === 'STUDENT' || ctx.role === 'PARENT' ? MY_RESULTS : CLASS_RESULTS;
-  }),
+  // Report cards are directly accessible via the navigation; no misleading Results back link.
+  'report-card': topLevel,
   // Orphan routes (no sidebar entry or in-app link): their parent is the role's dashboard.
   'report-card-templates': nested(ctx => homeDashboard(ctx.role)),
   'report-card-remarks': nested(ctx => homeDashboard(ctx.role)),
