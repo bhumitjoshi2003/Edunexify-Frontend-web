@@ -24,7 +24,7 @@ export class AttendancePdfService {
     private readonly attendance: AttendanceService
   ) {}
 
-  async studentReport(summary: StudentAttendanceSummary, period: string, month?: { month: number; year: number }): Promise<void> {
+  async studentReport(summary: StudentAttendanceSummary, period: string, month?: { month: number; year: number }, action: 'download' | 'share' = 'download'): Promise<void> {
     const school = await this.schoolIdentity();
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
     const w = 210;
@@ -73,10 +73,10 @@ export class AttendancePdfService {
       }
     }
     this.footers(pdf, w);
-    await this.deliver(pdf, `Attendance_${this.fileSafe(summary.studentName)}_${this.fileSafe(period)}.pdf`);
+    await this.deliver(pdf, `Attendance_${this.fileSafe(summary.studentName)}_${this.fileSafe(period)}.pdf`, action);
   }
 
-  async classReport(students: ClassAttendanceSummary[], className: string, sectionName: string, period: string): Promise<void> {
+  async classReport(students: ClassAttendanceSummary[], className: string, sectionName: string, period: string, action: 'download' | 'share' = 'download'): Promise<void> {
     if (!students.length) throw new Error('No class report is loaded.');
     const school = await this.schoolIdentity();
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
@@ -109,7 +109,7 @@ export class AttendancePdfService {
       { label: 'Rate', width: 24, align: 'right' }
     ], y, w, school, 'CLASS ATTENDANCE REPORT', period);
     this.footers(pdf, w, '*Approved leave is included in absent days.');
-    await this.deliver(pdf, `Attendance_Class_${this.fileSafe(className)}_${this.fileSafe(period)}.pdf`);
+    await this.deliver(pdf, `Attendance_Class_${this.fileSafe(className)}_${this.fileSafe(period)}.pdf`, action);
   }
 
   private async schoolIdentity(): Promise<SchoolIdentity> {
@@ -343,7 +343,21 @@ export class AttendancePdfService {
     return input.replace(/[^a-zA-Z0-9_-]+/g, '_').slice(0, 70);
   }
 
-  private async deliver(pdf: ReportDocument, filename: string): Promise<void> {
+  private async deliver(pdf: ReportDocument, filename: string, action: 'download' | 'share'): Promise<void> {
+    if (action === 'download') {
+      pdf.save(filename);
+      return;
+    }
+    const file = new File([pdf.output('blob')], filename, { type: 'application/pdf' });
+    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+      try {
+        await navigator.share({ files: [file], title: 'Attendance Report' });
+      } catch (error) {
+        if ((error as Error)?.name !== 'AbortError') throw error;
+      }
+      return;
+    }
+    // On browsers without file sharing, saving still lets the user share the report manually.
     pdf.save(filename);
   }
 }

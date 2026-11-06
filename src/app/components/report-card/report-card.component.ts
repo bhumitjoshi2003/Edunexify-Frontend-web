@@ -550,7 +550,7 @@ export class ReportCardComponent implements OnInit, OnDestroy {
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         this.saveUrl(url);
-        URL.revokeObjectURL(url);
+        setTimeout(() => URL.revokeObjectURL(url), 30_000);
         this.downloadingPdf = false;
         this.cdr.markForCheck();
       },
@@ -562,7 +562,9 @@ export class ReportCardComponent implements OnInit, OnDestroy {
     const a = document.createElement('a');
     a.href = url;
     a.download = this.pdfFileName;
+    document.body.appendChild(a);
     a.click();
+    a.remove();
   }
 
   /** PDF errors arrive as a Blob body: read it to show the right message (or the class picker). */
