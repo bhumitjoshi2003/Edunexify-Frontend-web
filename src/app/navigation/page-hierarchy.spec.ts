@@ -86,16 +86,13 @@ describe('page hierarchy', () => {
     expect(resolveBackTarget('report-card-documents/:id', ctx())?.link).toEqual(['/dashboard/bulk-report-cards']);
     expect(resolveBackTarget('report-card-documents/:id', ctx({ role: 'PARENT', queryParams: { studentId: 'S1' } })))
       .toEqual({ label: 'Report Cards', link: ['/dashboard/report-card-documents'], queryParams: { studentId: 'S1' } });
-    expect(resolveBackTarget('report-card', ctx({ role: 'STUDENT' }))?.link).toEqual(['/dashboard/my-results']);
-    expect(resolveBackTarget('report-card', ctx({ role: 'TEACHER' }))?.link).toEqual(['/dashboard/class-results']);
+    expect(resolveBackTarget('report-card', ctx({ role: 'STUDENT' }))).toBeNull();
+    expect(resolveBackTarget('report-card', ctx({ role: 'TEACHER' }))).toBeNull();
   });
 
-  it('returns the report card to the Class Results selection it was opened from, only for in-app URLs', () => {
+  it('does not show a misleading back button on report cards', () => {
     const returnUrl = '/dashboard/class-results?classId=3&session=2025-26';
-    expect(resolveBackTarget('report-card', ctx({ queryParams: { returnUrl } })))
-      .toEqual({ label: 'Class Results', link: ['/dashboard/class-results'], queryParams: { classId: '3', session: '2025-26' } });
-    expect(resolveBackTarget('report-card', ctx({ queryParams: { returnUrl: 'https://evil.example/x' } }))?.link)
-      .toEqual(['/dashboard/class-results']);
+    expect(resolveBackTarget('report-card', ctx({ queryParams: { returnUrl } }))).toBeNull();
     expect(parseInAppUrl('//evil.example')).toBeNull();
   });
 
