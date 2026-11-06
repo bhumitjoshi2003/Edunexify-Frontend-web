@@ -350,16 +350,20 @@ describe('Report Card V2 (Phase 1)', () => {
     expect(el.querySelector('iframe.dv-frame')).not.toBeNull();
   });
 
-  it('My report cards: "Earlier report cards" opens the older page for the signed-in student', () => {
+  it('My report cards: hides the legacy link and orders issued documents newest first', () => {
     role = 'STUDENT';
-    api.myDocuments.and.returnValue(of([]));
+    api.myDocuments.and.returnValue(of([
+      document({ id: 1, issuedAt: '2025-09-01T09:00:00', title: 'OLDER CARD' }),
+      document({ id: 2, issuedAt: '2026-11-03T09:00:00', title: 'NEWER CARD' }),
+    ]));
     TestBed.overrideProvider(ActivatedRoute, { useValue: { queryParamMap: of(convertToParamMap({})) } });
-    TestBed.overrideProvider(AcademicSessionService, { useValue: { getCurrentSession: () => of(session) } });
     const list = TestBed.createComponent(Rc2MyReportCardsComponent);
     list.detectChanges();
-    const navigate = spyOn(TestBed.inject(Router), 'navigate').and.resolveTo(true);
-    (list.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.mrc-older button')!.click();
-    expect(navigate).toHaveBeenCalledWith(['/dashboard/report-card'], { queryParams: { studentId: 'U1', session: '2026-2027' } });
+    const el = list.nativeElement as HTMLElement;
+    expect(el.textContent).not.toContain('Earlier report cards');
+    expect(el.querySelector('.mrc-older')).toBeNull();
+    const titles = [...el.querySelectorAll('.mrc-title')].map(node => node.textContent?.trim());
+    expect(titles).toEqual(['NEWER CARD', 'OLDER CARD']);
     role = 'ADMIN';
   });
 
