@@ -1,3 +1,4 @@
+import { AuthStateService } from '../auth/auth-state.service';
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, shareReplay, throwError } from 'rxjs';
@@ -268,7 +269,7 @@ export class SchoolService {
   // Cache the class list — resets on error so next subscriber gets a fresh request
   private classes$: Observable<string[]> | null = null;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private authState: AuthStateService) {}
 
   getClasses(): Observable<string[]> {
     if (!this.classes$) {
@@ -305,6 +306,11 @@ export class SchoolService {
 
   toggleStreamEligible(id: number, eligible: boolean): Observable<SchoolClass> {
     return this.http.patch<SchoolClass>(`${this.baseUrl}/classes/${id}/stream-eligible`, { eligible });
+  }
+
+  getAcademicContext(): Observable<Pick<SchoolSettings, 'name' | 'workingDays' | 'academicYearStartMonth' | 'periodsPerDay' | 'gradingSystem' | 'timezone' | 'schoolStartTime' | 'lateThresholdMinutes'>> {
+    return this.http.get<SchoolSettings>(this.authState.getUserRole() === 'PRINCIPAL'
+      ? `${environment.apiUrl}/principal/school-context` : `${this.baseUrl}/settings`);
   }
 
   getSettings(): Observable<SchoolSettings> {

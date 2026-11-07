@@ -26,10 +26,12 @@ describe('route access for target fee generation, school setup and active sessio
   });
 
   it('active sessions: every real role, including SUPER_ADMIN', () => {
-    expect(child('active-sessions').data?.['roles']).toEqual(['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'SUPER_ADMIN']);
+    expect(child('active-sessions').data?.['roles']).toEqual(['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'SUPER_ADMIN', 'PRINCIPAL']);
+    expect(child('active-sessions').data?.['principalOperation']).toBe('OWN_SESSIONS');
   });
 
   it('notification inbox: all authenticated roles including super admin', () => {
-    expect(child('notifications').data?.['roles']).toEqual(['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'SUPER_ADMIN']);
+    expect(child('notifications').data?.['roles']).toEqual(['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'SUPER_ADMIN', 'PRINCIPAL']);
+    expect(child('notifications').data?.['principalOperation']).toBe('OWN_INBOX');
   });
 });
