@@ -101,6 +101,7 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
   'teacher-dashboard': dashboard,
   'principal-dashboard': dashboard,
   'my-signature': topLevel,
+  'report-card-approvals': topLevel,
   'admin-dashboard': dashboard,
   'super-admin-dashboard': dashboard,
   'parent-dashboard': dashboard,

@@ -37,6 +37,10 @@
              (click)="closeSidebarOnMobile()" title="My Signature">
             <mat-icon>draw</mat-icon><span>My Signature</span>
           </a>
+          <a class="nav-item" routerLink="/dashboard/report-card-approvals" routerLinkActive="active"
+             (click)="closeSidebarOnMobile()" title="Report Card Approvals">
+            <mat-icon>fact_check</mat-icon><span>Report Card Approvals</span>
+          </a>
         </app-nav-group>
       </ng-container>
 
@@ -229,6 +233,10 @@
         <a class="nav-item" routerLink="/dashboard/my-signature" routerLinkActive="active"
            (click)="closeSidebarOnMobile()" title="My Signature">
           <mat-icon>draw</mat-icon><span>My Signature</span>
+        </a>
+        <a class="nav-item" routerLink="/dashboard/report-card-approvals" routerLinkActive="active"
+           (click)="closeSidebarOnMobile()" title="Report Card Approvals">
+          <mat-icon>fact_check</mat-icon><span>Report Card Approvals</span>
         </a>
         <a class="nav-item" routerLink="/dashboard/teacher-checkin" routerLinkActive="active"
            (click)="closeSidebarOnMobile()" title="My Check-in">
@@ -462,6 +470,10 @@
         <a class="nav-item" *ngIf="hasFeature('REPORT_CARDS')" routerLink="/dashboard/bulk-report-cards" routerLinkActive="active"
            (click)="closeSidebarOnMobile()" title="Published Report Cards">
           <mat-icon>picture_as_pdf</mat-icon><span>Published Report Cards</span>
+        </a>
+        <a class="nav-item" *ngIf="hasFeature('REPORT_CARDS') && Role === 'ADMIN'" routerLink="/dashboard/report-card-approvals" routerLinkActive="active"
+           (click)="closeSidebarOnMobile()" title="Report Card Approvals">
+          <mat-icon>fact_check</mat-icon><span>Report Card Approvals</span>
         </a>
 
         </app-nav-group>
