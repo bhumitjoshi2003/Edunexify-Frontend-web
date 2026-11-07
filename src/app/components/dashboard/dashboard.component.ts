@@ -381,6 +381,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const labels: Record<string, string> = {
       STUDENT: 'Student',
       TEACHER: 'Teacher',
+      PRINCIPAL: 'Principal',
       ADMIN: 'Admin',
       SUB_ADMIN: 'Sub Admin',
       SUPER_ADMIN: 'Super Admin',
@@ -393,6 +394,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const classes: Record<string, string> = {
       STUDENT: 'chip-student',
       TEACHER: 'chip-teacher',
+      PRINCIPAL: 'chip-admin',
       ADMIN: 'chip-admin',
       SUB_ADMIN: 'chip-subadmin',
       SUPER_ADMIN: 'chip-superadmin',
