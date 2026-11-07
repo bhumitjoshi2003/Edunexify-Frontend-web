@@ -55,6 +55,7 @@ describe('Report Card V2 (Phase 1)', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
+        { provide: HttpClient, useValue: { get: () => of({ required: false }), post: () => of({}) } },
         { provide: ReportCardV2Service, useValue: api },
         { provide: ToastService, useValue: toast },
         { provide: ReportCardPdfDeliveryService, useValue: delivery },
