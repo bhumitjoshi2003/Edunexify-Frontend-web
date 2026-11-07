@@ -1,3 +1,4 @@
+import { principalCapabilityGuard } from './auth/principal-capability.guard';
 import { provideRouter, Routes } from '@angular/router';
 import { authGuard } from './auth/auth.guard';
 import { roleGuard } from './auth/role.guard';
@@ -43,7 +44,7 @@ export const routes: Routes = [
       {
         path: 'report-card-approvals',
         loadComponent: () => import('./components/report-card-approvals/report-card-approvals.component').then(m => m.ReportCardApprovalsComponent),
-        canActivate: [roleGuard], data: { roles: ['ADMIN', 'TEACHER', 'PRINCIPAL'] }
+        canActivate: [roleGuard, featureGuard], data: { featureKey: FEATURES.REPORT_CARDS, roles: ['ADMIN', 'TEACHER', 'PRINCIPAL'] }
       },
       {
         path: 'my-signature',
@@ -95,7 +96,7 @@ export const routes: Routes = [
       {
         path: 'attendance-summary',
         loadComponent: () => import('./components/attendance-summary/attendance-summary.component').then(m => m.AttendanceSummaryComponent),
-        canActivate: [roleGuard], data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'ATTENDANCE_READ', roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'PRINCIPAL'] }
       },
 
       // ── Teacher routes ────────────────────────────────────────────────
@@ -112,31 +113,31 @@ export const routes: Routes = [
       {
         path: 'teacher-leave-requests',
         loadComponent: () => import('./components/teacher-leave-requests/teacher-leave-requests.component').then(m => m.TeacherLeaveRequestsComponent),
-        canActivate: [roleGuard], data: { roles: ['ADMIN'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'TEACHER_LEAVE_DECIDE', roles: ['ADMIN', 'PRINCIPAL'] }
       },
 
       // ── Admin global search ───────────────────────────────────────────
       {
         path: 'student-search',
         loadComponent: () => import('./components/student-search/student-search.component').then(m => m.StudentSearchComponent),
-        canActivate: [roleGuard], data: { roles: ['ADMIN'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'STUDENT_READ', roles: ['ADMIN', 'PRINCIPAL'] }
       },
 
       // ── Shared list / detail routes (Teacher + Admin) ─────────────────
       {
         path: 'student-list',
         loadComponent: () => import('./components/student-list/student-list.component').then(m => m.StudentListComponent),
-        canActivate: [roleGuard], data: { roles: ['TEACHER', 'ADMIN'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'STUDENT_READ', roles: ['TEACHER', 'ADMIN', 'PRINCIPAL'] }
       },
       {
         path: 'student-details/:studentId',
         loadComponent: () => import('./components/student-details/student-details.component').then(m => m.StudentDetailsComponent),
-        canActivate: [roleGuard], data: { roles: ['TEACHER', 'ADMIN', 'STUDENT'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'STUDENT_READ', roles: ['TEACHER', 'ADMIN', 'STUDENT', 'PRINCIPAL'] }
       },
       {
         path: 'view-leaves',
         loadComponent: () => import('./components/view-leaves/view-leaves.component').then(m => m.ViewLeavesComponent),
-        canActivate: [roleGuard], data: { roles: ['TEACHER', 'ADMIN'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'STUDENT_LEAVE_DECIDE', roles: ['TEACHER', 'ADMIN', 'PRINCIPAL'] }
       },
       {
         path: 'view-leaves/:studentId',
@@ -146,12 +147,12 @@ export const routes: Routes = [
       {
         path: 'event-new',
         loadComponent: () => import('./components/event-form/event-form.component').then(m => m.EventFormComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['ADMIN'], featureKey: FEATURES.SCHOOL_COMMUNICATION }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'COMMUNICATION_EDIT', roles: ['ADMIN', 'PRINCIPAL'], featureKey: FEATURES.SCHOOL_COMMUNICATION }
       },
       {
         path: 'event-edit/:id',
         loadComponent: () => import('./components/event-form/event-form.component').then(m => m.EventFormComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['ADMIN'], featureKey: FEATURES.SCHOOL_COMMUNICATION }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'COMMUNICATION_EDIT', roles: ['ADMIN', 'PRINCIPAL'], featureKey: FEATURES.SCHOOL_COMMUNICATION }
       },
 
       // ── Super Admin ───────────────────────────────────────────────────
@@ -185,12 +186,12 @@ export const routes: Routes = [
       {
         path: 'class-management',
         loadComponent: () => import('./components/class-management/class-management.component').then(m => m.ClassManagementComponent),
-        canActivate: [roleGuard], data: { roles: ['ADMIN', 'SUB_ADMIN'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'ACADEMIC_CONFIGURATION_EDIT', roles: ['ADMIN', 'SUB_ADMIN', 'PRINCIPAL'] }
       },
       {
         path: 'holiday-calendar',
         loadComponent: () => import('./components/holiday-calendar/holiday-calendar.component').then(m => m.HolidayCalendarComponent),
-        canActivate: [roleGuard], data: { roles: ['ADMIN', 'TEACHER', 'STUDENT', 'PARENT'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'COMMUNICATION_READ', roles: ['ADMIN', 'TEACHER', 'STUDENT', 'PARENT', 'PRINCIPAL'] }
       },
       {
         path: 'teacher-checkin',
@@ -207,7 +208,7 @@ export const routes: Routes = [
       {
         path: 'assessment-groups',
         loadComponent: () => import('./components/assessment-group-config/assessment-group-config.component').then(m => m.AssessmentGroupConfigComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['ADMIN'], featureKey: FEATURES.EXAMS_RESULTS }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'ACADEMIC_CONFIGURATION_EDIT', roles: ['ADMIN', 'PRINCIPAL'], featureKey: FEATURES.EXAMS_RESULTS }
       },
       {
         path: 'report-card-templates',
@@ -234,17 +235,17 @@ export const routes: Routes = [
       {
         path: 'report-cards-v2/setup',
         loadComponent: () => import('./components/report-card-v2/setup/rc2-setup.component').then(m => m.Rc2SetupComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['ADMIN'], featureKey: FEATURES.REPORT_CARDS }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'REPORT_CARD_CONFIGURATION_EDIT', roles: ['ADMIN', 'PRINCIPAL'], featureKey: FEATURES.REPORT_CARDS }
       },
       {
         path: 'report-cards-v2/design',
         loadComponent: () => import('./components/report-card-v2/design/rc2-design.component').then(m => m.Rc2DesignComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['ADMIN'], featureKey: FEATURES.REPORT_CARDS }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'REPORT_CARD_CONFIGURATION_EDIT', roles: ['ADMIN', 'PRINCIPAL'], featureKey: FEATURES.REPORT_CARDS }
       },
       {
         path: 'report-cards-v2/remarks',
         loadComponent: () => import('./components/report-card-v2/remarks/rc2-remarks.component').then(m => m.Rc2RemarksComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['ADMIN', 'TEACHER'], featureKey: FEATURES.REPORT_CARDS }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'REPORT_CARD_REMARKS_EDIT', roles: ['ADMIN', 'TEACHER', 'PRINCIPAL'], featureKey: FEATURES.REPORT_CARDS }
       },
       {
         path: 'report-cards-v2/generate',
@@ -260,7 +261,7 @@ export const routes: Routes = [
       {
         path: 'report-card-documents/:id',
         loadComponent: () => import('./components/report-card-v2/documents/rc2-document-view.component').then(m => m.Rc2DocumentViewComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['STUDENT', 'PARENT', 'ADMIN'], featureKey: FEATURES.REPORT_CARDS }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'ISSUED_REPORT_CARD_READ', roles: ['STUDENT', 'PARENT', 'ADMIN', 'PRINCIPAL'], featureKey: FEATURES.REPORT_CARDS }
       },
 
       // ── Admin-only routes ─────────────────────────────────────────────
@@ -277,12 +278,12 @@ export const routes: Routes = [
       {
         path: 'teacher-list',
         loadComponent: () => import('./components/teacher-list/teacher-list.component').then(m => m.TeacherListComponent),
-        canActivate: [roleGuard], data: { roles: ['ADMIN'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'TEACHER_READ', roles: ['ADMIN', 'PRINCIPAL'] }
       },
       {
         path: 'teacher-details/:teacherId',
         loadComponent: () => import('./components/teacher-details/teacher-details.component').then(m => m.TeacherDetailsComponent),
-        canActivate: [roleGuard], data: { roles: ['ADMIN', 'TEACHER'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'TEACHER_READ', roles: ['ADMIN', 'TEACHER', 'PRINCIPAL'] }
       },
       {
         path: 'register',
@@ -368,27 +369,27 @@ export const routes: Routes = [
       {
         path: 'subject-config',
         loadComponent: () => import('./components/subject-config/subject-config.component').then(m => m.SubjectConfigComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['ADMIN'], featureKey: FEATURES.SCHOOL_ADMINISTRATION }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'ACADEMIC_CONFIGURATION_EDIT', roles: ['ADMIN', 'PRINCIPAL'], featureKey: FEATURES.SCHOOL_ADMINISTRATION }
       },
       {
         path: 'exam-config',
         loadComponent: () => import('./components/exam-config/exam-config.component').then(m => m.ExamConfigComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['ADMIN'], featureKey: FEATURES.EXAMS_RESULTS }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'ACADEMIC_CONFIGURATION_EDIT', roles: ['ADMIN', 'PRINCIPAL'], featureKey: FEATURES.EXAMS_RESULTS }
       },
       {
         path: 'student-stream',
         loadComponent: () => import('./components/student-stream/student-stream.component').then(m => m.StudentStreamComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['ADMIN'], featureKey: FEATURES.EXAMS_RESULTS }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'STUDENT_ACADEMIC_EDIT', roles: ['ADMIN', 'PRINCIPAL'], featureKey: FEATURES.EXAMS_RESULTS }
       },
       {
         path: 'elective-assignment',
         loadComponent: () => import('./components/elective-assignment/elective-assignment.component').then(m => m.ElectiveAssignmentComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['ADMIN'], featureKey: FEATURES.EXAMS_RESULTS }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'STUDENT_ACADEMIC_EDIT', roles: ['ADMIN', 'PRINCIPAL'], featureKey: FEATURES.EXAMS_RESULTS }
       },
       {
         path: 'mark-entry',
         loadComponent: () => import('./components/mark-entry/mark-entry.component').then(m => m.MarkEntryComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['TEACHER', 'ADMIN'], featureKey: FEATURES.EXAMS_RESULTS }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'MARKS_CORRECT', roles: ['TEACHER', 'ADMIN', 'PRINCIPAL'], featureKey: FEATURES.EXAMS_RESULTS }
       },
       {
         path: 'my-results',
@@ -398,7 +399,7 @@ export const routes: Routes = [
       {
         path: 'class-results',
         loadComponent: () => import('./components/class-results/class-results.component').then(m => m.ClassResultsComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['TEACHER', 'ADMIN'], featureKey: FEATURES.EXAMS_RESULTS }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'RESULTS_READ', roles: ['TEACHER', 'ADMIN', 'PRINCIPAL'], featureKey: FEATURES.EXAMS_RESULTS }
       },
       {
         path: 'report-card',
@@ -511,12 +512,12 @@ export const routes: Routes = [
       {
         path: 'teacher-substitutions',
         loadComponent: () => import('./components/teacher-substitution/teacher-substitution.component').then(m => m.TeacherSubstitutionComponent),
-        canActivate: [roleGuard], data: { roles: ['ADMIN', 'SUB_ADMIN'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'TIMETABLE_READ', roles: ['ADMIN', 'SUB_ADMIN', 'PRINCIPAL'] }
       },
       {
         path: 'timetable',
         loadComponent: () => import('./components/timetable/timetable.component').then(m => m.TimetableComponent),
-        canActivate: [roleGuard], data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'TIMETABLE_READ', roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'PRINCIPAL'] }
       },
       {
         path: 'timetable-bulk-import',
@@ -530,17 +531,17 @@ export const routes: Routes = [
         // business behavior as Android. The school Notice Board below is a separate feature.
         path: 'notifications',
         loadComponent: () => import('./components/notification-center/notification-center.component').then(m => m.NotificationCenterComponent),
-        canActivate: [roleGuard], data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'SUPER_ADMIN'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'OWN_INBOX', roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'SUPER_ADMIN', 'PRINCIPAL'] }
       },
       {
         path: 'notice',
         loadComponent: () => import('./components/notice/notice.component').then(m => m.NoticeComponent),
-        canActivate: [roleGuard], data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'] }
+        canActivate: [roleGuard, principalCapabilityGuard], data: { principalOperation: 'COMMUNICATION_READ', roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'PRINCIPAL'] }
       },
       {
         path: 'event-calendar',
         loadComponent: () => import('./components/event-calendar/event-calendar.component').then(m => m.EventCalendarComponent),
-        canActivate: [roleGuard, featureGuard], data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'], featureKey: FEATURES.SCHOOL_COMMUNICATION }
+        canActivate: [roleGuard, principalCapabilityGuard, featureGuard], data: { principalOperation: 'COMMUNICATION_READ', roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'PRINCIPAL'], featureKey: FEATURES.SCHOOL_COMMUNICATION }
       },
       {
         // Personal account security, not a school-scoped feature — every real
@@ -549,8 +550,8 @@ export const routes: Routes = [
         // SUPER_ADMIN since it's meant for school-scoped features only).
         path: 'active-sessions',
         loadComponent: () => import('./components/active-sessions/active-sessions.component').then(m => m.ActiveSessionsComponent),
-        canActivate: [roleGuard],
-        data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'SUPER_ADMIN'] }
+        canActivate: [roleGuard, principalCapabilityGuard],
+        data: { principalOperation: 'OWN_SESSIONS', roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'SUPER_ADMIN', 'PRINCIPAL'] }
       },
       // Technical support — every normal role; reporting/tracking a platform problem is a
       // personal action, never routed to the reporter's own school admin. SUPER_ADMIN receives

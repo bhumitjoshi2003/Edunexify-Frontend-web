@@ -252,3 +252,31 @@ describe('B4-6 teaching configuration renders async results inside an OnPush hos
     expect(fixture.nativeElement.querySelector('.tc-error')?.textContent).toContain('already configured');
   });
 });
+
+describe('Teaching configuration for the Principal', () => {
+  it('shows class-teacher rows only: session copy and activation stay Admin tools', async () => {
+    const service = jasmine.createSpyObj('Responsibilities', ['list', 'create', 'update', 'delete', 'copy', 'preview', 'apply']);
+    service.list.and.returnValue(of([row])); service.preview.and.returnValue(of(preview));
+    const timetable = { copySession: jasmine.createSpy().and.returnValue(of({})) };
+    const toast = { confirm: jasmine.createSpy().and.resolveTo(true) };
+    await TestBed.configureTestingModule({ imports: [TeachingConfigurationComponent], providers: [
+      { provide: ClassTeacherResponsibilityService, useValue: service }, { provide: TimetableService, useValue: timetable },
+      { provide: AcademicSessionService, useValue: { getAllSessions: () => of([current, future, historical]), getCurrentSession: () => of(current) } },
+      { provide: SectionService, useValue: { getSectionsForClass: () => of([]) } }, { provide: ToastService, useValue: toast }
+    ] }).compileComponents();
+    const fixture = TestBed.createComponent(TeachingConfigurationComponent);
+    fixture.componentRef.setInput('session', current);
+    fixture.componentRef.setInput('fullAdministration', false);
+    fixture.detectChanges();
+    const text: string = fixture.nativeElement.textContent;
+    expect(text).toContain('Teacher');
+    expect(fixture.nativeElement.querySelector('[aria-expanded]')).not.toBeNull();
+    const headers = Array.from(fixture.nativeElement.querySelectorAll('.tc-section-header') as NodeListOf<HTMLElement>).map(h => h.textContent ?? '');
+    expect(headers.length).toBe(1);
+    await fixture.componentInstance.apply();
+    await fixture.componentInstance.copy('responsibilities');
+    expect(service.apply).not.toHaveBeenCalled();
+    expect(service.copy).not.toHaveBeenCalled();
+    expect(toast.confirm).not.toHaveBeenCalled();
+  });
+});

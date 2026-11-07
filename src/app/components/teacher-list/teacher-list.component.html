@@ -9,7 +9,7 @@
         <p>{{ teachers.length }} teacher{{ teachers.length !== 1 ? 's' : '' }} enrolled</p>
       </div>
     </div>
-    <button *ngIf="hasFeature('BULK_IMPORT')" class="bulk-import-btn" (click)="navigateToBulkImport()">&#8679; Bulk Import</button>
+    <button *ngIf="loggedInUserRole === 'ADMIN' && hasFeature('BULK_IMPORT')" class="bulk-import-btn" (click)="navigateToBulkImport()">&#8679; Bulk Import</button>
     <div class="tl-blob tl-blob-1"></div>
     <div class="tl-blob tl-blob-2"></div>
   </div>

@@ -26,7 +26,13 @@ const REPOS = ['EduPay-Leave-frontend', 'EduPay-Leave-android'];
 
 const sha256 = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-const shared = manifest.shared;
+const principalOnly = process.argv.includes('--principal');
+const shared = principalOnly
+  ? Object.fromEntries((manifest.principalShared ?? []).map(path => [path, manifest.shared[path]]))
+  : manifest.shared;
+if (principalOnly && !Object.keys(shared).length) {
+  console.error('parity: no Principal contracts registered'); process.exit(1);
+}
 const platformSpecific = (manifest.platformSpecific ?? []).map((entry) => entry.path);
 
 const overlap = Object.keys(shared).filter((path) => platformSpecific.includes(path));
