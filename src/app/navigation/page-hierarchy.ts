@@ -66,6 +66,7 @@ export function homeDashboard(role: string): BackTarget {
     case 'ADMIN':
     case 'SUB_ADMIN': return ADMIN_DASHBOARD;
     case 'TEACHER': return target('Teacher dashboard', `${D}/teacher-dashboard`);
+    case 'PRINCIPAL': return target('Principal dashboard', `${D}/principal-dashboard`);
     case 'STUDENT': return target('Student dashboard', `${D}/student-dashboard`);
     case 'PARENT': return target('Dashboard', `${D}/parent-dashboard`);
     case 'SUPER_ADMIN': return target('Super Admin dashboard', `${D}/super-admin-dashboard`);
@@ -98,6 +99,7 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
   // ── Dashboards / home ────────────────────────────────────────────────
   'student-dashboard': dashboard,
   'teacher-dashboard': dashboard,
+  'principal-dashboard': dashboard,
   'admin-dashboard': dashboard,
   'super-admin-dashboard': dashboard,
   'parent-dashboard': dashboard,
@@ -116,6 +118,7 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
   'apply-teacher-leave': topLevel,
   'teacher-leave-requests': topLevel,
   'student-search': topLevel,
+  'principal-management': topLevel,
   'student-list': topLevel,
   'view-leaves': topLevel,
   'payment-pricing': topLevel,

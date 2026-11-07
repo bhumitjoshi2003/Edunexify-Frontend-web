@@ -187,6 +187,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (user) {
       this.Role = user.role;
       this.Id = user.userId;
+      if (user.role === 'PRINCIPAL') this.Name = user.name ?? '';
       this.fetchUserDetails();
     }
   }
@@ -250,6 +251,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.router.navigate(['/dashboard/student-dashboard']);
     } else if (this.Role === 'TEACHER') {
       this.router.navigate(['/dashboard/teacher-dashboard']);
+    } else if (this.Role === 'PRINCIPAL') {
+      this.router.navigate(['/dashboard/principal-dashboard']);
     } else if (this.Role === 'ADMIN' || this.Role === 'SUB_ADMIN') {
       this.router.navigate(['/dashboard/admin-dashboard']);
     } else if (this.Role === 'PARENT') {
@@ -265,6 +268,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   isTeacher(): boolean {
     return this.Role === 'TEACHER';
+  }
+
+  isPrincipal(): boolean {
+    return this.Role === 'PRINCIPAL';
   }
 
   isAdmin(): boolean {
@@ -351,6 +358,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   fetchUnreadCount(): void {
+    if (this.isPrincipal()) return; // Principal inbox is not enabled in the initial role rollout.
     this.notificationState.refreshUnread();
   }
 
@@ -373,6 +381,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const labels: Record<string, string> = {
       STUDENT: 'Student',
       TEACHER: 'Teacher',
+      PRINCIPAL: 'Principal',
       ADMIN: 'Admin',
       SUB_ADMIN: 'Sub Admin',
       SUPER_ADMIN: 'Super Admin',
@@ -385,6 +394,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const classes: Record<string, string> = {
       STUDENT: 'chip-student',
       TEACHER: 'chip-teacher',
+      PRINCIPAL: 'chip-admin',
       ADMIN: 'chip-admin',
       SUB_ADMIN: 'chip-subadmin',
       SUPER_ADMIN: 'chip-superadmin',
