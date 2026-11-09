@@ -58,7 +58,7 @@
     "src/app/components/fee-reminders/fee-reminders.component.ts": "ac340d24349e906e76128a4076f6b46a615261725305be10dfe3fdd2cb7a0811",
     "src/app/services/notification.service.ts": "e2fd74361cac5977a12c42603b1d57e7cb0e0553699fdaf02ac964df5225d39d",
     "src/app/services/notification-state.service.ts": "d874ae51732ead54b1e76f23b254eb2f2f00f8a316f79d8ae0547774420e9ae1",
-    "src/app/services/notification-navigation.service.ts": "c3e3be72830778f672b1273a6529fc61d01617494acfb9151a30389d2078ac2a",
+    "src/app/services/notification-navigation.service.ts": "9908b9d971290a6858e79ebc8b1bfca8a51641823ed3c91827ff2dc9cd20e7f9",
     "src/app/interfaces/user-notification.ts": "8810bdfdb5c5d533f178f933cc846e2283a0e3b49fca070b539ca567bf74fef9",
     "src/app/components/notification-center/notification-center.component.ts": "dd5429bb53b9d8acf200224fe0823c9573108c09fd72818b59e0181e6707ea5f",
     "src/app/utils/school-date.util.ts": "ce8ece323b722e2bf7461c5e1644da4ac505737a25bd7e6c14c66240fcc6c814",
