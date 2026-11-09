@@ -9,8 +9,22 @@ export class ReportCardPdfDeliveryService {
   /** True where PDFs go to the operating system (Android app) instead of an in-page preview. */
   get native(): boolean { return false; }
 
+  /** Native-only path: the browser uses the PDF iframe instead. */
+  async previewPages(_blob: Blob, _fileName: string): Promise<string[]> { return []; }
+
+  async open(blob: Blob, fileName: string): Promise<void> { this.download(blob, fileName); }
+
+  async printNative(_blob: Blob, _fileName: string): Promise<void> { window.print(); }
+
+  async saveToDevice(blob: Blob, fileName: string): Promise<void> { this.download(blob, fileName); }
+
   /** Opens the system sheet (native) — on the web this simply downloads. */
   async share(blob: Blob, fileName: string): Promise<void> {
+    const file = new File([blob], fileName, { type: 'application/pdf' });
+    if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Report Card' });
+      return;
+    }
     this.download(blob, fileName);
   }
 

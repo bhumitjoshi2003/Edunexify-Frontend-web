@@ -28,7 +28,7 @@ import { Publication, PublicationJob, ReportCardDocument } from '../../services/
 describe('Report Card V2 (Phase 1)', () => {
   let api: jasmine.SpyObj<ReportCardV2Service>;
   let toast: jasmine.SpyObj<ToastService>;
-  let delivery: { native: boolean; share: jasmine.Spy; download: jasmine.Spy };
+  let delivery: { native: boolean; share: jasmine.Spy; download: jasmine.Spy; saveToDevice: jasmine.Spy; previewPages: jasmine.Spy; printNative: jasmine.Spy; open: jasmine.Spy };
   let role = 'ADMIN';
 
   const session = { id: 1, label: '2026-2027', startDate: '2026-04-01', endDate: '2027-03-31', current: true };
@@ -52,7 +52,15 @@ describe('Report Card V2 (Phase 1)', () => {
       { id: 12, examName: 'Annual', resultStatus: 'DRAFT', subjects: 5 },
     ]));
     toast = jasmine.createSpyObj('ToastService', ['success', 'error', 'warning', 'info', 'confirm']);
-    delivery = { native: false, share: jasmine.createSpy('share').and.resolveTo(), download: jasmine.createSpy('download') };
+    delivery = {
+      native: false,
+      share: jasmine.createSpy('share').and.resolveTo(),
+      download: jasmine.createSpy('download'),
+      saveToDevice: jasmine.createSpy('saveToDevice').and.resolveTo(),
+      previewPages: jasmine.createSpy('previewPages').and.resolveTo(['data:image/jpeg;base64,abc']),
+      printNative: jasmine.createSpy('printNative').and.resolveTo(),
+      open: jasmine.createSpy('open').and.resolveTo(),
+    };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -458,6 +466,45 @@ describe('Report Card V2 (Phase 1)', () => {
     tabs[1].click();
     expect(navigate).toHaveBeenCalledWith([], jasmine.objectContaining({ queryParams: { studentId: 'S2' } }));
     role = 'ADMIN';
+  });
+
+  it('Report-card viewer separates download from share and can expand the preview', async () => {
+    TestBed.overrideProvider(ActivatedRoute, { useValue: {
+      paramMap: of(convertToParamMap({ id: '900' })),
+      snapshot: { queryParamMap: convertToParamMap({ studentId: 'S1' }) },
+    } });
+    api.getDocument.and.returnValue(of(document()));
+    api.documentPdf.and.returnValue(of(new Blob(['%PDF'], { type: 'application/pdf' })));
+    const fixture = TestBed.createComponent(Rc2DocumentViewComponent);
+    fixture.detectChanges();
+    const view = fixture.componentInstance;
+    expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Download report card"]')).not.toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('[aria-label="Share report card"]')).not.toBeNull();
+    await view.download();
+    expect(delivery.saveToDevice).toHaveBeenCalled();
+    expect(delivery.share).not.toHaveBeenCalled();
+    await view.share();
+    expect(delivery.share).toHaveBeenCalled();
+    view.expanded = true;
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.dv-expanded')).not.toBeNull();
+  });
+
+  it('Report-card viewer previews native PDF pages without opening the share sheet', async () => {
+    delivery.native = true;
+    TestBed.overrideProvider(ActivatedRoute, { useValue: {
+      paramMap: of(convertToParamMap({ id: '900' })),
+      snapshot: { queryParamMap: convertToParamMap({}) },
+    } });
+    api.getDocument.and.returnValue(of(document()));
+    api.documentPdf.and.returnValue(of(new Blob(['%PDF'], { type: 'application/pdf' })));
+    const fixture = TestBed.createComponent(Rc2DocumentViewComponent);
+    fixture.detectChanges();
+    await Promise.resolve();
+    fixture.detectChanges();
+    expect(delivery.previewPages).toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.dv-pages img').length).toBe(1);
+    expect(delivery.share).not.toHaveBeenCalled();
   });
 
   it('Verify: a withdrawn V2 report card says so; legacy results look as before', () => {
