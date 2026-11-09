@@ -444,3 +444,7 @@
   animation: me-sk-shimmer 1.4s infinite;
 }
 @keyframes me-sk-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+/* The correction audit explanation is helpful on desktop, but crowds phone layouts. */
+@media (max-width: 767px) {
+  #mark-correction-help { display: none; }
+}

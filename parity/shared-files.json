@@ -106,7 +106,7 @@
     "src/app/auth/principal-capability.guard.spec.ts": "04d173cfb56600089ad22c0aa725424d1bae0412257c37a53bfd7cb85f3e4aa2",
     "src/app/services/leadership-people.spec.ts": "20a3cdbc53d53d526f80a53bcc5302feffd3b7e9c8fdce544faec9968a5b08ef",
     "src/app/components/principal-dashboard/principal-dashboard.component.ts": "78a2b932aabb8c565d7c68740610f4cfc1cdfcf6eceddec867662c428b3ae9d0",
-    "src/app/components/signature-settings/signature-settings.component.ts": "e20021a4b64ddeb0ee9536501625d9505c0bf380da0c4f8bbfae7b3b0b654a14",
+    "src/app/components/signature-settings/signature-settings.component.ts": "484fe2f3cc23d5eac5091d5a0bb73f98e39b28878456d2d7a18fbabc680347b0",
     "src/app/components/signature-settings/signature-pad-dialog.component.ts": "80ac63de8378e66655b8615ebfbe19344fe62b25f624f4a00c81ef1baedff6e8",
     "src/app/components/signature-settings/signature-pad-dialog.component.spec.ts": "411fc9d424ab2810bbe69d3b14c7ce34c860ffb8beff68c51cade4f8dbadd2b8",
     "src/app/components/signature-settings/signature-settings.component.spec.ts": "2dc45edde5f0e89d186cab8dc8c038a771094e5d4cad019971dabf3b08f75f87",
@@ -128,7 +128,7 @@
     "src/app/components/report-card-v2/published/rc2-published.component.ts": "aea85912c4962d02e5ad5c340bb0620cbe526f73defbe5c68890d69692df5d8d",
     "src/app/components/report-card-v2/published/rc2-published.component.html": "6a5a38d19bebb05d114e739f480251f08a4b6ec1cb344ed753c608904dda0f4c",
     "src/app/components/report-card-v2/published/rc2-published.component.css": "38db2e21954b7bb5e64165ba16e98cd258179286413d9112cfd2210ea7079235",
-    "src/app/components/principal-my-profile/principal-my-profile.component.ts": "4b43a0de7132087c9e723dce0b055dab5ade4e7d0fb5a32dcacaa588195cce1f"
+    "src/app/components/principal-my-profile/principal-my-profile.component.ts": "5942a51a24a476f04c80db13d32ff68803f5b2c53dfa03b1df7e0c08b7d1a36d"
   },
   "platformSpecific": [
     {
