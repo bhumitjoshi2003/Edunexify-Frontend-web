@@ -33,32 +33,6 @@ mat-icon {
   flex-shrink: 0;
 }
 
-/* ── Header ─────────────────────────────────────────────── */
-.pm-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-.pm-eyebrow {
-  color: var(--teal);
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-.pm-header h1 {
-  margin: 2px 0 4px;
-  font-size: 1.55rem;
-  letter-spacing: -0.4px;
-}
-.pm-header p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
 /* ── Buttons ────────────────────────────────────────────── */
 .pm-btn {
   display: inline-flex;
@@ -626,7 +600,7 @@ mat-icon {
 .pm-account-id {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 10px;
 }
 .pm-account-id span {
   color: var(--muted);
