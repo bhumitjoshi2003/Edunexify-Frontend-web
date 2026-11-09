@@ -1,7 +1,6 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject, forkJoin, takeUntil } from 'rxjs';
 import { ReportCardDocument, ReportCardV2Service } from '../../../services/report-card-v2.service';
 import { ReportCardPdfDeliveryService } from '../../../services/report-card-pdf-delivery.service';
@@ -42,7 +41,7 @@ import { MatIconModule } from '@angular/material/icon';
     .dv-loading { display:flex; align-items:center; justify-content:center; min-height:200px; color:#64748b; font-size:.85rem; }
     .dv-error { padding:26px; text-align:center; color:#9f3b36; font-size:.85rem; }
     .dv-expanded { position:fixed; z-index:1100; inset:10px; margin:0; display:flex; flex-direction:column; box-shadow:0 20px 70px #0006; }
-    .dv-expanded .dv-frame,.dv-expanded .dv-pages { flex:1; max-height:none; height:auto; }
+    .dv-expanded .dv-pages { flex:1; max-height:none; height:auto; }
     .dv-footer { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:17px; padding-top:15px; border-top:1px solid #e9edf2; }
     .dv-footer p { margin:0; font-size:.73rem; color:#64748b; }
     @media(max-width:600px) { .dv-page-title { padding:16px; border-radius:14px; } .dv-head { flex-direction:column; } .dv-actions { align-self:flex-end; } .dv-pages { padding:8px; } .dv-footer { flex-wrap:wrap; } }
@@ -88,7 +87,7 @@ import { MatIconModule } from '@angular/material/icon';
           <div class="dv-preview-top">
             <strong>Report card preview</strong>
             <div class="dv-preview-controls">
-              <ng-container *ngIf="native && previewState === 'ready'">
+              <ng-container *ngIf="previewState === 'ready'">
                 <button type="button" class="dv-icon-btn" (click)="changeZoom(-0.25)" [disabled]="zoom <= 0.75" aria-label="Zoom out" title="Zoom out"><mat-icon>remove</mat-icon></button>
                 <span style="font-size:.73rem;color:#526477">{{ zoom * 100 | number:'1.0-0' }}%</span>
                 <button type="button" class="dv-icon-btn" (click)="changeZoom(0.25)" [disabled]="zoom >= 2.5" aria-label="Zoom in" title="Zoom in"><mat-icon>add</mat-icon></button>
@@ -96,12 +95,11 @@ import { MatIconModule } from '@angular/material/icon';
               <button type="button" class="dv-icon-btn" (click)="expanded = !expanded" [attr.aria-label]="expanded ? 'Exit full screen' : 'Expand report card'" [title]="expanded ? 'Close full screen' : 'Expand preview'"><mat-icon>{{ expanded ? 'close_fullscreen' : 'open_in_full' }}</mat-icon></button>
             </div>
           </div>
-          <div *ngIf="native && previewState === 'loading'" class="dv-loading" aria-live="polite">Preparing your report card preview…</div>
-          <div *ngIf="native && previewState === 'error'" class="dv-error">Preview is unavailable on this device. <button type="button" class="rc2-btn rc2-btn-outline" (click)="openNative()">Open in viewer</button></div>
-          <div class="dv-pages" *ngIf="native && previewState === 'ready'">
+          <div *ngIf="previewState === 'loading'" class="dv-loading" aria-live="polite">Preparing your report card preview…</div>
+          <div *ngIf="previewState === 'error'" class="dv-error">Unable to display this PDF. <button type="button" class="rc2-btn rc2-btn-outline" (click)="download()">Download PDF</button></div>
+          <div class="dv-pages" *ngIf="previewState === 'ready'">
             <img *ngFor="let page of previewPages; let i = index" [src]="page" [alt]="'Report card PDF page ' + (i + 1)" [style.width.%]="zoom * 100">
           </div>
-          <iframe #pdfFrame *ngIf="!native && pdfUrl" class="dv-frame" [src]="pdfUrl" title="Report card PDF"></iframe>
         </section>
         <div class="dv-footer">
           <p>Official school-issued PDF · Ref {{ doc.reference }}</p>
@@ -113,11 +111,8 @@ import { MatIconModule } from '@angular/material/icon';
   `,
 })
 export class Rc2DocumentViewComponent implements OnInit, OnDestroy {
-  @ViewChild('pdfFrame') private pdfFrame?: ElementRef<HTMLIFrameElement>;
-
   state: 'loading' | 'loaded' | 'error' = 'loading';
   doc: ReportCardDocument | null = null;
-  pdfUrl: SafeResourceUrl | null = null;
   previewPages: string[] = [];
   previewState: 'loading' | 'ready' | 'error' = 'loading';
   zoom = 1;
@@ -128,7 +123,6 @@ export class Rc2DocumentViewComponent implements OnInit, OnDestroy {
   listQuery: Record<string, string> = {};
   readonly isAdmin: boolean;
   private blob: Blob | null = null;
-  private objectUrl: string | null = null;
   private requestVersion = 0;
   private destroy$ = new Subject<void>();
 
@@ -139,7 +133,6 @@ export class Rc2DocumentViewComponent implements OnInit, OnDestroy {
     private api: ReportCardV2Service,
     private delivery: ReportCardPdfDeliveryService,
     private toast: ToastService,
-    private sanitizer: DomSanitizer,
     private cdr: ChangeDetectorRef,
   ) {
     this.isAdmin = auth.getUserRole() === 'ADMIN';
@@ -176,14 +169,9 @@ export class Rc2DocumentViewComponent implements OnInit, OnDestroy {
         if (version !== this.requestVersion) return;
         this.doc = doc;
         this.blob = pdf;
-        if (!this.native) {
-          this.objectUrl = URL.createObjectURL(pdf);
-          this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.objectUrl);
-        }
         this.state = 'loaded';
         this.cdr.markForCheck();
-        if (this.native) {
-          this.delivery.previewPages(pdf, this.fileName()).then(pages => {
+        this.delivery.previewPages(pdf, this.fileName()).then(pages => {
             if (version !== this.requestVersion) return;
             this.previewPages = pages;
             this.previewState = pages.length ? 'ready' : 'error';
@@ -193,7 +181,6 @@ export class Rc2DocumentViewComponent implements OnInit, OnDestroy {
             this.previewState = 'error';
             this.cdr.markForCheck();
           });
-        }
       },
       error: async e => {
         try { const body = e?.error instanceof Blob ? JSON.parse(await e.error.text()) : e?.error; if (body?.message && e?.status !== 404) this.error = body.message; } catch { /* keep default */ }
@@ -236,25 +223,27 @@ export class Rc2DocumentViewComponent implements OnInit, OnDestroy {
   }
 
   async print(): Promise<void> {
-    if (this.native && this.blob) {
-      try { await this.delivery.printNative(this.blob, this.fileName()); }
-      catch { this.toast.error('Could not print PDF', 'Please try again.'); }
+    if (!this.previewPages.length) {
+      this.toast.error('Print unavailable', 'Please wait until the report card preview has loaded.');
       return;
     }
-    try {
-      this.pdfFrame?.nativeElement.contentWindow?.focus();
-      this.pdfFrame?.nativeElement.contentWindow?.print();
-    } catch {
-      if (this.objectUrl) window.open(this.objectUrl, '_blank', 'noopener');
+    // Printing the already-rendered pages avoids the same mobile PDF iframe problem.
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      this.toast.error('Print unavailable', 'Allow pop-ups to print this report card.');
+      return;
     }
+    printWindow.document.open();
+    printWindow.document.write('<!doctype html><html><head><title>Report Card</title><style>body{margin:0;background:white}img{display:block;width:100%;max-width:210mm;margin:0 auto;break-after:page}@page{size:auto;margin:0}</style></head><body>' +
+      this.previewPages.map(page => '<img alt="Report card page" src="' + page + '">').join('') +
+      '</body></html>');
+    printWindow.document.close();
+    printWindow.onload = () => { printWindow.focus(); printWindow.print(); };
   }
 
   back(): void { this.location.back(); }
 
   private revoke(): void {
-    if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
-    this.objectUrl = null;
-    this.pdfUrl = null;
     this.blob = null;
     this.previewPages = [];
   }
