@@ -59,6 +59,18 @@ describe('NotificationNavigationService', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/dashboard/report-card-documents/42'], { queryParams: {} });
   });
 
+  it('redirects an old parent report-card link to issued documents for the selected child', async () => {
+    role = 'PARENT';
+    expect(await service.navigate({ actionRoute: '/dashboard/report-card?examId=5', sourceEntityType: 'STUDENT', sourceEntityId: 'stu_A' })).toBeTrue();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard/report-card-documents'], { queryParams: { examId: '5', studentId: 'stu_A' } });
+  });
+
+  it('sends old admin report-card notifications to published report cards', async () => {
+    role = 'ADMIN';
+    expect(await service.navigate({ eventCode: 'REPORT_CARD_READY' })).toBeTrue();
+    expect(router.navigate).toHaveBeenCalledWith(['/dashboard/bulk-report-cards'], { queryParams: {} });
+  });
+
   for (const bad of ['https://evil.example/dashboard/fees', '/dashboard/../admin', '/home', 'javascript:alert(1)', '//evil.example/dashboard/x']) {
     it(`refuses an unsafe action target: ${bad}`, async () => {
       expect(await service.navigate({ actionRoute: bad })).toBeFalse();
