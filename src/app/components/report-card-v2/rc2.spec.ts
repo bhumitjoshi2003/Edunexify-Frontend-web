@@ -434,7 +434,9 @@ describe('Report Card V2 (Phase 1)', () => {
     const el = view.nativeElement as HTMLElement;
     expect(el.textContent).toContain('Official copy');
     expect(el.textContent).toContain('RC-ABCDEFGHJK');
-    expect(el.querySelector('iframe.dv-frame')).not.toBeNull();
+    expect(delivery.previewPages).toHaveBeenCalled();
+    expect(el.querySelector('iframe.dv-frame')).toBeNull();
+    expect(el.querySelector('.dv-pages img')).not.toBeNull();
   });
 
   it('My report cards: hides the legacy link and orders issued documents newest first', () => {
@@ -490,7 +492,7 @@ describe('Report Card V2 (Phase 1)', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.dv-expanded')).not.toBeNull();
   });
 
-  it('Report-card viewer previews native PDF pages without opening the share sheet', async () => {
+  it('Report-card viewer previews PDF pages without opening the share sheet', async () => {
     delivery.native = true;
     TestBed.overrideProvider(ActivatedRoute, { useValue: {
       paramMap: of(convertToParamMap({ id: '900' })),
