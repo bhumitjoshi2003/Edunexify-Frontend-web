@@ -82,23 +82,18 @@ describe('page hierarchy', () => {
     expect(resolveBackTarget('report-cards-v2/generate', ctx({ role: 'TEACHER' }))?.link).toEqual(['/dashboard/report-cards-v2/remarks']);
   });
 
-  it('routes published report cards and the report card to their lists', () => {
+  it('routes issued report-card documents to their lists', () => {
     expect(resolveBackTarget('report-card-documents/:id', ctx())?.link).toEqual(['/dashboard/bulk-report-cards']);
     expect(resolveBackTarget('report-card-documents/:id', ctx({ role: 'PARENT', queryParams: { studentId: 'S1' } })))
       .toEqual({ label: 'Report Cards', link: ['/dashboard/report-card-documents'], queryParams: { studentId: 'S1' } });
-    expect(resolveBackTarget('report-card', ctx({ role: 'STUDENT' }))).toBeNull();
-    expect(resolveBackTarget('report-card', ctx({ role: 'TEACHER' }))).toBeNull();
   });
 
-  it('does not show a misleading back button on report cards', () => {
-    const returnUrl = '/dashboard/class-results?classId=3&session=2025-26';
-    expect(resolveBackTarget('report-card', ctx({ queryParams: { returnUrl } }))).toBeNull();
+  it('does not accept unsafe return URLs', () => {
     expect(parseInAppUrl('//evil.example')).toBeNull();
   });
 
   it('falls back to the role\'s own dashboard for pages no list leads to', () => {
     expect(homeDashboard('TEACHER').link).toEqual(['/dashboard/teacher-dashboard']);
     expect(resolveBackTarget('wisdom/manage', ctx({ role: 'SUB_ADMIN' }))?.label).toBe('Admin dashboard');
-    expect(resolveBackTarget('class-overview', ctx({ role: 'TEACHER' }))?.label).toBe('Teacher dashboard');
   });
 });

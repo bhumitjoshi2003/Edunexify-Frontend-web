@@ -232,13 +232,6 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
     const studentId = ctx.queryParams['studentId'];
     return studentId ? { ...RC_MY_CARDS, queryParams: { studentId } } : RC_MY_CARDS;
   }),
-  // Report cards are directly accessible via the navigation; no misleading Results back link.
-  'report-card': topLevel,
-  // Orphan routes (no sidebar entry or in-app link): their parent is the role's dashboard.
-  'report-card-templates': nested(ctx => homeDashboard(ctx.role)),
-  'report-card-remarks': nested(ctx => homeDashboard(ctx.role)),
-  'class-overview': nested(ctx => homeDashboard(ctx.role)),
-  'report-card-gallery': nested(ctx => homeDashboard(ctx.role)),
 };
 
 /** The back target for a dashboard child route, or null when the page has none. */
