@@ -1,16 +1,4 @@
 <main class="pm-page">
-  <!-- ── Page header ─────────────────────────────────────────────── -->
-  <header class="pm-header">
-    <div>
-      <span class="pm-eyebrow">People</span>
-      <h1>Principal</h1>
-      <p>Your school's Principal, their profile and appointment history.</p>
-    </div>
-    <button type="button" class="pm-btn pm-btn-primary" *ngIf="!loading && !loadFailed && !profile && !mode" (click)="open('create')">
-      <mat-icon>person_add</mat-icon>Appoint Principal
-    </button>
-  </header>
-
   <!-- ── Loading ─────────────────────────────────────────────────── -->
   <section *ngIf="loading" class="pm-skeleton" role="status" aria-label="Loading Principal details">
     <div class="sk-hero"><span class="sk-avatar"></span><span class="sk-lines"><i></i><i></i><i></i></span></div>
@@ -246,7 +234,6 @@
           <div class="pm-account-id">
             <span>Principal ID (login ID)</span>
             <strong>{{ p.loginId }}</strong>
-            <small>Generated automatically and cannot be changed.</small>
           </div>
           <button type="button" class="pm-btn pm-btn-ghost" (click)="resend()" [disabled]="saving || !p.active" [title]="p.active ? 'Email a new password setup link' : 'Reactivate the Principal first'">
             <mat-icon>forward_to_inbox</mat-icon>Resend setup link
@@ -263,7 +250,7 @@
           </div>
           <div class="pm-danger-item">
             <div><strong>Appoint a replacement</strong>
-              <p>Ends this appointment and creates a new Principal with a new ID. Past approvals and signatures stay with {{ p.name }}.</p></div>
+              <p>Ends the current appointment and appoints a new Principal.</p></div>
             <button type="button" class="pm-btn pm-btn-danger-outline" (click)="open('replace')" [disabled]="saving"><mat-icon>swap_horiz</mat-icon>Appoint replacement</button>
           </div>
         </div>
