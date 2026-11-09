@@ -150,6 +150,7 @@
       <!-- Expanded Detail -->
       <div *ngIf="expandedExamId === exam.examId" class="sr-exam-body">
         <!-- Subject Table -->
+        <div class="sr-table-scroll" role="region" aria-label="Subject marks table" tabindex="0">
         <table class="sr-table">
           <thead>
             <tr>
@@ -179,6 +180,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
 
         <!-- Bar Chart -->
         <div class="sr-chart-wrapper">
