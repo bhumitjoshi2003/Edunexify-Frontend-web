@@ -121,6 +121,7 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
   'teacher-leave-requests': topLevel,
   'student-search': topLevel,
   'principal-management': topLevel,
+  'principal-profile': topLevel,
   'student-list': topLevel,
   'view-leaves': topLevel,
   'payment-pricing': topLevel,
