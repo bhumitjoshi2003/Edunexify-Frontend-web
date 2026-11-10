@@ -111,12 +111,12 @@ describe('Assessments — role access', () => {
     expect(link('/dashboard/assessments')).toBeNull();
   });
 
-  it('routes are guarded: management is TEACHER/ADMIN-only and the calendar STUDENT + PARENT (read-only)', () => {
+  it('routes are guarded: management is TEACHER/ADMIN/PRINCIPAL-only and the calendar STUDENT + PARENT (read-only)', () => {
     const dashboard = routes.find(r => r.path === 'dashboard')!;
     const manage = dashboard.children!.find(r => r.path === 'manage-assessments')!;
     const student = dashboard.children!.find(r => r.path === 'assessments')!;
     expect(manage.canActivate).toContain(roleGuard);
-    expect(manage.data!['roles']).toEqual(['TEACHER', 'ADMIN']);
+    expect(manage.data!['roles']).toEqual(['TEACHER', 'ADMIN', 'PRINCIPAL']);
     expect(student.canActivate).toContain(roleGuard);
     expect(student.data!['roles']).toEqual(['STUDENT', 'PARENT']);
     expect(student.canActivate).toContain(featureGuard);
