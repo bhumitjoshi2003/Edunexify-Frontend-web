@@ -484,7 +484,7 @@ export class TeacherDashboardComponent implements OnInit, OnDestroy {
           this.pendingLeavesCount = serverTotal(leaves).count;
           // Overdue requests first (oldest day first); the rest keep the server's order.
           this.recentLeaves = [...pending]
-            .sort((a, b) => (isLeaveNeedsAttention(b) ? b.escalation!.day : 0) - (isLeaveNeedsAttention(a) ? a.escalation!.day : 0))
+            .sort((a, b) => (isLeaveNeedsAttention(b) ? (b.escalation?.day ?? 0) : 0) - (isLeaveNeedsAttention(a) ? (a.escalation?.day ?? 0) : 0))
             .slice(0, 10);
 
           // Class rate = all present days / all submitted days (the same formula as each student's %).
