@@ -33,7 +33,7 @@ describe('ApplyLeaveComponent — parent confirmation', () => {
     c.studentId = 'stu_A';
     c.studentName = 'Asha';
     c.leaves = [];
-    c.leaveForm.setValue({ leaveDate: futureWeekday(), reason: 'Sick', otherReason: '' });
+    c.leaveForm.setValue({ leaveDate: futureWeekday(), reason: 'Sick', otherReason: '', urgent: false });
   });
 
   it('confirms and submits for the child named in the dialog', async () => {

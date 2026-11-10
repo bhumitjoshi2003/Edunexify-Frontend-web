@@ -187,7 +187,7 @@ describe('TeacherDashboardComponent today classes', () => {
     expect(component.recentLeaves.map(l => l.id)).toEqual([2, 3, 1]);
     expect(component.overdueLeaveCount).toBe(2);
     expect(component.hasTeacherAttention).toBeTrue();
-    expect(component.isOverdue(component.recentLeaves[2])).toBeFalse();
+    expect(component.isOverdue(component.recentLeaves[2])).toBeTrue();
   });
 
   it('does not query overdue leave for a teacher without a class', () => {

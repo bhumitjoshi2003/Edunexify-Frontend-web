@@ -325,7 +325,7 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
     const teacherRow = fixture.nativeElement.querySelector('.ad-attention-list a[routerLink="/dashboard/teacher-leave-requests"]') as HTMLElement;
     const studentRow = fixture.nativeElement.querySelector('.ad-attention-list a[routerLink="/dashboard/view-leaves"]') as HTMLElement;
     expect(teacherRow.classList).toContain('is-overdue');
-    expect(teacherRow.textContent).toContain('Overdue · Action Required · 1 overdue · oldest on day 4');
+    expect(teacherRow.textContent).toContain('Needs Attention · 1 need attention · oldest on day 4');
     expect(studentRow.classList).not.toContain('is-overdue');
     expect(studentRow.textContent).not.toContain('Overdue');
   });
