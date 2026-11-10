@@ -40,7 +40,7 @@ describe('StaffAttendanceComponent — teachers offered for marking', () => {
     await TestBed.configureTestingModule({
       imports: [StaffAttendanceComponent],
       providers: [
-        { provide: AuthStateService, useValue: { getUserRole: () => 'ADMIN' } },
+        { provide: AuthStateService, useValue: { isCoordinator: () => false, getUserRole: () => 'ADMIN' } },
         { provide: TeacherCheckinService, useValue: checkin },
         { provide: TeacherService, useValue: teachers },
         { provide: TenantService, useValue: jasmine.createSpyObj('TenantService', ['getLogoUrl']) },

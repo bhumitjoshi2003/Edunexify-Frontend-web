@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { coordinatorClassNames, optionalCoordinatorService } from '../../services/coordinator.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, switchMap } from 'rxjs';
 import { ToastService } from '../../services/toast.service';
 import {
   SubjectConfigService,
@@ -25,6 +26,9 @@ import { FEATURES } from '../../auth/feature-keys';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SubjectConfigComponent implements OnInit, OnDestroy {
+  /** Coordinators see only classes they cover in full; everyone else is unaffected. */
+  private coordinators = optionalCoordinatorService();
+
   private destroy$ = new Subject<void>();
 
   activeTab: 'class' | 'streams' | 'optional' = 'class';
@@ -60,7 +64,7 @@ export class SubjectConfigComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit(): void {
-    this.schoolService.getClasses().pipe(takeUntil(this.destroy$)).subscribe(classes => {
+    this.schoolService.getClasses().pipe(switchMap(c => coordinatorClassNames(this.coordinators, c)), takeUntil(this.destroy$)).subscribe(classes => {
       this.classOptions = classes;
       if (!this.hasConfiguredClass) this.selectedClass = classes[0] ?? '';
       this.cdr.markForCheck();
