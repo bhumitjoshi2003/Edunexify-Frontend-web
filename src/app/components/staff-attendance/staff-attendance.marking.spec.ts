@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject } from 'rxjs';
 
 import { StaffAttendanceComponent } from './staff-attendance.component';
+import { AuthStateService } from '../../auth/auth-state.service';
 import { TeacherCheckinService } from '../../services/teacher-checkin.service';
 import { TeacherService } from '../../services/teacher.service';
 import { TenantService } from '../../services/tenant.service';
@@ -39,6 +40,7 @@ describe('StaffAttendanceComponent — teachers offered for marking', () => {
     await TestBed.configureTestingModule({
       imports: [StaffAttendanceComponent],
       providers: [
+        { provide: AuthStateService, useValue: { getUserRole: () => 'ADMIN' } },
         { provide: TeacherCheckinService, useValue: checkin },
         { provide: TeacherService, useValue: teachers },
         { provide: TenantService, useValue: jasmine.createSpyObj('TenantService', ['getLogoUrl']) },
