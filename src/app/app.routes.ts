@@ -539,8 +539,8 @@ export const routes: Routes = [
       {
         path: 'report-problem',
         loadComponent: () => import('./components/report-support-ticket/report-support-ticket.component').then(m => m.ReportSupportTicketComponent),
-        canActivate: [roleGuard],
-        data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'] }
+        canActivate: [roleGuard, principalCapabilityGuard],
+        data: { principalOperation: 'OWN_SUPPORT', roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'PRINCIPAL'] }
       },
       {
         path: 'account-deletion-request',
@@ -550,8 +550,8 @@ export const routes: Routes = [
       {
         path: 'my-support-requests',
         loadComponent: () => import('./components/my-support-requests/my-support-requests.component').then(m => m.MySupportRequestsComponent),
-        canActivate: [roleGuard],
-        data: { roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT'] }
+        canActivate: [roleGuard, principalCapabilityGuard],
+        data: { principalOperation: 'OWN_SUPPORT', roles: ['STUDENT', 'TEACHER', 'ADMIN', 'SUB_ADMIN', 'PARENT', 'PRINCIPAL'] }
       },
       // SUPER_ADMIN-only global queue — school ADMIN/SUB_ADMIN must never reach this; they
       // only ever see their own tickets via /my-support-requests, same as any other role.
