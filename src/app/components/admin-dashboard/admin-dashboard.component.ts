@@ -24,6 +24,7 @@ import { pickNearestUpcomingEvent } from '../../utils/upcoming-event.util';
 import { TeacherSubstitutionService } from '../../services/teacher-substitution.service';
 import { OnLeaveTodayComponent } from '../on-leave-today/on-leave-today.component';
 import { FeatureKey } from '../../auth/feature-keys';
+import { LeaveAttentionSummary, NEEDS_ATTENTION_BADGE, attentionOverdueLabel } from '../../utils/leave-escalation.util';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -55,6 +56,10 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   teacherPendingLeaveCount: number | null = null;
   teacherPendingLeaveLoading = true;
   teacherPendingLeaveFailed = false;
+  /** Overdue (day 3+) leave counts; optional — the rows simply stay neutral without it. */
+  leaveAttention: LeaveAttentionSummary | null = null;
+  readonly overdueBadge = NEEDS_ATTENTION_BADGE;
+  readonly overdueLabel = attentionOverdueLabel;
   upcomingEvent: CalendarEvent | null = null;
   upcomingEventLoading = true;
   upcomingEventFailed = false;
@@ -113,6 +118,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       this.loadSetupHealth();
       this.loadStaffAdoption();
       this.loadTeacherPendingLeaveCount();
+      this.loadLeaveAttention();
     }
   }
 
@@ -192,6 +198,17 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return this.substitutionsFailed || (this.isAdmin && (
       this.statsFailed || this.teacherPendingLeaveFailed || this.staffAdoptionError || this.staffAttendanceFailed
     ));
+  }
+
+  /** Overdue leave for the Needs Attention rows. Not part of the initial-load gate: a failure
+   *  only means the rows show their plain count without the overdue styling. */
+  loadLeaveAttention(): void {
+    this.leaveService.getAttentionSummary()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: summary => { this.leaveAttention = summary; this.cdr.markForCheck(); },
+        error: e => this.logger.error('Leave attention summary load error:', e),
+      });
   }
 
   /** Reuses the existing ADMIN-only teacher-leave endpoint's status filter — requests the

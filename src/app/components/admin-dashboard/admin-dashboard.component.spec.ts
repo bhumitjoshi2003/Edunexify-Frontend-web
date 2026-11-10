@@ -15,6 +15,9 @@ import { StaffAdoptionResponse } from '../../interfaces/staff-adoption';
 import { TeacherLeaveService } from '../../services/teacher-leave.service';
 import { EventService } from '../../services/event.service';
 import { TeacherSubstitutionService } from '../../services/teacher-substitution.service';
+import { LeaveAttentionSummary } from '../../utils/leave-escalation.util';
+
+const NO_LEAVE_ATTENTION: LeaveAttentionSummary = { today: '2026-11-16', student: null, teacher: null };
 
 describe('AdminDashboardComponent — Staff Adoption card', () => {
   let fixture: ComponentFixture<AdminDashboardComponent>;
@@ -41,7 +44,7 @@ describe('AdminDashboardComponent — Staff Adoption card', () => {
         { provide: AuthStateService, useValue: authState },
         { provide: AdminService, useValue: { getAdminById: () => of({ name: 'Test Admin' }) } },
         { provide: DashboardAnalyticsService, useValue: { getStats: () => of({ totalStudents: 0, totalTeachers: 0, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 0 }) } },
-        { provide: LeaveService, useValue: { getLeavesPaginated: () => of({ content: [] }), getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }) } },
+        { provide: LeaveService, useValue: { getLeavesPaginated: () => of({ content: [] }), getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }), getAttentionSummary: () => of(NO_LEAVE_ATTENTION) } },
         { provide: SchoolService, useValue: { getEntitlement: () => of(null), getSetupHealth: () => of(null) } },
         { provide: TeacherCheckinService, useValue: { getTodaySummary: () => of(null) } },
         { provide: StaffAdoptionService, useValue: staffAdoptionService },
@@ -100,6 +103,8 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
     entitlementError?: boolean;
     setupHealthError?: boolean;
     staffAdoptionError?: boolean;
+    leaveAttention?: LeaveAttentionSummary;
+    leaveAttentionError?: boolean;
   } = {}): void {
     const authState = jasmine.createSpyObj('AuthStateService', ['getUser', 'hasFeature']);
     authState.getUser.and.returnValue({ userId: 'U1', role, name: 'Test', className: '' } as any);
@@ -142,6 +147,8 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
           provide: LeaveService, useValue: {
             getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }),
             getLeavesPaginated: () => opts.studentLeavesError ? throwError(() => new Error('leaves offline')) : of({ content: [] }),
+            getAttentionSummary: () => opts.leaveAttentionError
+              ? throwError(() => new Error('attention offline')) : of(opts.leaveAttention ?? NO_LEAVE_ATTENTION),
           },
         },
         {
@@ -308,6 +315,29 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
     expect(fixture.nativeElement.querySelector('.ad-attention-list a[routerLink="/dashboard/teacher-leave-requests"]')).toBeTruthy();
   });
 
+  it('marks only leave rows that have reached day 3 as overdue, with the badge and oldest day', () => {
+    configure('ADMIN', {
+      teacherLeavesTotal: 2,
+      stats: { totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 3 },
+      leaveAttention: { today: '2026-11-16', student: { pending: 3, overdue: 0, oldestDay: 2 }, teacher: { pending: 2, overdue: 1, oldestDay: 4 } },
+    });
+    fixture.detectChanges();
+    const teacherRow = fixture.nativeElement.querySelector('.ad-attention-list a[routerLink="/dashboard/teacher-leave-requests"]') as HTMLElement;
+    const studentRow = fixture.nativeElement.querySelector('.ad-attention-list a[routerLink="/dashboard/view-leaves"]') as HTMLElement;
+    expect(teacherRow.classList).toContain('is-overdue');
+    expect(teacherRow.textContent).toContain('Needs Attention · 1 need attention · oldest on day 4');
+    expect(studentRow.classList).not.toContain('is-overdue');
+    expect(studentRow.textContent).not.toContain('Overdue');
+  });
+
+  it('keeps leave rows and their counts when the overdue summary fails', () => {
+    configure('ADMIN', { teacherLeavesTotal: 2, leaveAttentionError: true });
+    fixture.detectChanges();
+    const teacherRow = fixture.nativeElement.querySelector('.ad-attention-list a[routerLink="/dashboard/teacher-leave-requests"]') as HTMLElement;
+    expect(teacherRow.textContent).toContain('2');
+    expect(teacherRow.classList).not.toContain('is-overdue');
+  });
+
   it('isolates a teacher-leave-count failure — the rest of the dashboard still loads', () => {
     const authState = jasmine.createSpyObj('AuthStateService', ['getUser', 'hasFeature']);
     authState.getUser.and.returnValue({ userId: 'U1', role: 'ADMIN', name: 'Test', className: '' } as any);
@@ -325,7 +355,7 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
         { provide: AdminService, useValue: { getAdminById: () => of({ name: 'Test Admin' }) } },
         { provide: TeacherSubstitutionService, useValue: { getUncovered: () => of([]) } },
         { provide: DashboardAnalyticsService, useValue: { getStats: () => of({ totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 0 }) } },
-        { provide: LeaveService, useValue: { getLeavesPaginated: () => of({ content: [] }), getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }) } },
+        { provide: LeaveService, useValue: { getLeavesPaginated: () => of({ content: [] }), getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }), getAttentionSummary: () => of(NO_LEAVE_ATTENTION) } },
         { provide: SchoolService, useValue: { getEntitlement: () => of(null), getSetupHealth: () => of({ completionPercentage: 80, completedRequired: 4, totalRequired: 5, status: 'IN_PROGRESS', items: [] }) } },
         { provide: TeacherCheckinService, useValue: { getTodaySummary: () => of({ date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1, expectedCount: 9, notCheckedInCount: 3 }) } },
         { provide: StaffAdoptionService, useValue: jasmine.createSpyObj('StaffAdoptionService', { getStaffAdoption: of({ summary: { totalTeachers: 1, startedTeachers: 1, notStartedTeachers: 0, attendanceUsedTeachers: 1, disabledTeachers: 0 }, teachers: [] }) }) },
@@ -400,7 +430,7 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
         { provide: AuthStateService, useValue: authState },
         { provide: AdminService, useValue: { getAdminById: () => of({ name: 'Test Admin' }) } },
         { provide: DashboardAnalyticsService, useValue: { getStats: () => of({ totalStudents: 0, totalTeachers: 10, feesCollectedThisMonth: 0, overdueStudents: 0, todayAttendanceRate: 0, pendingLeaves: 0 }) } },
-        { provide: LeaveService, useValue: { getLeavesPaginated: () => of({ content: [] }), getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }) } },
+        { provide: LeaveService, useValue: { getLeavesPaginated: () => of({ content: [] }), getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }), getAttentionSummary: () => of(NO_LEAVE_ATTENTION) } },
         { provide: SchoolService, useValue: { getEntitlement: () => of(null), getSetupHealth: () => of({ completionPercentage: 80, completedRequired: 4, totalRequired: 5, status: 'IN_PROGRESS', items: [] }) } },
         { provide: TeacherCheckinService, useValue: { getTodaySummary: () => of({ date: '2026-09-22', presentCount: 4, lateCount: 1, absentCount: 0, halfDayCount: 0, onLeaveCount: 1, expectedCount: 9, notCheckedInCount: 3 }) } },
         { provide: StaffAdoptionService, useValue: jasmine.createSpyObj('StaffAdoptionService', { getStaffAdoption: of({ summary: { totalTeachers: 1, startedTeachers: 1, notStartedTeachers: 0, attendanceUsedTeachers: 1, disabledTeachers: 0 }, teachers: [] }) }) },
@@ -545,7 +575,7 @@ describe('AdminDashboardComponent — Daily Action Center (Phase 1)', () => {
         { provide: AdminService, useValue: { getAdminById: () => of({ name: 'Test Admin' }) } },
         { provide: TeacherSubstitutionService, useValue: { getUncovered: () => of([]) } },
         { provide: DashboardAnalyticsService, useValue: { getStats } },
-        { provide: LeaveService, useValue: { getLeavesPaginated, getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }) } },
+        { provide: LeaveService, useValue: { getLeavesPaginated, getOnLeaveToday: () => of({ date: '2026-10-05', students: [], staff: [], periodsNeedingSubstitute: 0 }), getAttentionSummary: () => of(NO_LEAVE_ATTENTION) } },
         { provide: SchoolService, useValue: { getEntitlement, getSetupHealth: () => of(null) } },
         { provide: TeacherCheckinService, useValue: { getTodaySummary } },
         { provide: StaffAdoptionService, useValue: jasmine.createSpyObj('StaffAdoptionService', { getStaffAdoption: of({ summary: { totalTeachers: 1, startedTeachers: 1, notStartedTeachers: 0, attendanceUsedTeachers: 1, disabledTeachers: 0 }, teachers: [] }) }) },

@@ -22,7 +22,7 @@ describe('Leave Phase 1', () => {
     return new ViewLeavesComponent({ params: of({}) } as any, api, {} as any, {} as any, logger, noop, toast, {} as any);
   }
 
-  it('apply sends only the day and the reason', async () => {
+  it('apply sends only the date and reason', async () => {
     const api = jasmine.createSpyObj('LeaveService', ['applyLeave', 'getLeavesByStudentId']);
     api.applyLeave.and.returnValue(of('ok'));
     api.getLeavesByStudentId.and.returnValue(of({ content: [], totalPages: 0, totalElements: 0 }));
