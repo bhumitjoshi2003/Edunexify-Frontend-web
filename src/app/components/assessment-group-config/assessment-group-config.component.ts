@@ -1,3 +1,4 @@
+import { coordinatorClassNames, optionalCoordinatorService } from '../../services/coordinator.service';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -8,7 +9,7 @@ import {
 } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, switchMap } from 'rxjs';
 
 import {
   AssessmentGroup,
@@ -53,6 +54,9 @@ interface GroupForm {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AssessmentGroupConfigComponent implements OnInit, OnDestroy {
+  /** Coordinators see only classes they cover in full; everyone else is unaffected. */
+  private coordinators = optionalCoordinatorService();
+
 
   private destroy$ = new Subject<void>();
   private cdr = inject(ChangeDetectorRef);
@@ -112,7 +116,7 @@ export class AssessmentGroupConfigComponent implements OnInit, OnDestroy {
 
   private loadClasses(): void {
     this.schoolService.getClasses()
-      .pipe(takeUntil(this.destroy$))
+      .pipe(switchMap(c => coordinatorClassNames(this.coordinators, c)), takeUntil(this.destroy$))
       .subscribe({
         next: (classes: string[]) => {
           this.classes = classes;

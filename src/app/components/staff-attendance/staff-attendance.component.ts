@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { optionalCoordinatorService } from '../../services/coordinator.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable, Subject, takeUntil } from 'rxjs';
+import { Observable, Subject, takeUntil, map } from 'rxjs';
 import { TeacherCheckinService } from '../../services/teacher-checkin.service';
 import { TeacherService } from '../../services/teacher.service';
 import { TeacherAttendanceRecord, TeacherAttendanceSummary, TeacherAttendanceSessionSummary, SchoolTiming, MarkableTeacher } from '../../interfaces/teacher-checkin';
@@ -24,6 +25,8 @@ import { schoolDateKey } from '../../utils/school-date.util';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StaffAttendanceComponent implements OnInit, OnDestroy {
+  private coordinators = optionalCoordinatorService();
+
   private destroy$ = new Subject<void>();
 
   selectedDate: string;
@@ -104,7 +107,8 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
   historyLoading = false;
 
   ngOnInit(): void {
-    this.isPrincipal = this.authState.getUserRole() === 'PRINCIPAL';
+    // A Coordinator corrects like the Principal (reason, history, never their own record), in scope.
+    this.isPrincipal = this.authState.getUserRole() === 'PRINCIPAL' || this.authState.isCoordinator();
     if (this.isPrincipal) this.loadOwnTeacherIds();
     this.loadDailyRecords();
     this.loadTeachers();
@@ -137,7 +141,10 @@ export class StaffAttendanceComponent implements OnInit, OnDestroy {
   }
 
   loadTeachers(): void {
-    this.teacherService.getAllTeachers()
+    const teachers$ = this.authState.isCoordinator() && this.coordinators
+      ? this.coordinators!.teachers().pipe(map(list => list.map(t => ({ teacherId: t.teacherId, name: t.name } as Teacher))))
+      : this.teacherService.getAllTeachers();
+    teachers$
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (teachers) => {

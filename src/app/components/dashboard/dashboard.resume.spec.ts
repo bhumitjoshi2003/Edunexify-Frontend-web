@@ -28,7 +28,7 @@ describe('DashboardComponent — after the app resumes', () => {
   let notifications: { unreadState$: unknown; refreshUnread: jasmine.Spy };
 
   beforeEach(async () => {
-    authState = jasmine.createSpyObj('AuthStateService', [
+    authState = jasmine.createSpyObj('AuthStateService', ['isCoordinator', 
       'getUser', 'isLoggedIn', 'isUnauthenticated', 'loadCurrentUser', 'mustChangePassword',
       'getSubscriptionStatus', 'hasFeature', 'isSubscriptionWarning',
     ]);
