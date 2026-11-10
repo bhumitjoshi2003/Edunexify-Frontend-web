@@ -58,7 +58,8 @@ describe('TeacherDashboardComponent today classes', () => {
     teacherService.getTeacher.and.returnValue(of({ name: 'Ms Rao', classTeacher: null }));
     studentService = jasmine.createSpyObj('StudentService', ['getActiveStudentsByClass']);
     attendanceService = jasmine.createSpyObj('AttendanceService', ['getSheet', 'getClassSummary']);
-    leaveService = jasmine.createSpyObj('LeaveService', ['getLeavesPaginated', 'updateLeaveStatus']);
+    leaveService = jasmine.createSpyObj('LeaveService', ['getLeavesPaginated', 'updateLeaveStatus', 'getAttentionSummary']);
+    leaveService.getAttentionSummary.and.returnValue(of({ today: '2026-09-17', student: { pending: 0, overdue: 0, oldestDay: null }, teacher: null }));
     logger = jasmine.createSpyObj('LoggerService', ['error']);
     cdr = jasmine.createSpyObj('ChangeDetectorRef', ['markForCheck']);
     toast = jasmine.createSpyObj('ToastService', ['success', 'info', 'error']);
@@ -168,6 +169,32 @@ describe('TeacherDashboardComponent today classes', () => {
     component.ngOnInit();
     expect(leaveService.getLeavesPaginated).toHaveBeenCalledWith(0, 10, 'X', undefined, undefined, 'PENDING');
     expect(component.pendingLeavesCount).toBe(23);
+  });
+
+  it('lists overdue student leave first and flags it in Needs Attention for a class teacher', () => {
+    teacherService.getTeacher.and.returnValue(of({ name: 'Mr Shah', classTeacher: 'X' }));
+    studentService.getActiveStudentsByClass.and.returnValue(of([]));
+    attendanceService.getSheet.and.returnValue(of(null));
+    attendanceService.getClassSummary.and.returnValue(of([]));
+    leaveService.getLeavesPaginated.and.returnValue(of({ content: [
+      { id: 1, status: 'PENDING', leaveDate: '2026-09-16', escalation: { day: 2, overdue: false, autoApprovalDate: '2026-09-23', automatic: true } },
+      { id: 2, status: 'PENDING', leaveDate: '2026-09-12', escalation: { day: 6, overdue: true, autoApprovalDate: '2026-09-19', automatic: true } },
+      { id: 3, status: 'PENDING', leaveDate: '2026-09-14', escalation: { day: 4, overdue: true, autoApprovalDate: '2026-09-21', automatic: true } },
+    ], totalElements: 3, totalPages: 1, number: 0, size: 10 }));
+    leaveService.getAttentionSummary.and.returnValue(of({ today: '2026-09-17', student: { pending: 3, overdue: 2, oldestDay: 6 }, teacher: null }));
+    const component = build();
+    component.ngOnInit();
+    expect(component.recentLeaves.map(l => l.id)).toEqual([2, 3, 1]);
+    expect(component.overdueLeaveCount).toBe(2);
+    expect(component.hasTeacherAttention).toBeTrue();
+    expect(component.isOverdue(component.recentLeaves[2])).toBeFalse();
+  });
+
+  it('does not query overdue leave for a teacher without a class', () => {
+    const component = build();
+    component.ngOnInit();
+    expect(leaveService.getAttentionSummary).not.toHaveBeenCalled();
+    expect(component.overdueLeaveCount).toBe(0);
   });
 
   it('keeps existing class-teacher dashboard loading independent', () => {
