@@ -27,9 +27,9 @@ for (const [i, [name, ct, s]] of teachers.entries()) {
   ids.teachers[name] = t.teacherId;
 }
 const students = [];
-for (const cls of ['3', '6', '7', '8', '9', '10']) for (const s of ['A', 'B']) for (let k = 1; k <= 3; k++) students.push([cls, s, k]);
+for (const cls of ['2', '3', '6', '7', '8', '9', '10', '11']) for (const s of ['A', 'B']) for (let k = 1; k <= 3; k++) students.push([cls, s, k]);
 const have = new Set();
-for (const cls of ['3', '6', '7', '8', '9', '10']) for (const st of await admin.ok('GET', `/students/active/class/${cls}`)) have.add(st.name);
+for (const cls of ['2', '3', '6', '7', '8', '9', '10', '11']) for (const st of await admin.ok('GET', `/students/active/class/${cls}`)) have.add(st.name);
 ids.students = {};
 for (const [cls, s, k] of students) {
   const name = `Student ${cls}${s}${k}`;
@@ -37,7 +37,7 @@ for (const [cls, s, k] of students) {
     dob: '2013-02-02', className: cls, sectionId: sec[`${cls}-${s}`].sectionId, gender: k % 2 ? 'Male' : 'Female',
     fatherName: `Father ${cls}${s}${k}`, motherName: `Mother ${cls}${s}${k}`, takesBus: false, joiningDate: '2026-04-01' });
 }
-for (const cls of ['3', '6', '7', '8', '9', '10']) for (const st of await admin.ok('GET', `/students/active/class/${cls}`)) ids.students[st.name] = st.studentId;
+for (const cls of ['2', '3', '6', '7', '8', '9', '10', '11']) for (const st of await admin.ok('GET', `/students/active/class/${cls}`)) ids.students[st.name] = st.studentId;
 sql(`UPDATE users SET password='${H}', must_change_password=false WHERE school_id=(SELECT id FROM school WHERE slug='coordtest')`);
 const missingLogins = sql(`SELECT t.teacher_id FROM teacher t LEFT JOIN users u ON u.user_id=t.teacher_id WHERE t.school_id=1 AND u.id IS NULL`);
 writeFileSync(new URL('./ids.json', import.meta.url), JSON.stringify(ids, null, 2));

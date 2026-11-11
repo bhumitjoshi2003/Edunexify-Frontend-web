@@ -10,9 +10,11 @@ whose name does not end in `_e2e`. Never point it at production or at an existin
 |---|---|
 | `seed*.mjs` | Builds two synthetic schools through the API (Admin, Principal, 3 Coordinators, class teachers, students, timetable, attendance, leave, exams, report card, notices). |
 | `f1`–`f4` | API checks: appointments, school-wide directories, staff and student attendance, student and teacher leave, substitutions, academics, communication, report cards, dashboard numbers, revocation, audit attribution. Each mutation is verified in the database. |
+| `f5` | API: Coordinator directories never include another school; an ordinary teacher gets no directory; Principal directory unchanged. |
 | `b1` | Browser: Teacher/Coordinator workspace switching, reload, new tab, Back/Forward, silent token refresh, 403 never signs out, logout/login, revocation while signed in, staff-attendance labels, partial-scope timetables, phone width. |
 | `b2` | Browser: primary actions through the UI (dashboard tiles vs database, approve leave, teacher leave read-only, correct staff attendance, assign cover, request a report-card correction, mark a section, appoint a Coordinator). |
 | `b3` | Browser: notification deep links. |
+| `b4` | Browser, per Coordinator (A 6–10, B 1–5, C 8-A only): Students lists classes 1–12, search and open an out-of-scope student (profile loads; attendance/leave/results shortcuts give way to a note), the backend refuses an out-of-scope change, Teachers lists every teacher once with no account controls, staff attendance lists every teacher, the Teacher workspace navigation is an ordinary teacher's. |
 | `crawl.mjs` | Opens every sidebar page of a workspace and reports API errors (≥400), JavaScript errors and redirects. |
 
 Results are appended to `results.jsonl`.

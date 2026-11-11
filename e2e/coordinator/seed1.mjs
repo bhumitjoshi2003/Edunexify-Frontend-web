@@ -19,7 +19,7 @@ let cur = sessions.find(s => s.label === '2026-2027');
 if (!cur) cur = await admin.ok('POST', '/academic-sessions', { label: '2026-2027', startDate: '2026-04-01', endDate: '2027-03-31', current: true });
 if (!cur.current) await admin.req('PUT', `/academic-sessions/${cur.id}/set-current`, {});
 const existing = await admin.ok('GET', '/school/classes/manage');
-for (const n of ['1','2','3','4','5','6','7','8','9','10']) {
+for (const n of ['1','2','3','4','5','6','7','8','9','10','11','12']) {
   if (!existing.some(c => c.name === n)) await admin.ok('POST', '/school/classes', { name: n });
 }
 const classes = await admin.ok('GET', '/school/classes/manage');
