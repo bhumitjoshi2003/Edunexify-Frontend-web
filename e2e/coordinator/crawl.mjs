@@ -19,7 +19,8 @@ for (const href of links) {
   results.push({ href, url, redirected: url.split('?')[0] !== href.split('?')[0],
     api: log.api.slice(before.api), console: log.console.slice(before.console), pageErrors: log.pageErrors.slice(before.pageErrors),
     spinner: await page.locator('.spinner, mat-spinner, mat-progress-spinner, .loading-spinner').count(),
-    errorText: (text.match(/(could not|unable to|failed|not allowed|forbidden|went wrong|session expired|sign in again)[^\n]{0,120}/ig) ?? []).slice(0, 4) });
+    errorText: (text.match(/(could not|unable to|failed|not allowed|forbidden|went wrong|session expired|sign in again)[^\n]{0,120}/ig) ?? [])
+      .filter(t => !/goes straight to Edunexify support/i.test(t)).slice(0, 4) });   // help text on Report a problem
 }
 writeFileSync(new URL(`./crawl-${who.replace(/\W+/g, '_')}-${workspace ?? 'default'}.json`, import.meta.url), JSON.stringify({ landed, results }, null, 2));
 console.log('landed', landed, 'links', links.length);
