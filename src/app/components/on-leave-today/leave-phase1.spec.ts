@@ -1,3 +1,4 @@
+import { AuthStateService } from '../../auth/auth-state.service';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { FormBuilder } from '@angular/forms';
@@ -19,7 +20,9 @@ describe('Leave Phase 1', () => {
   }
 
   function viewLeaves(api: any, toast: any): ViewLeavesComponent {
-    return new ViewLeavesComponent({ params: of({}) } as any, api, {} as any, {} as any, logger, noop, toast, {} as any);
+    TestBed.configureTestingModule({ providers: [{ provide: AuthStateService, useValue: { getUser: () => null } }] });
+    return TestBed.runInInjectionContext(() =>
+      new ViewLeavesComponent({ params: of({}) } as any, api, {} as any, {} as any, logger, noop, toast, {} as any, undefined as any));
   }
 
   it('apply sends only the date and reason', async () => {
