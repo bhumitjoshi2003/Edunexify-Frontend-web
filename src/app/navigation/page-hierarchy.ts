@@ -123,7 +123,6 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
   'student-search': topLevel,
   'principal-management': topLevel,
   'coordinator-management': topLevel,
-  'coordinator-people': topLevel,
   'coordinator-report-cards': topLevel,
   'report-card-review': topLevel,
   'coordinator-timetable': topLevel,
