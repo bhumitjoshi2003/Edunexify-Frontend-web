@@ -125,6 +125,7 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
   'coordinator-management': topLevel,
   'coordinator-people': topLevel,
   'coordinator-report-cards': topLevel,
+  'report-card-review': topLevel,
   'coordinator-timetable': topLevel,
   'coordinator-attendance': topLevel,
   'principal-profile': topLevel,
