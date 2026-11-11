@@ -1,0 +1,16 @@
+{
+  "name": "edunexify-coordinator-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Coordinator end-to-end checks (API and real browser) for a LOCAL disposable stack. See README.md.",
+  "scripts": {
+    "seed": "node seed1.mjs && node seed2.mjs && node seed3.mjs && node seed-other.mjs",
+    "api": "node f1.mjs && node f2.mjs && node f3.mjs && node f4.mjs",
+    "browser": "node b2.mjs && node b1.mjs && node b3.mjs",
+    "crawl": "node crawl.mjs \"Sunita Rao\" COORDINATOR && node crawl.mjs \"Sunita Rao\" TEACHER && node crawl.mjs \"Arjun Das\" COORDINATOR && node crawl.mjs \"Kiran Mehta\" COORDINATOR"
+  },
+  "dependencies": {
+    "bcryptjs": "2.4.3",
+    "playwright-core": "1.48.2"
+  }
+}
