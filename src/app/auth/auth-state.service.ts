@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, firstValueFrom, Observable } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, Observable, Subject } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { classifyAuthFailure } from './auth-failure-classifier';
@@ -64,6 +64,9 @@ export class AuthStateService {
    * synchronous getStatus()/isChecking()/etc. below for one-off, imperative reads (guards,
    * interceptor) exactly as before; nothing about those changed. */
   readonly status$: Observable<AuthStatus> = this.status$$.asObservable();
+  private readonly verified$$ = new Subject<void>();
+  /** Emits each time the server confirms the session and the user info (role, appointment) was refreshed. */
+  readonly verified$: Observable<void> = this.verified$$.asObservable();
   private readonly apiUrl = `${environment.apiUrl}/auth`;
 
   constructor(private http: HttpClient, private observability: ObservabilityService) {}
@@ -94,6 +97,7 @@ export class AuthStateService {
       this.user = userInfo;
       this.verifications++;
       this.status$$.next('AUTHENTICATED');
+      this.verified$$.next();
       if (userInfo.role !== 'PARENT') this.clearParentChildSelection();
     } catch (err) {
       if (classifyAuthFailure(err) === 'AUTHORITATIVE') {
@@ -132,6 +136,7 @@ export class AuthStateService {
     this.user = userInfo;
     this.verifications++;
     this.status$$.next('AUTHENTICATED');
+    this.verified$$.next();
   }
 
   /** Lets a background re-check tell "confirmed just now" from "kept after a transient failure". */
