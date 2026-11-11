@@ -586,6 +586,15 @@ export class TeacherDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Admin resets any teacher's password; a teacher changes only their own. A Coordinator reads
+   * other teachers' profiles from the school-wide directory, which never carries account controls.
+   */
+  canChangePassword(): boolean {
+    if (this.role === 'ADMIN') return true;
+    return this.role === 'TEACHER' && !!this.teacherId && this.teacherId === this.authService.getUserId();
+  }
+
   openPasswordModal(): void {
     this.cpOldPw = '';
     this.cpNewPw = '';
