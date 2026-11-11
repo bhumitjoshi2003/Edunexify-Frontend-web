@@ -67,6 +67,20 @@ describe('StudentListComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  /** Regression: a subject teacher (or a Coordinator in Teacher work) with no class saw "Failed to load students". */
+  it('a teacher without a class of their own sees "No class assigned" and no request is sent', () => {
+    authStateServiceSpy.getUser.and.returnValue({ ...adminUser, userId: 'T9', role: 'TEACHER' } as any);
+    const teachers = TestBed.inject(TeacherService) as jasmine.SpyObj<TeacherService>;
+    teachers.getTeacher.and.returnValue(of({ teacherId: 'T9', name: 'Subject Teacher', classTeacher: null } as any));
+    schoolServiceSpy.getClasses.and.returnValue(of(['8']));
+    schoolServiceSpy.getManagedClasses.and.returnValue(of([]));
+    fixture.detectChanges();
+    expect(component.noOwnClass).toBeTrue();
+    expect(component.isLoading).toBeFalse();
+    expect(studentServiceSpy.getActiveStudentsByClass).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('No class assigned');
+  });
+
   it('when the school has no configured classes, selectedClass stays empty and no student query runs', () => {
     schoolServiceSpy.getClasses.and.returnValue(of([]));
     schoolServiceSpy.getManagedClasses.and.returnValue(of([]));
