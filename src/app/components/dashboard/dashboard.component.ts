@@ -103,7 +103,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.getDetails();
     this.whatsNewService.checkOnStartup();
     this.loadAuthenticatedSchoolBranding();
+    this.followUrlWorkspace(this.router.url);
     this.handleInitialNavigation();
+    this.workspace.revoked$.pipe(takeUntil(this.ngUnsubscribe)).subscribe(() => this.onAppointmentEnded());
     this.notificationState.unreadState$
       .pipe(takeUntil(this.ngUnsubscribe))
       .subscribe(state => {
@@ -293,6 +295,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     void this.router.navigateByUrl(this.workspace.homeRoute(target));
   }
 
+  /** The Coordinator appointment ended (seen on a verified session): leave Coordinator pages for the Teacher dashboard. */
+  private onAppointmentEnded(): void {
+    if (WorkspaceService.workspaceOf(this.router.url) === 'COORDINATOR') {
+      void this.router.navigateByUrl(this.workspace.homeRoute('TEACHER'), { replaceUrl: true });
+    }
+    this.cdr.markForCheck();
+  }
+
   /** Browser/Android Back, deep links and notifications land on a page of one workspace: show that
    *  workspace's navigation. Shared pages leave the current workspace alone. */
   private followUrlWorkspace(url: string): void {
@@ -415,7 +425,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       STUDENT: 'Student',
       TEACHER: 'Teacher',
       PRINCIPAL: 'Principal',
-      COORDINATOR: 'Academic Coordinator',
+      COORDINATOR: 'Coordinator',
       ADMIN: 'Admin',
       SUB_ADMIN: 'Sub Admin',
       SUPER_ADMIN: 'Super Admin',
