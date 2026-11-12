@@ -4,6 +4,7 @@ import { routes } from './app.routes';
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { AuthInterceptor } from './auth/auth.interceptor';
+import { WorkspaceInterceptor } from './core/workspace.interceptor';
 import { GlobalErrorHandler } from './core/global-error-handler';
 import { StartupService } from './core/startup.service';
 import { STARTUP_BOOTSTRAP_GRACE_MS } from './core/startup.constants';
@@ -19,6 +20,8 @@ export const appConfig: ApplicationConfig = {
     provideAnimations(),
     provideHttpClient(withInterceptorsFromDi()),
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    // A Coordinator in the Teacher workspace calls the API as an ordinary teacher.
+    { provide: HTTP_INTERCEPTORS, useClass: WorkspaceInterceptor, multi: true },
     { provide: ErrorHandler, useClass: GlobalErrorHandler },
     provideAppInitializer(() => {
       const startupService = inject(StartupService);
