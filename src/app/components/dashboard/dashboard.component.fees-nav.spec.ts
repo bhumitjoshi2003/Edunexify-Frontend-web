@@ -13,7 +13,6 @@ import { TenantService } from '../../services/tenant.service';
 import { ParentPortalService } from '../../services/parent-portal.service';
 import { ParentChildContextService } from '../../services/parent-child-context.service';
 import { LoggerService } from '../../services/logger.service';
-import { WhatsNewService } from '../../services/whats-new.service';
 
 /**
  * Entitlement-aware navigation: a group whose items were all filtered out (role, feature or
@@ -54,7 +53,6 @@ describe('DashboardComponent — empty navigation groups', () => {
         { provide: ParentPortalService, useValue: { getMyProfile: () => of(null) } },
         { provide: ParentChildContextService, useValue: { selectedChild$: of(selectedChild), reconcile: () => {} } },
         { provide: LoggerService, useValue: { error: () => {} } },
-        { provide: WhatsNewService, useValue: { checkOnStartup: () => {}, openManually: () => {} } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(DashboardComponent);

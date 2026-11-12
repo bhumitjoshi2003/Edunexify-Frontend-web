@@ -30,7 +30,7 @@ export async function session(browser, userId, { workspace } = {}) {
 export async function settle(page, ms = 1500) {
   await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
   await page.waitForTimeout(ms);
-  // First-visit dialogs (welcome / what's new) sit over the page; close them like a user would.
+  // First-visit dialogs (welcome) sit over the page; close them like a user would.
   for (let i = 0; i < 3 && await page.locator('mat-dialog-container').count(); i++) {
     await page.keyboard.press('Escape'); await page.waitForTimeout(400);
   }

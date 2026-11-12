@@ -1,9 +1,0 @@
-.wn-root { display:flex; flex-direction:column; align-items:center; padding:28px 24px 20px; text-align:center; }
-.wn-icon-wrap { width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-bottom:14px; background:#eff6ff; }
-.wn-sparkle { font-size:28px; line-height:1; }
-.wn-title { font-size:18px; font-weight:700; color:#111827; margin:0 0 8px; line-height:1.3; }
-.wn-summary { font-size:14px; color:#4b5563; margin:0 0 16px; line-height:1.55; }
-.wn-items { width:100%; text-align:left; margin:0 0 24px; padding-left:20px; }
-.wn-items li { font-size:13.5px; color:#374151; margin-bottom:8px; line-height:1.5; }
-.wn-actions { display:flex; width:100%; justify-content:center; }
-.wn-btn-close { min-width:140px; height:42px; border-radius:10px !important; font-weight:600 !important; background-color:#1e3a5f !important; color:#fff !important; }

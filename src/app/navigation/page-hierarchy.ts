@@ -52,8 +52,6 @@ const FEES = target('Fees', `${D}/fees`);
 const ADMIN_DASHBOARD = target('Admin dashboard', `${D}/admin-dashboard`);
 const SCHOOL_SETUP = target('School setup', `${D}/school-setup`);
 const FEE_ASSIGNMENT = target('Fee assignment', `${D}/fee-assignment`);
-const RC_SETUP = target('Report Card Setup', `${D}/report-cards-v2/setup`);
-const RC_REMARKS = target('Remarks', `${D}/report-cards-v2/remarks`);
 const RC_PUBLISHED = target('Published Report Cards', `${D}/bulk-report-cards`);
 const RC_MY_CARDS = target('Report Cards', `${D}/report-card-documents`);
 const TIMETABLE = target('Timetable', `${D}/timetable`);
@@ -211,7 +209,8 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
   'payment': nested(FEES),
 
   // ── Nested: create / edit / import ───────────────────────────────────
-  'event-new': nested(EVENTS),
+  // New event is in the sidebar: no back control (editing an event still returns to the calendar).
+  'event-new': topLevel,
   'event-edit/:id': nested(EVENTS),
   'student-bulk-import': nested(STUDENTS),
   'teacher-bulk-import': nested(TEACHERS),
@@ -231,8 +230,8 @@ export const PAGE_HIERARCHY: Record<string, PageEntry> = {
   'fee-recalculation': nested(FEE_ASSIGNMENT),
 
   // ── Nested: report cards ─────────────────────────────────────────────
-  // Generate & Preview is the last step of the setup → remarks → generate workflow.
-  'report-cards-v2/generate': nested(ctx => ctx.role === 'ADMIN' ? RC_SETUP : RC_REMARKS),
+  // Generate & Preview is in the sidebar: no back control.
+  'report-cards-v2/generate': topLevel,
   'report-card-documents/:id': nested(ctx => {
     if (ctx.role === 'ADMIN') return RC_PUBLISHED;
     const studentId = ctx.queryParams['studentId'];
