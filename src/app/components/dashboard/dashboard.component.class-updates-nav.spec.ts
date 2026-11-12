@@ -16,7 +16,6 @@ import { TenantService } from '../../services/tenant.service';
 import { ParentPortalService } from '../../services/parent-portal.service';
 import { ParentChildContextService } from '../../services/parent-child-context.service';
 import { LoggerService } from '../../services/logger.service';
-import { WhatsNewService } from '../../services/whats-new.service';
 
 describe('Class Updates — role access', () => {
   let classroom = true;
@@ -51,7 +50,6 @@ describe('Class Updates — role access', () => {
         { provide: ParentPortalService, useValue: { getMyProfile: () => of(null) } },
         { provide: ParentChildContextService, useValue: { selectedChild$: of(selectedChild), reconcile: () => {} } },
         { provide: LoggerService, useValue: { error: () => {} } },
-        { provide: WhatsNewService, useValue: { checkOnStartup: () => {}, openManually: () => {} } },
       ],
     }).compileComponents();
 

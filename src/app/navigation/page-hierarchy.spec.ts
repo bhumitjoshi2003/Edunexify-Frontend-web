@@ -35,7 +35,6 @@ describe('page hierarchy', () => {
     expect(t('teacher-details/:teacherId', { params: { teacherId: 'T1' } })?.label).toBe('Teachers');
     expect(t('admin-details/:adminId', { role: 'SUPER_ADMIN', params: { adminId: 'A1' } })?.label).toBe('Admins');
     expect(t('event-edit/:id')?.link).toEqual(['/dashboard/event-calendar']);
-    expect(t('event-new')?.label).toBe('Event Calendar');
     expect(t('student-bulk-import')?.link).toEqual(['/dashboard/student-list']);
     expect(t('staff-adoption')?.link).toEqual(['/dashboard/admin-dashboard']);
     expect(t('fee-recalculation')?.link).toEqual(['/dashboard/fee-assignment']);
@@ -77,9 +76,11 @@ describe('page hierarchy', () => {
     expect(resolveBackTarget(p, ctx({ role: 'PARENT' }))?.link).toEqual(['/dashboard/parent-dashboard']);
   });
 
-  it('routes Generate & Preview to a Report Cards parent for each role', () => {
-    expect(resolveBackTarget('report-cards-v2/generate', ctx())?.link).toEqual(['/dashboard/report-cards-v2/setup']);
-    expect(resolveBackTarget('report-cards-v2/generate', ctx({ role: 'TEACHER' }))?.link).toEqual(['/dashboard/report-cards-v2/remarks']);
+  it('shows no back control on sidebar pages such as Generate & Preview and New event', () => {
+    for (const role of ['ADMIN', 'TEACHER', 'PRINCIPAL']) {
+      expect(resolveBackTarget('report-cards-v2/generate', ctx({ role }))).toBeNull();
+      expect(resolveBackTarget('event-new', ctx({ role }))).toBeNull();
+    }
   });
 
   it('routes issued report-card documents to their lists', () => {

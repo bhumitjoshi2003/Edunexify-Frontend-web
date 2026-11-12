@@ -13,7 +13,6 @@ import { TenantService } from '../../services/tenant.service';
 import { ParentPortalService } from '../../services/parent-portal.service';
 import { ParentChildContextService } from '../../services/parent-child-context.service';
 import { LoggerService } from '../../services/logger.service';
-import { WhatsNewService } from '../../services/whats-new.service';
 import { baselineTestProviders } from '../../../testing/baseline-test-providers';
 
 /**
@@ -54,7 +53,6 @@ describe('DashboardComponent — Teacher Substitution nav entry', () => {
         { provide: ParentPortalService, useValue: {} },
         { provide: ParentChildContextService, useValue: {} },
         { provide: LoggerService, useValue: { error: () => {} } },
-        { provide: WhatsNewService, useValue: { checkOnStartup: () => {}, openManually: () => {} } },
       ],
     }).compileComponents();
 

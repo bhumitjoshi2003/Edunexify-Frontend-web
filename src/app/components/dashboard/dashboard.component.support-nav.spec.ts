@@ -13,7 +13,6 @@ import { TenantService } from '../../services/tenant.service';
 import { ParentPortalService } from '../../services/parent-portal.service';
 import { ParentChildContextService } from '../../services/parent-child-context.service';
 import { LoggerService } from '../../services/logger.service';
-import { WhatsNewService } from '../../services/whats-new.service';
 
 /**
  * Report a Problem / My Support Requests are for every normal role (Student/Teacher/Parent/
@@ -52,7 +51,6 @@ describe('DashboardComponent — Help & Support nav entries', () => {
         { provide: ParentPortalService, useValue: { getMyProfile: () => of(null) } },
         { provide: ParentChildContextService, useValue: { selectedChild$: of(null), reconcile: () => {} } },
         { provide: LoggerService, useValue: { error: () => {} } },
-        { provide: WhatsNewService, useValue: { checkOnStartup: () => {}, openManually: () => {} } },
       ],
     }).compileComponents();
 
