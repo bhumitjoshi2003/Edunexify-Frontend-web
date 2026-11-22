@@ -8,6 +8,7 @@ import { ExamConfigService, ExamConfig, ExamSubjectEntry, ExamSubjectOption } fr
 import { LoggerService } from '../../services/logger.service';
 import { AcademicSessionService } from '../../services/academic-session.service';
 import { SchoolService } from '../../services/school.service';
+import { HelpButtonComponent } from '../help-button/help-button.component';
 
 /** One row in the subject checklist (an academic subject of the class, or a legacy extra). */
 interface SubjectRow {
@@ -25,7 +26,7 @@ interface SubjectRow {
 @Component({
   selector: 'app-exam-config',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [HelpButtonComponent, CommonModule, FormsModule],
   templateUrl: './exam-config.component.html',
   styleUrl: './exam-config.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
