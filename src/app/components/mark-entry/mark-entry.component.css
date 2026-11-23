@@ -448,3 +448,5 @@
 @media (max-width: 767px) {
   #mark-correction-help { display: none; }
 }
+
+.me-guidance { display: block; margin: 10px 0; }

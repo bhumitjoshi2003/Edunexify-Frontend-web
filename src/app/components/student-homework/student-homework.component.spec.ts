@@ -118,7 +118,7 @@ describe('StudentHomeworkComponent', () => {
     homework.studentOn.and.returnValue(throwError(() => new Error('offline')));
     component.load('today');
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('temporarily unavailable');
+    expect(fixture.nativeElement.textContent).toContain("Couldn't load");
   });
   it('a parent reads the linked child named in the URL, switches child, and sees no posting controls', () => {
     role = 'PARENT';
