@@ -43,6 +43,8 @@ describe('HomeComponent — sign in', () => {
     req.flush(user);
     expect(component.signingIn).toBeFalse();
     expect(router.navigateByUrl).toHaveBeenCalled();
+    // The sign-in page is replaced, so Back from the first page after sign-in does not return to it.
+    expect((router.navigateByUrl as jasmine.Spy).calls.mostRecent().args[1]).toEqual({ replaceUrl: true });
   });
 
   it('unlocks after a failed login so the user can try again', () => {

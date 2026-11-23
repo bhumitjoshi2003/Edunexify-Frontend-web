@@ -249,20 +249,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const url = this.router.url.split('?')[0];
     const isBareDashboard = url === '/dashboard' || url === '/dashboard/';
     if (!isBareDashboard) return;
+
+    // The bare /dashboard entry is only a redirect: replace it, so Back from the role home does not
+    // land on /dashboard and get redirected forward again (a Back loop that never gets past the dashboard).
     if (this.Role === 'STUDENT') {
-      this.router.navigate(['/dashboard/student-dashboard']);
+      this.router.navigate(['/dashboard/student-dashboard'], { replaceUrl: true });
     } else if (this.Role === 'TEACHER') {
       // One account, two workspaces: a coordinating teacher opens the workspace they last used
       // (Coordinator until they choose otherwise); everyone else opens the Teacher dashboard.
-      this.router.navigate([this.workspace.homeRoute()]);
+      this.router.navigate([this.workspace.homeRoute()], { replaceUrl: true });
     } else if (this.Role === 'PRINCIPAL') {
-      this.router.navigate(['/dashboard/principal-dashboard']);
+      this.router.navigate(['/dashboard/principal-dashboard'], { replaceUrl: true });
     } else if (this.Role === 'ADMIN' || this.Role === 'SUB_ADMIN') {
-      this.router.navigate(['/dashboard/admin-dashboard']);
+      this.router.navigate(['/dashboard/admin-dashboard'], { replaceUrl: true });
     } else if (this.Role === 'PARENT') {
-      this.router.navigate(['/dashboard/parent-dashboard']);
+      this.router.navigate(['/dashboard/parent-dashboard'], { replaceUrl: true });
     } else if (this.Role === 'SUPER_ADMIN') {
-      this.router.navigate(['/dashboard/super-admin-dashboard']);
+      this.router.navigate(['/dashboard/super-admin-dashboard'], { replaceUrl: true });
     }
   }
 
