@@ -99,7 +99,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.authenticated = true;
       this.router.navigateByUrl(postLoginDestination({
         mustChangePassword: this.authStateService.mustChangePassword(), school: this.tenantService.slug,
-      }));
+      }), { replaceUrl: true });
     }
     this.loadPlans();
   }
@@ -174,7 +174,7 @@ export class HomeComponent implements OnInit, OnDestroy {
             this.cdr.markForCheck();
             this.router.navigateByUrl(postLoginDestination({
               mustChangePassword: !!response.mustChangePassword, school: this.tenantService.slug,
-            }));
+            }), { replaceUrl: true });
           } else {
             // On root domain — redirect to their school subdomain. A page saved on another origin
             // never applies to this school.
@@ -189,7 +189,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.showLoginForm = false;
         this.cdr.markForCheck();
 
-        this.router.navigateByUrl(postLoginDestination({ mustChangePassword: !!response.mustChangePassword, school: null }));
+        this.router.navigateByUrl(postLoginDestination({ mustChangePassword: !!response.mustChangePassword, school: null }), { replaceUrl: true });
       },
       error: (error) => {
         let text: string;
