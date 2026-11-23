@@ -25,11 +25,12 @@ import { AssessmentService } from '../../services/assessment.service';
 import { Assessment, countdownLabel, countdownTone, dateParts } from '../../interfaces/assessment';
 import { countLabel, countOnPage } from '../../utils/page-count.util';
 import { FeatureKey } from '../../auth/feature-keys';
+import { GettingStartedComponent } from '../getting-started/getting-started.component';
 
 @Component({
   selector: 'app-student-dashboard',
   standalone: true,
-  imports: [WisdomCardsComponent, CommonModule, RouterLink, MatIconModule],
+  imports: [WisdomCardsComponent, CommonModule, RouterLink, MatIconModule, GettingStartedComponent],
   templateUrl: './student-dashboard.component.html',
   styleUrl: './student-dashboard.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

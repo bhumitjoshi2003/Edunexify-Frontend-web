@@ -25,11 +25,12 @@ import { TeacherSubstitutionService } from '../../services/teacher-substitution.
 import { OnLeaveTodayComponent } from '../on-leave-today/on-leave-today.component';
 import { FeatureKey } from '../../auth/feature-keys';
 import { LeaveAttentionSummary, NEEDS_ATTENTION_BADGE } from '../../utils/leave-escalation.util';
+import { GettingStartedComponent } from '../getting-started/getting-started.component';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [WisdomCardsComponent, OnLeaveTodayComponent, CommonModule, RouterLink, MatIconModule],
+  imports: [WisdomCardsComponent, OnLeaveTodayComponent, CommonModule, RouterLink, MatIconModule, GettingStartedComponent],
   templateUrl: './admin-dashboard.component.html',
   styleUrl: './admin-dashboard.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
