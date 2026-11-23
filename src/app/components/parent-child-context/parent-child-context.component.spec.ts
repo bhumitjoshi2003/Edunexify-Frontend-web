@@ -91,4 +91,13 @@ describe('ParentChildContextComponent (inaccessible child)', () => {
     expect(emitted).toEqual([]);
     expect(selected?.studentId).toBe('S1');
   });
+
+  it('counts as the parent’s own choice only when they pick a tab, never when the page sets the child', () => {
+    const explicit: string[] = [];
+    context.explicitSelection$.subscribe(c => explicit.push(c.studentId));
+    open('S1');                                              // the page selects the deep-linked child
+    expect(explicit).toEqual([]);
+    component.selectChild(profile.children[1]);              // the parent picks another tab
+    expect(explicit).toEqual(['S2']);
+  });
 });
