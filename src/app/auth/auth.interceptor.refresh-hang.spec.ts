@@ -89,6 +89,6 @@ describe('AuthInterceptor — a refresh that never completes', () => {
 
     expect((failure as { status?: number }).status).toBe(403);
     expect(authState.clearUser).not.toHaveBeenCalled();
-    expect(router.navigate).not.toHaveBeenCalledWith(['/home']);
+    expect(router.navigate).not.toHaveBeenCalledWith(['/home'], { replaceUrl: true });
   });
 });
