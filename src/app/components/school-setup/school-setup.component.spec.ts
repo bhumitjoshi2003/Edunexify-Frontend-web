@@ -66,7 +66,7 @@ describe('SchoolSetupComponent', () => {
   it('shows a recoverable backend error', () => {
     schoolService.getSetupHealth.and.returnValue(throwError(() => new Error('offline')));
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Setup status could not be loaded');
+    expect(fixture.nativeElement.textContent).toContain("Couldn't load the setup status");
     expect(fixture.nativeElement.textContent).toContain('Retry');
   });
 
@@ -136,11 +136,63 @@ describe('SchoolSetupComponent', () => {
   it('a failed request can be retried and then shows the checklist', () => {
     schoolService.getSetupHealth.and.returnValue(throwError(() => new Error('offline')));
     fixture.detectChanges();
-    expect(text()).toContain('Setup status could not be loaded');
+    expect(text()).toContain("Couldn't load the setup status");
     schoolService.getSetupHealth.and.returnValue(response$);
     (Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(b => b.textContent?.includes('Retry')) as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(fixture.componentInstance.error).toBeFalse();
     expect(text()).toContain('60%');
+  });
+
+  // ─── Academic setup readiness (Phase 3) ───
+  const academic: SchoolSetupHealth = { ...health, items: [
+    ...health.items,
+    { key: 'CLASSES_SECTIONS', title: 'Classes and sections', description: '12 active classes, 20 sections.', status: 'COMPLETED', importance: 'RECOMMENDED', completed: 12, total: 12, details: [] },
+    { key: 'CLASS_SUBJECTS', title: 'Class subjects', description: '8 of 12 classes have subjects.', status: 'INCOMPLETE', importance: 'RECOMMENDED', completed: 8, total: 12, details: ['No subjects: 3, 7, 9, 10'] },
+    { key: 'CLASS_TEACHERS', title: 'Class teachers', description: '0 of 20 classes and sections have an active class teacher.', status: 'INCOMPLETE', importance: 'RECOMMENDED', completed: 0, total: 20, details: ['No class teacher: 1-A'] },
+    { key: 'EXAMS', title: 'Exams', description: 'Exams & Results is not part of the school\'s plan.', status: 'NOT_APPLICABLE', importance: 'RECOMMENDED', completed: null, total: null, details: [] },
+    { key: 'REPORT_CARDS', title: 'Report cards', description: '1 of 12 classes have a report card with exams.', status: 'INCOMPLETE', importance: 'RECOMMENDED', completed: 1, total: 12,
+      details: ['No exams: 2', 'No report card set up: 4'] },
+  ] };
+  const row = (key: string) => (fixture.nativeElement as HTMLElement).querySelector(`.setup-item[data-key="${key}"]`) as HTMLElement;
+
+  it('academic setup is its own group with partial progress, and never changes the essentials score', () => {
+    response$.next(academic);
+    fixture.detectChanges();
+    expect(text()).toContain('Academic setup');
+    expect(text()).toContain('60%');                                   // the server's essentials score, unchanged
+    expect(text()).toContain('1 of 4 ready');                          // EXAMS is not applicable
+    expect(row('CLASS_SUBJECTS').textContent).toContain('8 of 12');
+    expect(row('CLASS_SUBJECTS').textContent).toContain('No subjects: 3, 7, 9, 10');
+    expect(row('CLASS_SUBJECTS').querySelector('.setup-item-bar span')!.getAttribute('style')).toContain('67%');
+    expect(row('CLASS_TEACHERS').querySelector('.setup-item-bar')).not.toBeNull();   // 0 of 20 still shows an empty bar
+    // Academic items are not repeated under Recommended.
+    expect(fixture.componentInstance.items('RECOMMENDED').map(i => i.key)).toEqual(['SCHOOL_LOGO']);
+  });
+
+  it('not applicable renders the same in every group: muted, no count, no action', () => {
+    response$.next(academic);
+    fixture.detectChanges();
+    const exams = row('EXAMS');
+    expect(exams.classList).toContain('na');
+    expect(exams.querySelector('.setup-item-count')).toBeNull();
+    expect(exams.querySelector('a')).toBeNull();
+    expect(row('PARENT_CONTACTS').classList).toContain('na');
+  });
+
+  it('links each academic gap to its setup page; class teachers open the Timetable Setup tab', () => {
+    response$.next(academic);
+    fixture.detectChanges();
+    const href = (key: string) => Array.from(row(key).querySelectorAll('a')).map(a => a.getAttribute('href'));
+    expect(href('CLASS_SUBJECTS')).toEqual(['/dashboard/subject-config']);
+    expect(href('CLASS_TEACHERS')).toEqual(['/dashboard/timetable?tab=setup']);
+    expect(row('CLASSES_SECTIONS').querySelector('a')).toBeNull();       // complete: no action
+    // Report cards blocked by missing exams also offer the exam step.
+    expect(href('REPORT_CARDS')).toEqual(['/dashboard/exam-config', '/dashboard/report-cards-v2/setup']);
+  });
+
+  it('the header has the contextual help button', () => {
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-help-button')).not.toBeNull();
   });
 });

@@ -134,6 +134,11 @@ export interface SchoolSetupItem {
   description: string;
   status: SetupItemStatus;
   importance: SetupImportance;
+  /** Partial progress, e.g. 8 of 12 classes (academic readiness items). */
+  completed?: number | null;
+  total?: number | null;
+  /** Short lines naming what is missing, e.g. "No subjects: Class 3, Class 7". */
+  details?: string[];
 }
 
 export interface SchoolSetupHealth {
